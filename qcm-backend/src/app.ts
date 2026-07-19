@@ -31,22 +31,25 @@ if (!fs.existsSync("uploads/resumes")) {
 
 // 🔒 ✅ CONFIGURATION CORS UNIQUE ET STRICTE
 const allowedOrigins = [
+  "http://localhost:3000", 
   "http://localhost:5173",          // Frontend local (Vite)
-  "https://med-contest.vercel.app"  // Frontend de production (Vercel)
+  "https://bac-sp-prepa.vercel.app"  // Frontend de production (Vercel)
 ];
 
+// 2. Configuration du CORS
 app.use(cors({
-  origin: (origin, callback) => {
-    // Permet aux requêtes sans origine (comme Postman ou les requêtes internes) de passer
+  origin: function (origin, callback) {
+    // Autorise les requêtes sans origine (Postman, etc.)
     if (!origin) return callback(null, true);
     
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Bloqué par la politique CORS de Med-Contest"));
+    // Vérifie si l'origine est dans notre liste
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'Bloqué par la politique CORS';
+      return callback(new Error(msg), false); // 👈 C'est de là que vient ton erreur 500 !
     }
+    return callback(null, true);
   },
-  credentials: true, // 🔥 Requis pour le bon fonctionnement de withCredentials: true côté frontend
+  credentials: true ,    // Important si tu utilises des cookies ou des sessions
   methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
