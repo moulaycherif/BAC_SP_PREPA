@@ -1,0 +1,10 @@
+{
+  "name": "BAC_SP_PREPA",
+  "dependencies": {
+    "jsonwebtoken": "^9.0.3",
+    "smiles-drawer": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.10"
+  }
+}
