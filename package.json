@@ -1,5 +1,5 @@
 {
-  "name": "BAC_SP_PREPA",
+  "name": "bac-sp-prepa",
   "dependencies": {
     "jsonwebtoken": "^9.0.3",
     "smiles-drawer": "^2.3.0"
