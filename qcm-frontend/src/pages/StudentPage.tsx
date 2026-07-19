@@ -1315,7 +1315,7 @@ const getAccessibleSubjects = () => {
       );
     }
     return <StudentDashboardStats />;
-  };
+
 // 1️⃣ NOUVELLE FONCTION DE NAVIGATION PAR ÉTAPES
   const handleRetourArriere = () => {
     // Si le détail d'une astuce (Pop-up ou composant) est ouvert
