@@ -8,6 +8,8 @@ export interface IStudent extends Document {
   // 🔒 Propriétés ajoutées pour la sécurité de session unique
   currentSessionId?: string | null;
   currentIp?: string | null;
+  // 📚 NOUVEAU : Options de matières de l'étudiant
+  options: string[]; 
 }
 
 const StudentSchema = new Schema<IStudent>(
@@ -19,6 +21,11 @@ const StudentSchema = new Schema<IStudent>(
     // 🔒 Champs stockés en base de données pour valider le poste de connexion
     currentSessionId: { type: String, default: null },
     currentIp: { type: String, default: null },
+    // 📚 NOUVEAU : Champ pour stocker les options
+    options: { 
+      type: [String], 
+      default: ["MATH", "PC", "SVT"] // Par défaut, on donne accès à tout
+    },
   },
   { timestamps: true }
 );

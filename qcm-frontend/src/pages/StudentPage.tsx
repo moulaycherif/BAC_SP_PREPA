@@ -53,6 +53,39 @@ interface Question {
   reponseCorrecte: string;
   note: number;
 }
+  const chaptersBySubject: Record<string, string[]> = {
+        Mathématique: [
+          "Chapitre I : Suites & Sommes",
+          "Chapitre II : Etude de fonctions",
+          "Chapitre III : Equations différentielles",
+          "Chapitre IV : Nombres complexes",
+          "Chapitre V : Intégrales",
+          "Chapitre VI : Géométrie dans l'espace",
+          "Chapitre VII : Probabilité",
+        ],
+        Physique: [
+          "Chapitre I : Les ondes",
+          "Chapitre II : Nucléaire",
+          "Chapitre III : Electricité",
+          "Chapitre IV : Lois de Newton & Théorème d'énergie cinétique",
+          "Chapitre V : Système oscillant & Pendule élastique",
+        ],
+        Chimie: [
+          "Chapitre I : Chimie des solutions",
+          "Chapitre II : Cinétique chimique",
+          "Chapitre III : Les piles",
+          "Chapitre IV : Chimie organique",
+        ],
+        SVT: [
+          "Chapitre 1 : Les réactions responsables de la libération de l'énergie emmagasinée dans la matière organique",
+          "Chapitre 2 : Rôle du muscle strié squelettique dans la conversion de l'énergie",
+          "Chapitre 3 : L'information génétique",
+          "Chapitre 4 : Le génie génétique",
+          "Chapitre 5 : La génétique humaine",
+          "Chapitre 6 : La génétique des populations",
+          "Chapitre 7 : L'immunité"
+        ],
+      };
 
 export default function StudentPage() {
   const navigate = useNavigate();
@@ -102,6 +135,32 @@ export default function StudentPage() {
     { key: "Chimie", label: "Composante 3 : Chimie", coeff: 1 },
     { key: "Mathématique", label: "Composante 4 : Mathématiques", coeff: 1 }
   ];
+
+  const [studentOptions, setStudentOptions] = useState<string[]>([]);
+useEffect(() => {
+  // Exemple de récupération depuis le localStorage
+  const options = JSON.parse(localStorage.getItem("studentOptions") || '["MATH", "PC", "SVT"]'); 
+  setStudentOptions(options);
+}, []);
+
+useEffect(() => {
+  // On lit le localStorage. S'il est vide, on met un tableau vide par sécurité.
+  const storedOptions = localStorage.getItem("studentOptions");
+  if (storedOptions) {
+    setStudentOptions(JSON.parse(storedOptions));
+  }
+}, []);
+
+const getAccessibleSubjects = () => {
+  let subjects: string[] = [];
+  if (studentOptions.includes("MATH")) subjects.push("Mathématique");
+  if (studentOptions.includes("PC")) {
+    subjects.push("Physique");
+    subjects.push("Chimie");
+  }
+  if (studentOptions.includes("SVT")) subjects.push("SVT");
+  return subjects;
+};
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -416,8 +475,51 @@ export default function StudentPage() {
     }
     
     if (section === "home") {
-      return <StudentDashboardStats />;
-    }
+  const accessibleSubjects = getAccessibleSubjects();
+
+  return (
+    <div className="p-6 space-y-8 h-full overflow-y-auto">
+      {accessibleSubjects.map((matiere) => (
+        <div key={matiere} className="bg-white rounded-2xl shadow-lg p-6 border-l-8 border-blue-800">
+          <h2 className="text-3xl font-bold text-blue-900 mb-6 border-b pb-2">
+            Matière : {matiere}
+          </h2>
+          
+          {/* Boutons d'action généraux de la matière */}
+          <div className="flex gap-4 mb-6">
+            <button className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl shadow hover:bg-red-700 transition">
+              🎥 Vidéos enregistrées
+            </button>
+            <button className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl shadow hover:bg-green-700 transition flex items-center gap-2">
+              <span className="animate-pulse h-3 w-3 bg-white rounded-full"></span>
+              LIVE
+            </button>
+          </div>
+
+          {/* Boutons des chapitres */}
+          <h3 className="text-xl font-semibold text-gray-700 mb-4">Chapitres :</h3>
+          <div className="flex flex-wrap gap-3">
+            {chaptersBySubject[matiere]?.map((chapter, index) => (
+              <motion.button
+                key={index}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => {
+                  setSelectedMatiere(matiere);
+                  setSelectedChapter(chapter);
+                  setSection("soutien"); // Cela redirigera vers l'interface existante des astuces/résumés/exos
+                }}
+                className="px-4 py-2 bg-blue-100 text-blue-800 font-medium rounded-lg shadow-sm hover:bg-blue-200 transition border border-blue-200"
+              >
+                {chapter}
+              </motion.button>
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
     
     if (section === "qcm" && currentExam) {
       if (questions.length === 0) {
@@ -669,42 +771,7 @@ export default function StudentPage() {
       );
     }
 
-    if (section === "soutien" && selectedMatiere) {
-      const chaptersBySubject: Record<string, string[]> = {
-        Mathématique: [
-          "Chapitre I : Suites & Sommes",
-          "Chapitre II : Etude de fonctions",
-          "Chapitre III : Equations différentielles",
-          "Chapitre IV : Nombres complexes",
-          "Chapitre V : Intégrales",
-          "Chapitre VI : Géométrie dans l'espace",
-          "Chapitre VII : Probabilité",
-        ],
-        Physique: [
-          "Chapitre I : Les ondes",
-          "Chapitre II : Nucléaire",
-          "Chapitre III : Electricité",
-          "Chapitre IV : Lois de Newton & Théorème d'énergie cinétique",
-          "Chapitre V : Système oscillant & Pendule élastique",
-        ],
-        Chimie: [
-          "Chapitre I : Chimie des solutions",
-          "Chapitre II : Cinétique chimique",
-          "Chapitre III : Les piles",
-          "Chapitre IV : Chimie organique",
-        ],
-        SVT: [
-          "Chapitre 1 : Les réactions responsables de la libération de l'énergie emmagasinée dans la matière organique",
-          "Chapitre 2 : Rôle du muscle strié squelettique dans la conversion de l'énergie",
-          "Chapitre 3 : L'information génétique",
-          "Chapitre 4 : Le génie génétique",
-          "Chapitre 5 : La génétique humaine",
-          "Chapitre 6 : La génétique des populations",
-          "Chapitre 7 : L'immunité"
-        ],
-      };
-
-      const chapters = chaptersBySubject[selectedMatiere] || [];
+     const chapters = chaptersBySubject[selectedMatiere] || [];
 
       if (selectedChapter && selectedAction === "Astuces") {
         
@@ -1295,94 +1362,14 @@ export default function StudentPage() {
         backgroundPosition: "center",
       }}
     >
-      {/* Barre latérale (Sidebar) */}
+      {/* Barre latérale SUPPRIMÉE */}
+
+      {/* Contenu Central (on enlève rounded-l-3xl pour que ça remplisse bien l'écran) */}
       <motion.div
-        className="w-64 bg-blue-900/40 backdrop-blur-md p-4 flex flex-col gap-4 shadow-2xl overflow-y-auto"
-        initial={{ x: -40, opacity: 0 }}
-        animate={{ x: 0, opacity: 1 }}
-      >
-        <div>
-          <h3 className="font-bold text-lg mb-3 text-yellow-200">🎯 QCE par Concours</h3>
-          <button
-            onClick={() => {
-              resetQcm();
-              setSection("concours");
-              setSelectedMatiere(null);
-              setSelectedChapter(null);
-              setSelectedAction(null);
-            }}
-            className="py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition w-full"
-          >
-            Concours
-          </button>
-        </div>
-
-        <div>
-          <h3 className="font-bold text-lg mb-3 text-yellow-300">📚 QCE par Matière</h3>
-          <div className="flex flex-col gap-2">
-            {matieres.map((m) => (
-              <button
-                key={m}
-                onClick={() => {
-                  resetQcm();
-                  setSection("matiere");
-                  setSelectedMatiere(m);
-                  setSelectedChapter(null);
-                  setSelectedAction(null);
-                }}
-                className="py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition"
-              >
-                {m}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div>
-          <h3 className="font-bold text-lg mb-3 text-yellow-300">💡 Soutien</h3>
-          <div className="flex flex-col gap-2">
-            {matieres.map((m) => (
-              <button
-                key={m}
-                onClick={() => {
-                  setSection("soutien");
-                  setSelectedMatiere(m);
-                  setSelectedChapter(null);
-                  setSelectedAction(null);
-                }}
-                className="py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-semibold transition"
-              >
-                {m}
-              </button>
-            ))}
-          </div>
-        </div>
-
-<div>
-          <h3 className="font-bold text-lg mb-3 mt-4 text-yellow-200">📝 Concours Blancs</h3>
-          <button
-            onClick={() => {
-              resetQcm();
-              setSection("blancs");
-              setSelectedMatiere(null);
-              setSelectedChapter(null);
-              setSelectedAction(null);
-            }}
-            className="py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-bold transition w-full shadow-md flex justify-center items-center gap-2"
-          >
-            <span>Passer un examen</span>
-          </button>
-        </div>
-
-      </motion.div>
-
-      {/* Contenu Central */}
-      <motion.div
-        className="flex-1 h-full bg-white/80 backdrop-blur-md rounded-l-3xl shadow-lg p-4 overflow-y-auto relative"
+        className="flex-1 h-full bg-white/80 backdrop-blur-md shadow-lg p-4 overflow-y-auto relative"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
       >
-        {/* BOUTON RETOUR CORRIGÉ QUI APPELLE LA FONCTION PAR ÉTAPES */}
         {(section !== "home" || selectedMatiere || selectedChapter || selectedAction || selectedTipId) && (
           <button
             onClick={handleRetourArriere}

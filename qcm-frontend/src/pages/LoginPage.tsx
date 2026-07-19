@@ -1,4 +1,4 @@
-// src/pages/LoginPage.tsx (ou chemin correspondant)
+// src/pages/LoginPage.tsx
 import React, { useState, useEffect } from "react";
 import axios from "../api/axios";
 import { motion } from "framer-motion";
@@ -24,12 +24,14 @@ export default function LoginPage() {
     }
   }, []);
 
- const handleLogin = async (e: React.FormEvent, force: boolean = false) => {
+  const handleLogin = async (e: React.FormEvent, force: boolean = false) => {
     e.preventDefault();
     // 🧼 Nettoyage préventif pour éviter que l'ancienne session étudiant ne pollue l'admin
-  localStorage.removeItem("token");
-  localStorage.removeItem("adminToken");
-  localStorage.removeItem("isGuest");
+    localStorage.removeItem("token");
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("isGuest");
+    // Suppression des anciennes options au cas où
+    localStorage.removeItem("studentOptions"); 
     setError("");
     setLoading(true);
 
@@ -83,6 +85,12 @@ export default function LoginPage() {
       localStorage.removeItem("adminToken");
 
       localStorage.setItem("token", studentRes.data.token);
+      
+      // 👇 NOUVEAUTÉ : Sauvegarde des options renvoyées par le backend
+      if (studentRes.data.student && studentRes.data.student.options) {
+        localStorage.setItem("studentOptions", JSON.stringify(studentRes.data.student.options));
+      }
+
       setToken(studentRes.data.token);
       setRole("student");
       setLoading(false);
@@ -176,7 +184,7 @@ export default function LoginPage() {
         )}
 
         <p className="text-gray-500 text-center text-sm mt-6">
-          © 2026 Med-Contest — Tous droits réservés
+          © 2026 BAC-SP-PREPA — Tous droits réservés
         </p>
       </motion.div>
     </div>

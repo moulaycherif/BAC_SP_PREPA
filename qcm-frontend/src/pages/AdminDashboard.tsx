@@ -23,6 +23,7 @@ interface Student {
   _id: string;
   name: string;
   email: string;
+  options?: string[]; // 👈 Ajout du champ pour l'affichage
 }
 
 interface ImportResult {
@@ -52,10 +53,12 @@ const AdminDashboard: React.FC = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  // 👈 NOUVEAU : State pour les options
+  const [options, setOptions] = useState<string[]>(["MATH", "PC", "SVT"]); 
   const [message, setMessage] = useState("");
 
   // ===============================================
-  // STATE : IMPORT DES QUESTIONS (Modifié & Enrichi)
+  // STATE : IMPORT DES QUESTIONS
   // ===============================================
   const [exams, setExams] = useState<Exam[]>([]);
   const [file, setFile] = useState<File | null>(null);
@@ -102,16 +105,31 @@ const AdminDashboard: React.FC = () => {
   // ===============================================
   // ACTIONS : ÉTUDIANTS
   // ===============================================
+
+  // 👈 NOUVEAU : Gestionnaire de cases à cocher
+  const handleOptionToggle = (option: string) => {
+    setOptions((prev) =>
+      prev.includes(option)
+        ? prev.filter((o) => o !== option)
+        : [...prev, option]
+    );
+  };
+
   const handleCreateStudent = async () => {
     if (!name || !email || !password) {
       setMessage("⚠️ Veuillez remplir tous les champs");
       return;
     }
 
+    if (options.length === 0) {
+      setMessage("⚠️ Veuillez sélectionner au moins une option (matière)");
+      return;
+    }
+
     try {
       await axios.post(
         `${API_BASE_URL}/api/admin/create-student`,
-        { name, email, password },
+        { name, email, password, options }, // 👈 Envoi des options au backend
         {
           headers: { Authorization: `Bearer ${adminToken}` },
         }
@@ -121,6 +139,7 @@ const AdminDashboard: React.FC = () => {
       setName("");
       setEmail("");
       setPassword("");
+      setOptions(["MATH", "PC", "SVT"]); // Réinitialisation
       fetchStudents();
     } catch (err: any) {
       console.error("❌ Création étudiant :", err);
@@ -147,9 +166,9 @@ const AdminDashboard: React.FC = () => {
   };
 
   // ===============================================
-  // ACTIONS : IMPORT DES QUESTIONS (Adapté)
+  // ACTIONS : IMPORT DES QUESTIONS
   // ===============================================
- const handleUpload = async () => {
+  const handleUpload = async () => {
     if (!file) {
       setImportMessage("⚠️ Veuillez choisir un fichier Excel.");
       return;
@@ -300,38 +319,59 @@ const AdminDashboard: React.FC = () => {
       {/* ----------- Onglet Étudiants ----------- */}
       {activeTab === "students" && (
         <div>
-          <div className="mb-6 p-4 border rounded shadow-sm flex flex-col md:flex-row gap-2 bg-white">
-            <input
-              type="text"
-              placeholder="Nom complet"
-              value={name}
-              onChange={e => setName(e.target.value)}
-              className="border px-3 py-2 rounded text-black flex-1"
-            />
-            <input
-              type="email"
-              placeholder="Adresse Email"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              className="border px-3 py-2 rounded text-black flex-1"
-            />
-            <input
-              type="password"
-              placeholder="Mot de passe temporaire"
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              className="border px-3 py-2 rounded text-black flex-1"
-            />
-            <button
-              onClick={handleCreateStudent}
-              className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors font-semibold"
-            >
-              Ajouter
-            </button>
+          <div className="mb-6 p-4 border rounded-xl shadow-sm bg-white flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row gap-3">
+              <input
+                type="text"
+                placeholder="Nom complet"
+                value={name}
+                onChange={e => setName(e.target.value)}
+                className="border px-3 py-2 rounded text-black flex-1 focus:ring-2 focus:ring-blue-400 outline-none"
+              />
+              <input
+                type="email"
+                placeholder="Adresse Email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="border px-3 py-2 rounded text-black flex-1 focus:ring-2 focus:ring-blue-400 outline-none"
+              />
+              <input
+                type="password"
+                placeholder="Mot de passe temporaire"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                className="border px-3 py-2 rounded text-black flex-1 focus:ring-2 focus:ring-blue-400 outline-none"
+              />
+            </div>
+            
+            {/* 👈 NOUVEAU : Bloc des options + Bouton Ajouter */}
+            <div className="flex flex-col md:flex-row justify-between items-center bg-gray-50 p-3 rounded-lg border">
+              <div className="flex flex-wrap items-center gap-4">
+                <span className="font-semibold text-gray-700">Options autorisées :</span>
+                {["MATH", "PC", "SVT"].map((opt) => (
+                  <label key={opt} className="flex items-center gap-1 cursor-pointer hover:bg-gray-200 px-2 py-1 rounded transition">
+                    <input
+                      type="checkbox"
+                      checked={options.includes(opt)}
+                      onChange={() => handleOptionToggle(opt)}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="font-medium text-sm text-gray-800">{opt}</span>
+                  </label>
+                ))}
+              </div>
+              
+              <button
+                onClick={handleCreateStudent}
+                className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors font-semibold mt-3 md:mt-0"
+              >
+                + Ajouter
+              </button>
+            </div>
           </div>
 
           {message && (
-            <div className="mb-4 p-3 bg-blue-50 text-blue-800 rounded border border-blue-200">
+            <div className={`mb-4 p-3 rounded border font-medium ${message.includes('✅') ? 'bg-green-50 text-green-800 border-green-200' : 'bg-blue-50 text-blue-800 border-blue-200'}`}>
               {message}
             </div>
           )}
@@ -340,20 +380,25 @@ const AdminDashboard: React.FC = () => {
             <table className="w-full border-collapse border border-gray-300">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Nom</th>
-                  <th className="border border-gray-300 px-4 py-2 text-left">Email</th>
-                  <th className="border border-gray-300 px-4 py-2 text-center w-32">Actions</th>
+                  <th className="border border-gray-300 px-4 py-3 text-left">Nom</th>
+                  <th className="border border-gray-300 px-4 py-3 text-left">Email</th>
+                  <th className="border border-gray-300 px-4 py-3 text-left">Options</th> {/* 👈 NOUVELLE COLONNE */}
+                  <th className="border border-gray-300 px-4 py-3 text-center w-32">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {students.map(s => (
-                  <tr key={s._id} className="text-sm hover:bg-gray-50">
-                    <td className="border border-gray-300 px-4 py-2">{s.name}</td>
-                    <td className="border border-gray-300 px-4 py-2">{s.email}</td>
-                    <td className="border border-gray-300 px-4 py-2 flex justify-center gap-2">
+                  <tr key={s._id} className="text-sm hover:bg-gray-50 transition-colors">
+                    <td className="border border-gray-300 px-4 py-3 font-medium">{s.name}</td>
+                    <td className="border border-gray-300 px-4 py-3 text-gray-600">{s.email}</td>
+                    <td className="border border-gray-300 px-4 py-3 text-blue-700 font-semibold">
+                      {/* 👈 AFFICHAGE DES OPTIONS */}
+                      {s.options && s.options.length > 0 ? s.options.join(", ") : "MATH, PC, SVT"}
+                    </td>
+                    <td className="border border-gray-300 px-4 py-3 text-center">
                       <button
                         onClick={() => handleDeleteStudent(s._id)}
-                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors"
+                        className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors shadow-sm"
                       >
                         Supprimer
                       </button>
@@ -362,7 +407,7 @@ const AdminDashboard: React.FC = () => {
                 ))}
                 {students.length === 0 && (
                   <tr>
-                    <td colSpan={3} className="text-center py-4 text-gray-500">Aucun étudiant trouvé</td>
+                    <td colSpan={4} className="text-center py-6 text-gray-500 italic">Aucun étudiant trouvé</td>
                   </tr>
                 )}
               </tbody>
@@ -371,7 +416,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-     {/* ----------- Onglet Import ----------- */}
+      {/* ----------- Onglet Import ----------- */}
       {activeTab === "import" && (
         <div className="bg-white p-6 rounded shadow border border-gray-200">
           <h2 className="text-2xl font-bold mb-2 text-gray-800">📂 Importer des questions via Excel</h2>

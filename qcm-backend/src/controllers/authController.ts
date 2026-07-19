@@ -57,10 +57,16 @@ export const loginStudent = async (req: Request, res: Response) => {
   { expiresIn: "24h" }
 );
 
-    res.json({
+   res.json({
       message: "Connexion réussie",
       token,
-      student: { id: student._id, name: student.name, email: student.email, isAdmin: student.isAdmin }
+      student: { 
+        id: student._id, 
+        name: student.name, 
+        email: student.email, 
+        isAdmin: student.isAdmin,
+        options: (student as any).options || ["MATH", "PC", "SVT"] // 👈 AJOUT ICI (avec une sécurité par défaut)
+      }
     });
   } catch (err) {
     console.error("❌ Erreur Login :", err);
@@ -172,7 +178,8 @@ export const logoutAdmin = async (req: Request, res: Response) => {
 
 export const createStudent = async (req: Request, res: Response) => {
   try {
-    const { name, email, password } = req.body;
+    // 👉 On ajoute la récupération de "options"
+    const { name, email, password, options } = req.body;
     
     const existing = await User.findOne({ email });
     if (existing) return res.status(400).json({ error: "Cet email existe déjà" });
@@ -183,7 +190,8 @@ export const createStudent = async (req: Request, res: Response) => {
       name, 
       email, 
       password: hashedPassword, 
-      isAdmin: false 
+      isAdmin: false,
+      options: options || ["MATH", "PC", "SVT"] // 👈 AJOUT ICI (par défaut, on donne tout accès)
     });
     await student.save();
 
