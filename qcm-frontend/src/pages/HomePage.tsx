@@ -7,7 +7,7 @@ import BackgroundWrapper from "../components/BackgroundWrapper";
 import { Link } from "react-router-dom";
 
 import heroImage from "../Image2.jfif";
-import MedecineImage from "../assets/medicine.png"; // <-- importe ton image
+import Soutien_BacImage from "../assets/SOUTIEN_BAC.png"; // <-- importe ton image
 
 export default function HomePage() {
   return (
@@ -52,7 +52,7 @@ export default function HomePage() {
 
         {/* 🌟 Image au milieu */}
       <motion.img
-        src={MedecineImage}
+        src={Soutien_BacImage}
         alt="Médecine"
         initial={{ opacity: 0, scale: 0.8 }}
         animate={{ opacity: 1, scale: 1 }}
