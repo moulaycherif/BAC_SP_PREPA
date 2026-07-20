@@ -22,7 +22,7 @@ export default function HomePage() {
           transition={{ duration: 0.7 }}
           className="text-4xl md:text-5xl font-extrabold text-blue-700 mb-6 drop-shadow-lg"
         >
-          🎓 Bienvenue sur <span className="text-blue-500">Med-Contest</span>
+          🎓 Bienvenue sur <span className="text-blue-500">Bac-SP-PREPA</span>
         </motion.h1>
 
         <motion.div
@@ -33,17 +33,17 @@ export default function HomePage() {
 >
   {/* Paragraphe 1 */}
   <p className="text-blue-700 font-medium">
-    La plateforme marocaine dédiée aux étudiants souhaitant faire une carrière en médecine 🩺 —
+    Cette plateforme est dédiée aux élèves bacheliers (Option Sciences Physiques) souhaitant bien se préparer pour l'Examen National du Baccalauréat —
   </p>
 
   {/* Paragraphe 2 — clignotement fluide + zoom */}
   <p className="text-red-600 font-semibold animate-blink-zoom">
-    Le 1er pas passe par la réussite du Concours d'accès aux Facultés de Médecine et de Pharmacie.
+    Ce site regroupe toutes les démarches favorables pour votre réussite.
   </p>
 
   {/* Paragraphe 3 */}
   <p className="text-gray-700">
-    Cette application est un moyen efficace pour vous préparer aux concours avec des QCE interactifs,
+    Un soutien en LIVE avec des vidéos enregistrées ainsi qu'un QCE interactifs,
     un suivi intelligent et un espace d’astuces pour réviser plus rapidement.
   </p>
 </motion.div>
