@@ -68,9 +68,7 @@ export default function Navbar() {
       </Link>
 
       <div className="hidden md:flex gap-6 text-gray-700 font-medium">
-        <Link to="/" className="hover:text-blue-500 transition">Accueil</Link>
-        <Link to="/demo" className="hover:text-blue-500 transition">Démo</Link>
-        <Link to="/abonnement" className="hover:text-blue-500 transition">Abonnement</Link>
+        <Link to="/" className="hover:text-blue-500 transition">Accueil</Link>      
         <Link to="/contact" className="hover:text-blue-500 transition">Contact</Link>
       </div>
 

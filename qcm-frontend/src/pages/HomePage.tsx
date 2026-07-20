@@ -63,18 +63,6 @@ export default function HomePage() {
 
         <div className="flex flex-wrap gap-6 justify-center">
           <Link
-            to="/demo"
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition"
-          >
-            🚀 Essayer la démo
-          </Link>
-          <Link
-            to="/abonnement"
-            className="px-6 py-3 bg-green-600 text-white rounded-lg shadow-md hover:bg-green-700 transition"
-          >
-            💎 Voir les abonnements
-          </Link>
-          <Link
             to="/contact"
             className="px-6 py-3 bg-purple-600 text-white rounded-lg shadow-md hover:bg-purple-700 transition"
           >

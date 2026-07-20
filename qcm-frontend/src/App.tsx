@@ -3,8 +3,6 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 // 📄 Import des pages
 import HomePage from "./pages/HomePage";
-import AbonnementPage from "./pages/AbonnementPage";
-import DemoPage from "./pages/DemoPage";
 import ContactPage from "./pages/ContactPage";
 import LoginPage from "./pages/LoginPage";
 import StudentPage from "./pages/StudentPage";
@@ -31,9 +29,7 @@ export default function App() {
       <main className="pt-16 min-h-screen">
         <Routes>
           {/* 🏠 Pages publiques */}
-          <Route path="/" element={<HomePage />} />
-          <Route path="/abonnement" element={<AbonnementPage />} />
-          <Route path="/demo" element={<DemoPage />} />
+          <Route path="/" element={<HomePage />} />          
           <Route path="/contact" element={<ContactPage />} />
           <Route path="/login" element={<LoginPage />} />
 
