@@ -482,11 +482,11 @@ const getAccessibleSubjects = () => {
 
   return (
     <div className="p-6 space-y-8 h-full overflow-y-auto">
-      {accessibleSubjects.map((matiere) => (
-        <div key={matiere} className="bg-white rounded-2xl shadow-lg p-6 border-l-8 border-blue-800">
-          <h2 className="text-3xl font-bold text-blue-900 mb-6 border-b pb-2 justify-center">
-            Matière : {matiere}
-          </h2>
+  {accessibleSubjects.map((matiere) => (
+    <div key={matiere} className="bg-white rounded-2xl shadow-lg p-6 border-l-8 border-blue-800">
+      <h2 className="text-3xl font-bold text-blue-900 mb-6 border-b pb-2 text-center">
+        Matière : {matiere}
+      </h2>
           
          {/* Boutons d'action généraux de la matière */}
 <div className="flex justify-between items-center mb-6">
