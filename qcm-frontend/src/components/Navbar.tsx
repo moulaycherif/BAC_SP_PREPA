@@ -64,7 +64,7 @@ export default function Navbar() {
         onClick={handleLogoClick}
         className="text-2xl font-bold text-blue-700 hover:text-blue-500 transition"
       >
-        🩺 Med-Contest
+        🩺 Bac-SP-PREPA
       </Link>
 
       <div className="hidden md:flex gap-6 text-gray-700 font-medium">

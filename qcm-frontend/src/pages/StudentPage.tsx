@@ -86,6 +86,9 @@ interface Question {
           "Chapitre 7 : L'immunité"
         ],
       };
+// Récupération des matières de l'étudiant depuis le localStorage
+const savedOptions = JSON.parse(localStorage.getItem("studentOptions") || "[]");
+// Exemple : savedOptions pourrait être ["Mathématiques", "Physique-Chimie"]
 
 export default function StudentPage() {
   const navigate = useNavigate();
@@ -770,9 +773,6 @@ const getAccessibleSubjects = () => {
         </motion.div>
       );
     }
-
-     const chapters = chaptersBySubject[selectedMatiere] || [];
-
       if (selectedChapter && selectedAction === "Astuces") {
         
         if (selectedMatiere === "SVT") {
@@ -1254,7 +1254,7 @@ const getAccessibleSubjects = () => {
         );
       }
 
-      if (selectedChapter) {
+     if (selectedChapter) {
         const actions = [
           { 
             label: selectedMatiere === "SVT" ? "📝 Examen blanc" : "💡 Astuces", 
@@ -1285,74 +1285,41 @@ const getAccessibleSubjects = () => {
         );
       }
 
-      return (
-        <div className="flex flex-wrap gap-6 justify-start items-start min-h-full p-4">
-          {chapters.map((chapter, index) => (
-            <motion.div
-              key={index}
-              whileHover={{ scale: 1.05 }}
-              className="w-48 cursor-pointer rounded-2xl overflow-hidden shadow-lg bg-white border border-gray-100 flex flex-col transition-all"
-              onClick={() => setSelectedChapter(chapter)}
-            >
-              <div className="w-48 h-48 bg-gray-50 shrink-0 overflow-hidden">
-                <img 
-                  src={(selectedMatiere && subjectImages[selectedMatiere]) || mathsImg} 
-                  alt={chapter} 
-                  className="w-full h-full object-cover" 
-                />
-              </div>
-              <div 
-                className="bg-yellow-300 text-black text-center p-2 font-semibold text-xs flex items-center justify-center h-16 min-w-0"
-                title={chapter}
-              >
-                <span className="line-clamp-3 break-words leading-tight">
-                  {chapter}
-                </span>
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      );
-    }
-    return <StudentDashboardStats />;
+      // 🎯 Rendu par défaut si aucune condition n'est remplie
+      return <StudentDashboardStats />;
+      
+  }; // 👈 L'ACCOLADE EST ICI : Elle ferme PROPREMENT renderCenterContent !
 
-// 1️⃣ NOUVELLE FONCTION DE NAVIGATION PAR ÉTAPES
+
+  // 1️⃣ NOUVELLE FONCTION DE NAVIGATION PAR ÉTAPES
   const handleRetourArriere = () => {
-    // Si le détail d'une astuce (Pop-up ou composant) est ouvert
     if (selectedTipId) {
       setSelectedTipId(null);
       return;
     }
-
-    // Si on est dans une sous-action de chapitre (Astuces, Résumé, Exercices)
     if (selectedAction) {
       setSelectedAction(null);
       return;
     }
-
-    // Si on est sur l'affichage des actions d'un chapitre
     if (selectedChapter) {
       setSelectedChapter(null);
+      setSelectedMatiere(null); // Retourne à l'accueil global
+      setSection("home");
       return;
     }
-
-    // Si on est EN TRAIN DE FAIRE un QCM / Concours
     if (section === "qcm") {
       resetQcm();
-      // CORRECTION ICI : On retourne à l'arborescence correcte (Matière ou Concours)
-      setSection(selectedMatiere ? "matiere" : "concours");
+      setSection("home");
       return;
     }
-
-    // Si on est sur la liste des chapitres ou des examens d'une matière
-    if (section === "soutien" || section === "matiere" || section === "concours" || section === "blancs") {
+    if (section !== "home") {
       setSelectedMatiere(null);
       setSection("home");
       return;
     }
   };
 
-  // 2️⃣ LE RENDU PRINCIPAL DU COMPOSANT
+  // 2️⃣ LE RENDU PRINCIPAL DU COMPOSANT (Celui qui englobe toute la page)
   return (
     <div
       className="h-screen w-screen flex text-black overflow-hidden"
@@ -1362,9 +1329,6 @@ const getAccessibleSubjects = () => {
         backgroundPosition: "center",
       }}
     >
-      {/* Barre latérale SUPPRIMÉE */}
-
-      {/* Contenu Central (on enlève rounded-l-3xl pour que ça remplisse bien l'écran) */}
       <motion.div
         className="flex-1 h-full bg-white/80 backdrop-blur-md shadow-lg p-4 overflow-y-auto relative"
         initial={{ opacity: 0 }}
@@ -1383,4 +1347,4 @@ const getAccessibleSubjects = () => {
       </motion.div>
     </div>
   );
-}
+} // 👈 ET CELLE-CI FERME LE COMPOSANT STUDENTPAGE
