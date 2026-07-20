@@ -488,16 +488,23 @@ const getAccessibleSubjects = () => {
             Matière : {matiere}
           </h2>
           
-          {/* Boutons d'action généraux de la matière */}
-          <div className="flex gap-4 mb-6">
-            <button className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl shadow hover:bg-red-700 transition">
-              🎥 Vidéos enregistrées
-            </button>
-            <button className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl shadow hover:bg-green-700 transition flex items-center gap-2">
-              <span className="animate-pulse h-3 w-3 bg-white rounded-full"></span>
-              LIVE
-            </button>
-          </div>
+         {/* Boutons d'action généraux de la matière */}
+<div className="flex justify-between items-center mb-6">
+  
+  {/* 1️⃣ LIVE (Tout à gauche) */}
+  <button className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl shadow hover:bg-green-700 transition flex items-center gap-2">
+    <span className="text-lg">📡</span> {/* 👈 Icône ajoutée ici (tu peux aussi utiliser 🔴 ou 🎙️) */}
+    <span className="animate-pulse h-3 w-3 bg-white rounded-full"></span>
+    LIVE
+  </button>
+
+  {/* 2️⃣ Vidéos enregistrées (Tout à droite) */}
+  <button className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl shadow hover:bg-red-700 transition flex items-center gap-2">
+    <span>🎥</span>
+    Vidéos enregistrées
+  </button>
+
+</div>
 
           {/* Boutons des chapitres */}
           <h3 className="text-xl font-semibold text-gray-700 mb-4">Chapitres :</h3>
