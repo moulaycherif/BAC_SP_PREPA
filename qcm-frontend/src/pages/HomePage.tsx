@@ -73,15 +73,15 @@ export default function HomePage() {
 
       {/* 🧠 Section de présentation rapide */}
       <section className="px-6 py-12 bg-white text-center">
-        <h2 className="text-3xl font-bold text-blue-700 mb-4">Pourquoi choisir Med-Contest ?</h2>
+        <h2 className="text-3xl font-bold text-blue-700 mb-4">Pourquoi choisir bac-SP-PREPA ?</h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
           <motion.div
             whileHover={{ scale: 1.05 }}
             className="p-6 bg-blue-50 rounded-2xl shadow"
           >
-            <h3 className="text-xl font-semibold text-blue-600 mb-3">📚 QCE par Conours / Matière</h3>
+            <h3 className="text-xl font-semibold text-blue-600 mb-3">📚 Des Lives tout au long de l'année</h3>
             <p className="text-gray-600">
-              Tous les concours traités globalement ou par matière.
+              Une stratégie de soutien ciblée pour une progression continue.
             </p>
           </motion.div>
           <motion.div
@@ -90,7 +90,7 @@ export default function HomePage() {
           >
             <h3 className="text-xl font-semibold text-green-600 mb-3">📈 Suivi intelligent</h3>
             <p className="text-gray-600">
-              Suivez votre progression, vos points forts et vos lacunes.
+              Suivez votre progression, vos points forts et vos lacunes à travers des contrôles continus.
             </p>
           </motion.div>
           <motion.div
@@ -99,7 +99,7 @@ export default function HomePage() {
           >
             <h3 className="text-xl font-semibold text-purple-600 mb-3">👨‍🏫 Espace SOUTIEN</h3>
             <p className="text-gray-600">
-              Sous forme d'astuces, de complément de cours et des exercices.
+              Sous forme d'astuces, de complément de cours et des exercices approfondies.
             </p>
           </motion.div>
         </div>
