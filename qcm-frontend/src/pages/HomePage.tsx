@@ -43,8 +43,8 @@ export default function HomePage() {
 
   {/* Paragraphe 3 */}
   <p className="text-gray-700">
-    Un soutien en LIVE avec des vidéos enregistrées ainsi qu'un QCE interactifs,
-    un suivi intelligent et un espace d’astuces pour réviser plus rapidement.
+    Un soutien en LIVE avec des vidéos enregistrées ainsi que des QCM interactifs,
+    un suivi intelligent et un espace de méthodes rapides pour une maîtrise plus efficace.
   </p>
 </motion.div>
 
