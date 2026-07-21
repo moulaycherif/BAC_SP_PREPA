@@ -67,4 +67,33 @@ router.delete("/students/:id", authenticateAdmin, async (req, res) => {
   }
 });
 
+// 🔹 Mettre à jour un étudiant existant (ADMIN)
+router.put("/students/:id", authenticateAdmin, async (req, res) => {
+  try {
+    const { name, email, options } = req.body;
+
+    // On cherche l'étudiant et on met à jour ses informations
+    const updatedStudent = await Student.findByIdAndUpdate(
+      req.params.id,
+      { 
+        $set: { 
+          name, 
+          email, 
+          options: options || [] 
+        } 
+      },
+      { new: true } // Retourne le document mis à jour
+    );
+
+    if (!updatedStudent) {
+      return res.status(404).json({ message: "Étudiant introuvable" });
+    }
+
+    res.json({ message: "✅ Options mises à jour avec succès !" });
+  } catch (err) {
+    console.error("Erreur mise à jour :", err);
+    res.status(500).json({ message: "Erreur serveur lors de la mise à jour" });
+  }
+});
+
 export default router;

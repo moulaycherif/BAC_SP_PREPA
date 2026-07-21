@@ -56,6 +56,8 @@ const AdminDashboard: React.FC = () => {
   // 👈 NOUVEAU : State pour les options
   const [options, setOptions] = useState<string[]>([]); 
   const [message, setMessage] = useState("");
+  // 👈 NOUVEAU : Mémorise l'ID de l'étudiant qu'on est en train de modifier
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // ===============================================
   // STATE : IMPORT DES QUESTIONS
@@ -148,6 +150,42 @@ const AdminDashboard: React.FC = () => {
       } else {
         setMessage(err.response?.data?.message || "Erreur création étudiant");
       }
+    }
+  };
+
+  // 👈 NOUVEAU : Pré-remplit le formulaire quand on clique sur "Modifier"
+  const handleEditClick = (student: Student) => {
+    setEditingId(student._id);
+    setName(student.name);
+    setEmail(student.email);
+    setOptions(student.options || []);
+    setPassword(""); // On vide le mot de passe, on ne le change pas ici
+    setMessage("✏️ Mode modification activé");
+    window.scrollTo({ top: 0, behavior: "smooth" }); // Remonte en haut de page
+  };
+
+  // 👈 NOUVEAU : Envoie la mise à jour au backend
+  const handleUpdateStudent = async () => {
+    if (!editingId) return;
+    
+    try {
+      await axios.put(
+        `${API_BASE_URL}/api/admin/students/${editingId}`,
+        { name, email, options },
+        { headers: { Authorization: `Bearer ${adminToken}` } }
+      );
+
+      setMessage("✅ Étudiant mis à jour avec succès");
+      // Réinitialisation du formulaire
+      setEditingId(null);
+      setName("");
+      setEmail("");
+      setPassword("");
+      setOptions([]);
+      fetchStudents();
+    } catch (err: any) {
+      console.error("❌ Erreur mise à jour :", err);
+      setMessage(err.response?.data?.message || "Erreur mise à jour");
     }
   };
 
@@ -335,13 +373,16 @@ const AdminDashboard: React.FC = () => {
                 onChange={e => setEmail(e.target.value)}
                 className="border px-3 py-2 rounded text-black flex-1 focus:ring-2 focus:ring-blue-400 outline-none"
               />
-              <input
-                type="password"
-                placeholder="Mot de passe temporaire"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                className="border px-3 py-2 rounded text-black flex-1 focus:ring-2 focus:ring-blue-400 outline-none"
-              />
+              {/* Le mot de passe disparaît si on est en train de modifier */}
+              {!editingId && (
+                <input
+                  type="password"
+                  placeholder="Mot de passe temporaire"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="border px-3 py-2 rounded text-black flex-1 focus:ring-2 focus:ring-blue-400 outline-none"
+                />
+              )}
             </div>
             
             {/* 👈 NOUVEAU : Bloc des options + Bouton Ajouter */}
@@ -361,12 +402,37 @@ const AdminDashboard: React.FC = () => {
                 ))}
               </div>
               
-              <button
-                onClick={handleCreateStudent}
-                className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors font-semibold mt-3 md:mt-0"
-              >
-                + Ajouter
-              </button>
+              <div className="flex gap-2 mt-3 md:mt-0">
+                {editingId ? (
+                  <>
+                    <button
+                      onClick={handleUpdateStudent}
+                      className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 transition-colors font-semibold shadow-sm"
+                    >
+                      💾 Mettre à jour
+                    </button>
+                    <button
+                      onClick={() => {
+                        setEditingId(null);
+                        setName("");
+                        setEmail("");
+                        setOptions([]);
+                        setMessage("");
+                      }}
+                      className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500 transition-colors font-semibold shadow-sm"
+                    >
+                      Annuler
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    onClick={handleCreateStudent}
+                    className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors font-semibold shadow-sm"
+                  >
+                    + Ajouter
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
@@ -395,7 +461,13 @@ const AdminDashboard: React.FC = () => {
                       {/* 👈 CORRECTION : Afficher "Aucune option" si le backend renvoie undefined ou un tableau vide */}
                       {s.options && s.options.length > 0 ? s.options.join(", ") : "Aucune option"}
                     </td>
-                    <td className="border border-gray-300 px-4 py-3 text-center">
+                    <td className="border border-gray-300 px-4 py-3 text-center space-x-2">
+                      <button
+                        onClick={() => handleEditClick(s)}
+                        className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600 transition-colors shadow-sm"
+                      >
+                        Modifier
+                      </button>
                       <button
                         onClick={() => handleDeleteStudent(s._id)}
                         className="bg-red-500 text-white px-3 py-1 rounded hover:bg-red-600 transition-colors shadow-sm"
