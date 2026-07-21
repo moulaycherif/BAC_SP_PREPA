@@ -140,28 +140,45 @@ export default function StudentPage() {
   ];
 
   const [studentOptions, setStudentOptions] = useState<string[]>([]);
-useEffect(() => {
-  // Exemple de récupération depuis le localStorage
-  const options = JSON.parse(localStorage.getItem("studentOptions") || "[]"); 
-  setStudentOptions(options);
-}, []);
 
+// ✅ Un seul useEffect, totalement sécurisé contre les erreurs (Crash-proof)
 useEffect(() => {
-  // On lit le localStorage. S'il est vide, on met un tableau vide par sécurité.
-  const storedOptions = localStorage.getItem("studentOptions");
-  if (storedOptions) {
-    setStudentOptions(JSON.parse(storedOptions));
+  try {
+    const storedOptions = localStorage.getItem("studentOptions");
+    
+    // On vérifie que la valeur existe ET qu'elle n'est pas le texte "undefined"
+    if (storedOptions && storedOptions !== "undefined") {
+      const parsed = JSON.parse(storedOptions);
+      
+      // On s'assure que c'est bien un tableau pour éviter le crash de ".includes()"
+      if (Array.isArray(parsed)) {
+        setStudentOptions(parsed);
+      } else {
+        // Si c'est juste un string (ex: "PC"), on le transforme en tableau
+        setStudentOptions([parsed]); 
+      }
+    } else {
+      setStudentOptions([]); // Rien n'est coché par défaut
+    }
+  } catch (error) {
+    console.error("❌ Erreur lors de la lecture des options :", error);
+    setStudentOptions([]); // Fallback sécurisé en cas de problème de JSON
   }
 }, []);
 
 const getAccessibleSubjects = () => {
   let subjects: string[] = [];
-  if (studentOptions.includes("MATH")) subjects.push("Mathématique");
-  if (studentOptions.includes("PC")) {
+  
+  // Par sécurité supplémentaire
+  const safeOptions = Array.isArray(studentOptions) ? studentOptions : [];
+
+  if (safeOptions.includes("MATH")) subjects.push("Mathématique");
+  if (safeOptions.includes("PC")) {
     subjects.push("Physique");
     subjects.push("Chimie");
   }
-  if (studentOptions.includes("SVT")) subjects.push("SVT");
+  if (safeOptions.includes("SVT")) subjects.push("SVT");
+  
   return subjects;
 };
 

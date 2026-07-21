@@ -86,10 +86,9 @@ export default function LoginPage() {
 
       localStorage.setItem("token", studentRes.data.token);
       
-      // 👇 NOUVEAUTÉ : Sauvegarde des options renvoyées par le backend
-      if (studentRes.data.student && studentRes.data.student.options) {
-        localStorage.setItem("studentOptions", JSON.stringify(studentRes.data.student.options));
-      }
+     // 👇 NOUVEAUTÉ : Sauvegarde des options avec une sécurité "tableau vide"
+const studentOptions = studentRes.data.student?.options || [];
+localStorage.setItem("studentOptions", JSON.stringify(studentOptions));
 
       setToken(studentRes.data.token);
       setRole("student");
