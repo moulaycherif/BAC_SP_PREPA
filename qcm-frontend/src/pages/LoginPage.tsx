@@ -86,11 +86,11 @@ export default function LoginPage() {
 
       localStorage.setItem("token", studentRes.data.token);
       
-    // 👇 CORRECTION : On vérifie "student" ET "user" selon la façon dont le backend répond
-const userData = studentRes.data.student || studentRes.data.user;
-const studentOptions = userData?.options || [];
+      // 👇 CORRECTION : On vérifie "student" ET "user" selon la façon dont le backend répond
+      const userData = studentRes.data.student || studentRes.data.user;
+      const studentOptions = userData?.options || [];
 
-localStorage.setItem("studentOptions", JSON.stringify(studentOptions));
+      localStorage.setItem("studentOptions", JSON.stringify(studentOptions));
 
       setToken(studentRes.data.token);
       setRole("student");
@@ -112,12 +112,15 @@ localStorage.setItem("studentOptions", JSON.stringify(studentOptions));
   if (token && role === "student") return <StudentPage />;
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-50 to-blue-100 p-4">
+    /* 🌌 L'arrière-plan global Bleu Nuit est visible grâce à "bg-transparent" */
+    <div className="min-h-screen w-full flex flex-col items-center justify-center bg-transparent px-4">
+      
+      {/* ⬜ Le cadre blanc de connexion */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        className="bg-white shadow-xl rounded-2xl p-8 w-[90%] max-w-md"
+        className="bg-white shadow-2xl rounded-2xl p-8 w-full max-w-md"
       >
         <h1 className="text-3xl font-bold text-center text-blue-700 mb-6">
           🔐 Connexion
@@ -132,7 +135,7 @@ localStorage.setItem("studentOptions", JSON.stringify(studentOptions));
               setEmail(e.target.value);
               setShowForceButton(false);
             }}
-            className="border border-gray-300 text-gray-900 bg-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+            className="border border-gray-300 text-gray-900 bg-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-gray-400 transition-shadow"
             required
           />
           <input
@@ -143,7 +146,7 @@ localStorage.setItem("studentOptions", JSON.stringify(studentOptions));
               setPassword(e.target.value);
               setShowForceButton(false);
             }}
-            className="border border-gray-300 text-gray-900 bg-white rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 placeholder-gray-400"
+            className="border border-gray-300 text-gray-900 bg-white rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder-gray-400 transition-shadow"
             required
           />
 
@@ -151,7 +154,7 @@ localStorage.setItem("studentOptions", JSON.stringify(studentOptions));
             <button
               type="submit"
               disabled={loading}
-              className={`bg-blue-600 text-white font-semibold py-2 rounded-lg hover:bg-blue-700 transition ${
+              className={`mt-2 bg-blue-600 text-white font-semibold py-3 rounded-lg hover:bg-blue-700 transition-colors shadow-md ${
                 loading ? "opacity-70 cursor-not-allowed" : ""
               }`}
             >
@@ -161,14 +164,14 @@ localStorage.setItem("studentOptions", JSON.stringify(studentOptions));
         </form>
 
         {error && !showForceButton && (
-          <p className="text-red-600 text-center mt-3 font-medium">{error}</p>
+          <p className="text-red-600 text-center mt-4 font-medium">{error}</p>
         )}
 
         {showForceButton && (
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="mt-4 p-4 bg-amber-50 border border-amber-300 rounded-xl text-center flex flex-col gap-3"
+            className="mt-5 p-4 bg-amber-50 border border-amber-300 rounded-xl text-center flex flex-col gap-3 shadow-sm"
           >
             <p className="text-amber-800 text-sm font-medium">
               ⚠️ {error}
@@ -177,14 +180,14 @@ localStorage.setItem("studentOptions", JSON.stringify(studentOptions));
               type="button"
               disabled={loading}
               onClick={(e) => handleLogin(e, true)}
-              className="bg-amber-600 text-white text-sm font-bold py-2.5 px-4 rounded-lg hover:bg-amber-700 transition shadow-sm"
+              className="bg-amber-600 text-white text-sm font-bold py-2.5 px-4 rounded-lg hover:bg-amber-700 transition-colors shadow-sm"
             >
               {loading ? "Déconnexion forcée..." : "Forcer la déconnexion de l'autre appareil"}
             </button>
           </motion.div>
         )}
 
-        <p className="text-gray-500 text-center text-sm mt-6">
+        <p className="text-gray-500 text-center text-xs mt-8">
           © 2026 BAC-SP-PREPA — Tous droits réservés
         </p>
       </motion.div>
