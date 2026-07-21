@@ -86,9 +86,6 @@ interface Question {
           "Chapitre 7 : L'immunité"
         ],
       };
-// Récupération des matières de l'étudiant depuis le localStorage
-const savedOptions = JSON.parse(localStorage.getItem("studentOptions") || "[]");
-// Exemple : savedOptions pourrait être ["Mathématiques", "Physique-Chimie"]
 
 export default function StudentPage() {
   const navigate = useNavigate();
