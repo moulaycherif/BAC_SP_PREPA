@@ -107,7 +107,8 @@ router.get("/me", async (req, res) => {
         name: student.name, 
         email: student.email, 
         isAdmin: false,
-        isGuest: false
+        isGuest: false,
+        options: (student as any).options || [] // 👈 AJOUT ICI
       });
     }
   } catch (err) {
