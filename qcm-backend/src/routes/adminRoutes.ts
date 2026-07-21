@@ -14,7 +14,8 @@ router.get("/ping", (req, res) => {
 // 🔹 Créer un étudiant (ADMIN)
 router.post("/create-student", authenticateAdmin, async (req, res) => {
   try {
-    const { name, email, password } = req.body;
+    // 1️⃣ On récupère 'options' depuis req.body
+    const { name, email, password, options } = req.body;
 
     if (!name || !email || !password) {
       return res.status(400).json({ message: "Champs manquants" });
@@ -27,10 +28,12 @@ router.post("/create-student", authenticateAdmin, async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    // 2️⃣ On ajoute 'options' lors de la création de l'étudiant
     const student = new Student({
       name,
       email,
       password: hashedPassword,
+      options: options || [], // 👈 AJOUT ICI (avec un tableau vide par défaut au cas où)
     });
 
     await student.save();
