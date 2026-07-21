@@ -86,8 +86,14 @@ export default function LoginPage() {
 
       localStorage.setItem("token", studentRes.data.token);
       
-     // 👇 NOUVEAUTÉ : Sauvegarde des options avec une sécurité "tableau vide"
-const studentOptions = studentRes.data.student?.options || [];
+    // 👇 CORRECTION : On vérifie "student" ET "user" selon la façon dont le backend répond
+const userData = studentRes.data.student || studentRes.data.user;
+const studentOptions = userData?.options || [];
+
+// Affichage dans la console (F12) pour s'assurer que les options arrivent bien
+console.log("✅ Données utilisateur reçues à la connexion :", userData);
+console.log("✅ Options sauvegardées :", studentOptions);
+
 localStorage.setItem("studentOptions", JSON.stringify(studentOptions));
 
       setToken(studentRes.data.token);

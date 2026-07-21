@@ -491,59 +491,73 @@ const getAccessibleSubjects = () => {
       return <StudentAstuceDetail id={selectedTipId} onBack={() => setSelectedTipId(null)} />;
     }
     
-    if (section === "home") {
-  const accessibleSubjects = getAccessibleSubjects();
+if (section === "home") {
+      const accessibleSubjects = getAccessibleSubjects();
 
-  return (
-    <div className="p-6 space-y-8 h-full overflow-y-auto">
-  {accessibleSubjects.map((matiere) => (
-    <div key={matiere} className="bg-white rounded-2xl shadow-lg p-6 border-l-8 border-blue-800">
-      <h2 className="text-3xl font-bold text-blue-900 mb-6 border-b pb-2 text-center">
-        Matière : {matiere}
-      </h2>
-          
-         {/* Boutons d'action généraux de la matière */}
-<div className="flex justify-between items-center mb-6">
-  
-  {/* 1️⃣ LIVE (Tout à gauche) */}
-  <button className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl shadow hover:bg-green-700 transition flex items-center gap-2">
-    <span className="text-lg">📡</span> {/* 👈 Icône ajoutée ici (tu peux aussi utiliser 🔴 ou 🎙️) */}
-    <span className="animate-pulse h-3 w-3 bg-white rounded-full"></span>
-    LIVE
-  </button>
-
-  {/* 2️⃣ Vidéos enregistrées (Tout à droite) */}
-  <button className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl shadow hover:bg-red-700 transition flex items-center gap-2">
-    <span>🎥</span>
-    Vidéos enregistrées
-  </button>
-
-</div>
-
-          {/* Boutons des chapitres */}
-          <h3 className="text-xl font-semibold text-gray-700 mb-4">Chapitres :</h3>
-          <div className="flex flex-wrap gap-3">
-            {chaptersBySubject[matiere]?.map((chapter, index) => (
-              <motion.button
-                key={index}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => {
-                  setSelectedMatiere(matiere);
-                  setSelectedChapter(chapter);
-                  setSection("soutien"); // Cela redirigera vers l'interface existante des astuces/résumés/exos
-                }}
-                className="px-4 py-2 bg-blue-100 text-blue-800 font-medium rounded-lg shadow-sm hover:bg-blue-200 transition border border-blue-200"
-              >
-                {chapter}
-              </motion.button>
-            ))}
+      // 🛡️ NOUVELLE SÉCURITÉ : Si aucune matière n'est trouvée
+      if (accessibleSubjects.length === 0) {
+        return (
+          <div className="flex flex-col items-center justify-center h-full p-6 text-center">
+            <div className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-red-500 max-w-lg">
+              <span className="text-5xl block mb-4">⚠️</span>
+              <h2 className="text-2xl font-bold text-gray-800 mb-2">Aucune option configurée</h2>
+              <p className="text-gray-600 mb-6">
+                Votre compte n'a actuellement accès à aucune matière (MATH, PC ou SVT). 
+                Veuillez demander à un administrateur de configurer vos options d'études.
+              </p>
+            </div>
           </div>
+        );
+      }
+
+      return (
+        <div className="p-6 space-y-8 h-full overflow-y-auto">
+          {accessibleSubjects.map((matiere) => (
+            <div key={matiere} className="bg-white rounded-2xl shadow-lg p-6 border-l-8 border-blue-800">
+              <h2 className="text-3xl font-bold text-blue-900 mb-6 border-b pb-2 text-center">
+                Matière : {matiere}
+              </h2>
+                  
+              {/* Boutons d'action généraux de la matière */}
+              <div className="flex justify-between items-center mb-6">
+                {/* 1️⃣ LIVE (Tout à gauche) */}
+                <button className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl shadow hover:bg-green-700 transition flex items-center gap-2">
+                  <span className="text-lg">📡</span>
+                  <span className="animate-pulse h-3 w-3 bg-white rounded-full"></span>
+                  LIVE
+                </button>
+
+                {/* 2️⃣ Vidéos enregistrées (Tout à droite) */}
+                <button className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl shadow hover:bg-red-700 transition flex items-center gap-2">
+                  <span>🎥</span>
+                  Vidéos enregistrées
+                </button>
+              </div>
+
+              {/* Boutons des chapitres */}
+              <h3 className="text-xl font-semibold text-gray-700 mb-4">Chapitres :</h3>
+              <div className="flex flex-wrap gap-3">
+                {chaptersBySubject[matiere]?.map((chapter, index) => (
+                  <motion.button
+                    key={index}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => {
+                      setSelectedMatiere(matiere);
+                      setSelectedChapter(chapter);
+                      setSection("soutien");
+                    }}
+                    className="px-4 py-2 bg-blue-100 text-blue-800 font-medium rounded-lg shadow-sm hover:bg-blue-200 transition border border-blue-200"
+                  >
+                    {chapter}
+                  </motion.button>
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
-  );
-}
+      );
+    }
     
     if (section === "qcm" && currentExam) {
       if (questions.length === 0) {
