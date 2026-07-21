@@ -6,16 +6,12 @@ import Footer from "../components/Footer";
 import BackgroundWrapper from "../components/BackgroundWrapper";
 import { Link } from "react-router-dom";
 
-import heroImage from "../Image2.jfif";
-import Soutien_BacImage from "../assets/SOUTIEN_BAC.png"; // <-- importe ton image
-
 export default function HomePage() {
   return (
     <BackgroundWrapper>
       <Navbar />
 
       {/* 🏠 Section d'accueil principale */}
-      {/* 🗑️ Retrait du fond blanc/bleu opaque, on laisse le body s'afficher */}
       <main className="flex flex-col min-h-screen items-center justify-center text-center px-6 pt-24 pb-12 bg-transparent">
         <motion.h1
           initial={{ opacity: 0, y: -40 }}
@@ -49,15 +45,39 @@ export default function HomePage() {
           </p>
         </motion.div>
 
-        {/* 🌟 Image au milieu avec un léger effet de lueur (glow) */}
-        <motion.img
-          src={Soutien_BacImage}
-          alt="Soutien Bac"
+        {/* 🌟 Illustration Vectorielle 3D "Atome Lumineux" */}
+        <motion.div
           initial={{ opacity: 0, scale: 0.8 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ duration: 0.8, delay: 0.5 }}
-          className="w-64 md:w-80 lg:w-96 rounded-2xl shadow-[0_0_40px_rgba(59,130,246,0.3)] border border-white/10 mb-10"
-        />
+          className="w-64 md:w-80 lg:w-96 mb-10 drop-shadow-[0_0_30px_rgba(59,130,246,0.6)]"
+        >
+          <svg viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-full">
+            <defs>
+              <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.3" />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0" />
+              </radialGradient>
+            </defs>
+            {/* Lueur de fond */}
+            <circle cx="200" cy="200" r="160" fill="url(#glow)" />
+            
+            {/* Orbites de l'atome */}
+            <ellipse cx="200" cy="200" rx="140" ry="45" stroke="#60a5fa" strokeWidth="3" transform="rotate(30 200 200)" opacity="0.8" />
+            <ellipse cx="200" cy="200" rx="140" ry="45" stroke="#93c5fd" strokeWidth="3" transform="rotate(90 200 200)" opacity="0.8" />
+            <ellipse cx="200" cy="200" rx="140" ry="45" stroke="#3b82f6" strokeWidth="3" transform="rotate(150 200 200)" opacity="0.8" />
+            
+            {/* Noyau lumineux au centre avec animation de pulsation */}
+            <circle cx="200" cy="200" r="18" fill="#ffffff" className="animate-pulse" />
+            <circle cx="200" cy="200" r="25" fill="#bfdbfe" opacity="0.5" className="animate-ping" />
+            
+            {/* Particules flottantes */}
+            <circle cx="100" cy="90" r="4" fill="#60a5fa" />
+            <circle cx="310" cy="120" r="6" fill="#93c5fd" />
+            <circle cx="130" cy="320" r="5" fill="#3b82f6" />
+            <circle cx="280" cy="300" r="3" fill="#ffffff" />
+          </svg>
+        </motion.div>
 
         <div className="flex flex-wrap gap-6 justify-center">
           <Link
