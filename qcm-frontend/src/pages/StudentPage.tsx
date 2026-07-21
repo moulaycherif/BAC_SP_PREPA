@@ -142,7 +142,7 @@ export default function StudentPage() {
   const [studentOptions, setStudentOptions] = useState<string[]>([]);
 useEffect(() => {
   // Exemple de récupération depuis le localStorage
-  const options = JSON.parse(localStorage.getItem("studentOptions") || '["MATH", "PC", "SVT"]'); 
+  const options = JSON.parse(localStorage.getItem("studentOptions") || "[]"); 
   setStudentOptions(options);
 }, []);
 

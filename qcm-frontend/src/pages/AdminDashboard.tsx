@@ -54,7 +54,7 @@ const AdminDashboard: React.FC = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   // 👈 NOUVEAU : State pour les options
-  const [options, setOptions] = useState<string[]>(["MATH", "PC", "SVT"]); 
+  const [options, setOptions] = useState<string[]>([]); 
   const [message, setMessage] = useState("");
 
   // ===============================================

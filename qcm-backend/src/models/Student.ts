@@ -24,7 +24,7 @@ const StudentSchema = new Schema<IStudent>(
     // 📚 NOUVEAU : Champ pour stocker les options
     options: { 
       type: [String], 
-      default: ["MATH", "PC", "SVT"] // Par défaut, on donne accès à tout
+      default: [] // Par défaut, un tableau vide
     },
   },
   { timestamps: true }
