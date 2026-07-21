@@ -139,7 +139,7 @@ const AdminDashboard: React.FC = () => {
       setName("");
       setEmail("");
       setPassword("");
-      setOptions(["MATH", "PC", "SVT"]); // Réinitialisation
+      setOptions([]); // Réinitialisation
       fetchStudents();
     } catch (err: any) {
       console.error("❌ Création étudiant :", err);
@@ -392,8 +392,8 @@ const AdminDashboard: React.FC = () => {
                     <td className="border border-gray-300 px-4 py-3 font-medium">{s.name}</td>
                     <td className="border border-gray-300 px-4 py-3 text-gray-600">{s.email}</td>
                     <td className="border border-gray-300 px-4 py-3 text-blue-700 font-semibold">
-                      {/* 👈 AFFICHAGE DES OPTIONS */}
-                      {s.options && s.options.length > 0 ? s.options.join(", ") : "MATH, PC, SVT"}
+                      {/* 👈 CORRECTION : Afficher "Aucune option" si le backend renvoie undefined ou un tableau vide */}
+                      {s.options && s.options.length > 0 ? s.options.join(", ") : "Aucune option"}
                     </td>
                     <td className="border border-gray-300 px-4 py-3 text-center">
                       <button

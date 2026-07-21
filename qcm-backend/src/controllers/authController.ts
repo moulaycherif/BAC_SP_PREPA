@@ -65,7 +65,7 @@ export const loginStudent = async (req: Request, res: Response) => {
         name: student.name, 
         email: student.email, 
         isAdmin: student.isAdmin,
-        options: (student as any).options || ["MATH", "PC", "SVT"] // 👈 AJOUT ICI (avec une sécurité par défaut)
+        options: (student as any).options || [] // 👈 AJOUT ICI (avec une sécurité par défaut)
       }
     });
   } catch (err) {
@@ -191,7 +191,7 @@ export const createStudent = async (req: Request, res: Response) => {
       email, 
       password: hashedPassword, 
       isAdmin: false,
-      options: options || ["MATH", "PC", "SVT"] // 👈 AJOUT ICI (par défaut, on donne tout accès)
+      options: options || [] // 👈 AJOUT ICI (par défaut, tableau vide)
     });
     await student.save();
 
