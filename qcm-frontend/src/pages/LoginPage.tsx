@@ -90,10 +90,6 @@ export default function LoginPage() {
 const userData = studentRes.data.student || studentRes.data.user;
 const studentOptions = userData?.options || [];
 
-// Affichage dans la console (F12) pour s'assurer que les options arrivent bien
-console.log("✅ Données utilisateur reçues à la connexion :", userData);
-console.log("✅ Options sauvegardées :", studentOptions);
-
 localStorage.setItem("studentOptions", JSON.stringify(studentOptions));
 
       setToken(studentRes.data.token);
