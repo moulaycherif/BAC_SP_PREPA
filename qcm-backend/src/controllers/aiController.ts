@@ -3,7 +3,7 @@ import { GoogleAIFileManager } from "@google/generative-ai/server";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import Question from "../models/Question"; // Assurez-vous que le chemin correspond à votre structure
+import Question from "../models/Question";
 import { GoogleGenerativeAI, SchemaType, Schema } from "@google/generative-ai";
 
 // Vérification de la clé API
@@ -16,7 +16,7 @@ if (!apiKey) {
 const genAI = new GoogleGenerativeAI(apiKey);
 const fileManager = new GoogleAIFileManager(apiKey);
 
-// Définition stricte du schéma JSON attendu de la part de l'IA
+// Définition stricte du schéma JSON attendu
 const qcmSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
@@ -52,11 +52,10 @@ export const generateQcmFromPdf = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    // 🛠️ FIX : Gestion du stockage en mémoire vs stockage disque
+    // Gestion du stockage en mémoire vs stockage disque
     if (file.path) {
-      tempFilePath = file.path; // Multer a enregistré le fichier sur le disque
+      tempFilePath = file.path;
     } else if (file.buffer) {
-      // Multer a gardé le fichier en mémoire, on crée un fichier temporaire
       tempFilePath = path.join(os.tmpdir(), `upload_${Date.now()}.pdf`);
       fs.writeFileSync(tempFilePath, file.buffer);
     } else {
@@ -64,22 +63,22 @@ export const generateQcmFromPdf = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    // 1. Upload du fichier vers l'infrastructure sécurisée de Gemini
+    // 1. Upload du fichier vers Gemini
     const uploadResult = await fileManager.uploadFile(tempFilePath, {
       mimeType: file.mimetype || "application/pdf",
       displayName: file.originalname || "document.pdf",
     });
 
-    // 2. Configuration du modèle avec le schéma JSON forcé
+    // 2. Configuration du modèle avec le modèle Gemini 2.5 Flash mis à jour
     const model = genAI.getGenerativeModel({
-      model: "gemini-1.5-flash",
+      model: "gemini-2.5-flash", // 👈 UTILISATION DU MODÈLE À JOUR
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: qcmSchema,
       },
     });
 
-    const prompt = "Génère 10 questions à choix multiples (QCM) basées strictement sur le contenu de ce document. Assure-toi que les questions sont pertinentes pour un niveau académique/concours. Chaque QCM doit avoir 4 options avec une seule bonne réponse.";
+    const prompt = "Génère 10 questions à choix multiples (QCM) basées strictly sur le contenu de ce document. Assure-toi que les questions sont pertinentes pour un niveau académique/concours. Chaque QCM doit avoir 4 options avec une seule bonne réponse.";
 
     // 3. Appel à l'IA
     const result = await model.generateContent([
