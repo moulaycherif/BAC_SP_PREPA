@@ -10,16 +10,20 @@ import {
 } from "../controllers/questionController";
 import { authenticateStudent } from "../middleware/authMiddleware";
 
+// 👇 AJOUT : On importe le middleware qui décode le jeton Admin
+import { authenticateAdmin } from "../middleware/authAdmin"; 
+
 const router = express.Router();
 
 const aiController = require('../controllers/aiController');
-const { upload } = require('../utils/multerConfig'); // Assurez-vous d'avoir une config multer pour les PDF
+const { upload } = require('../utils/multerConfig');
 const { verifyAdmin } = require('../middleware/verifyAdmin');
 
-router.post('/generate-from-pdf', verifyAdmin, upload.single('file'), aiController.generateQcmFromPdf);
+// 👇 CORRECTION : Ajout de authenticateAdmin avant verifyAdmin
+router.post('/generate-from-pdf', authenticateAdmin, verifyAdmin, upload.single('file'), aiController.generateQcmFromPdf);
 
-// 📥 Import Excel
-router.post("/import", upload.single("file"), importExcel);
+// 👇 CORRECTION : Ajout des protections Admin sur l'import Excel
+router.post("/import", authenticateAdmin, verifyAdmin, upload.single("file"), importExcel);
 
 // 📄 Questions (filtrables) 
 // 🔒 ON GARDE LA PROTECTION ICI : Seuls les étudiants connectés/invités voient les questions
@@ -30,7 +34,7 @@ router.get("/exams", getExams);
 router.get("/exams/blancs", getConcoursBlancs);
 router.get("/subjects/:exam", getSubjectsByExam);
 
-// 🧹 Suppression globale
-router.delete("/all", deleteAllQuestions);
+// 👇 CORRECTION : Ajout des protections Admin sur la suppression
+router.delete("/all", authenticateAdmin, verifyAdmin, deleteAllQuestions);
 
 export default router;
