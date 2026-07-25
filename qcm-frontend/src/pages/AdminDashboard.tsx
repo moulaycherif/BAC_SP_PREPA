@@ -80,8 +80,12 @@ const AdminDashboard: React.FC = () => {
   const [uploadPdfFile, setUploadPdfFile] = useState<File | null>(null);
   const [creationMode, setCreationMode] = useState<"text" | "upload">("text");
 
+  // ===============================================
   // STATE : GÉNÉRATION IA
+  // ===============================================
   const [aiPdfFile, setAiPdfFile] = useState<File | null>(null);
+  const [aiSubject, setAiSubject] = useState(""); // 👈 Ajout du state pour la matière
+  const [aiType, setAiType] = useState<"qcm" | "flashcard">("qcm"); // 👈 Préparation pour les Flashcards
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
 
@@ -243,33 +247,32 @@ const AdminDashboard: React.FC = () => {
   };
 
   const handleGenerateAI = async () => {
-    if (!aiPdfFile) {
-      setAiMessage("⚠️ Veuillez choisir un fichier PDF.");
-      return;
-    }
+    if (!aiPdfFile) return setAiMessage("⚠️ Veuillez choisir un fichier PDF.");
+    if (!aiSubject) return setAiMessage("⚠️ Veuillez indiquer la matière.");
+
     setIsGenerating(true);
-    setAiMessage("⏳ L'IA analyse le PDF et génère les questions... Cela peut prendre une minute.");
+    setAiMessage("⏳ L'IA analyse le PDF et génère le contenu... Cela peut prendre une minute.");
 
     const formData = new FormData();
     formData.append("file", aiPdfFile);
-    formData.append("subject", "Médecine"); // Ou un state si vous voulez le rendre dynamique
-    formData.append("examId", "..."); // ID du concours cible
+    formData.append("subject", aiSubject); // 👈 Dynamique
+    formData.append("examId", "Concours Blanc"); // 👈 Valeur par défaut plus propre
+    formData.append("type", aiType); // 👈 Permet au backend de savoir quoi générer
+
+    // URL dynamique selon ce qu'on veut générer
+    const endpoint = aiType === "qcm" 
+      ? `${API_BASE_URL}/api/questions/generate-from-pdf` 
+      : `${API_BASE_URL}/api/flashcards/generate`;
 
     try {
-      const res = await axios.post(
-        `${API_BASE_URL}/api/questions/generate-from-pdf`,
-        formData,
-        { 
-          headers: { 
-            "Content-Type": "multipart/form-data",
-            Authorization: `Bearer ${adminToken}`
-          } 
-        }
-      );
-      setAiMessage(`✅ Succès : ${res.data.count} ${res.data.message}`);
+      const res = await axios.post(endpoint, formData, { 
+        headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${adminToken}` } 
+      });
+      setAiMessage(`✅ Succès : ${res.data.count} éléments générés et sauvegardés !`);
       setAiPdfFile(null);
+      setAiSubject("");
     } catch (error: any) {
-      setAiMessage("❌ Erreur lors de la génération par IA");
+      setAiMessage(`❌ Erreur : ${error.response?.data?.message || "Échec de la génération IA"}`);
     } finally {
       setIsGenerating(false);
     }
@@ -578,36 +581,47 @@ const AdminDashboard: React.FC = () => {
             </p>
           )}
 
-          {/* --- NOUVELLE SECTION : GÉNÉRATION IA --- */}
+         {/* --- SECTION : GÉNÉRATION IA --- */}
           <hr className="my-8 border-gray-200" />
-          <h2 className="text-2xl font-bold mb-2 text-indigo-800">🤖 Générer des QCM avec l'IA (Gemini)</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            Uploadez un support de cours au format PDF. L'IA va l'analyser et créer automatiquement des questions à choix multiples.
-          </p>
+          <h2 className="text-2xl font-bold mb-2 text-indigo-800">🤖 Générer du contenu avec l'IA (Gemini)</h2>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            {/* 👈 NOUVEAU : Champ pour la matière */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Matière ciblée :</label>
+              <input 
+                type="text" 
+                placeholder="Ex: SVT, Maths..." 
+                value={aiSubject} 
+                onChange={(e) => setAiSubject(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 outline-none"
+              />
+            </div>
+            
+            {/* 👈 NOUVEAU : Sélecteur de type de contenu */}
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Type de contenu :</label>
+              <select 
+                value={aiType} 
+                onChange={(e) => setAiType(e.target.value as "qcm" | "flashcard")}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 outline-none bg-white"
+              >
+                <option value="qcm">QCM (Exercices)</option>
+                <option value="flashcard">Flashcards (Résumés)</option>
+              </select>
+            </div>
+          </div>
 
           <div className="mb-6 p-4 border-2 border-dashed border-indigo-300 rounded-lg bg-indigo-50/30 text-center">
             <label className="block text-sm font-semibold text-indigo-700 mb-2">📄 Fichier Cours (.pdf)</label>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={e => setAiPdfFile(e.target.files?.[0] || null)}
-              className="mx-auto block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-100 file:text-indigo-800 hover:file:bg-indigo-200 cursor-pointer"
-            />
+            <input type="file" accept=".pdf" onChange={e => setAiPdfFile(e.target.files?.[0] || null)} className="mx-auto block text-sm text-gray-500" />
           </div>
 
-          <button
-            onClick={handleGenerateAI}
-            disabled={isGenerating}
-            className={`w-full text-white px-6 py-3 rounded-xl transition-colors font-bold text-base shadow ${isGenerating ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-          >
-            {isGenerating ? "🧠 Analyse en cours..." : "✨ Générer les questions via l'IA"}
+          <button onClick={handleGenerateAI} disabled={isGenerating} className={`w-full text-white px-6 py-3 rounded-xl font-bold shadow ${isGenerating ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+            {isGenerating ? "🧠 Analyse en cours..." : `✨ Générer les ${aiType === 'qcm' ? 'QCM' : 'Flashcards'} via l'IA`}
           </button>
 
-          {aiMessage && (
-            <p className={`mt-4 font-semibold p-3 rounded border ${aiMessage.includes('❌') || aiMessage.includes('⚠️') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>
-              {aiMessage}
-            </p>
-          )}
+          {aiMessage && <p className={`mt-4 font-semibold p-3 rounded border ${aiMessage.includes('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>{aiMessage}</p>}
 
           {/* Tableau de restitution des détails */}
           {details.length > 0 && (
