@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import { GoogleAIFileManager } from "@google/generative-ai/server";
 import fs from "fs";
+import os from "os";
+import path from "path";
 import Question from "../models/Question"; // Assurez-vous que le chemin correspond à votre structure
 import { GoogleGenerativeAI, SchemaType, Schema } from "@google/generative-ai";
 
@@ -23,25 +25,10 @@ const qcmSchema: Schema = {
       items: {
         type: SchemaType.OBJECT,
         properties: {
-          question: {
-            type: SchemaType.STRING,
-            description: "Le texte de la question à choix multiples.",
-          },
-          options: {
-            type: SchemaType.ARRAY,
-            items: {
-              type: SchemaType.STRING,
-            },
-            description: "Les 4 options de réponse possibles.",
-          },
-          correctAnswerIndex: {
-            type: SchemaType.INTEGER,
-            description: "L'index (de 0 à 3) de la bonne réponse dans le tableau d'options.",
-          },
-          explication: {
-            type: SchemaType.STRING,
-            description: "Une brève explication justifiant la bonne réponse.",
-          },
+          question: { type: SchemaType.STRING, description: "Le texte de la question à choix multiples." },
+          options: { type: SchemaType.ARRAY, items: { type: SchemaType.STRING }, description: "Les 4 options de réponse possibles." },
+          correctAnswerIndex: { type: SchemaType.INTEGER, description: "L'index (de 0 à 3) de la bonne réponse dans le tableau d'options." },
+          explication: { type: SchemaType.STRING, description: "Une brève explication justifiant la bonne réponse." },
         },
         required: ["question", "options", "correctAnswerIndex", "explication"],
       },
@@ -54,8 +41,9 @@ const qcmSchema: Schema = {
  * Contrôleur pour générer et sauvegarder des QCM à partir d'un fichier PDF via Gemini AI
  */
 export const generateQcmFromPdf = async (req: Request, res: Response): Promise<void> => {
+  let tempFilePath = "";
+
   try {
-    // req.file est injecté par le middleware Multer
     const file = req.file;
     const { examId, subject } = req.body;
 
@@ -64,10 +52,22 @@ export const generateQcmFromPdf = async (req: Request, res: Response): Promise<v
       return;
     }
 
+    // 🛠️ FIX : Gestion du stockage en mémoire vs stockage disque
+    if (file.path) {
+      tempFilePath = file.path; // Multer a enregistré le fichier sur le disque
+    } else if (file.buffer) {
+      // Multer a gardé le fichier en mémoire, on crée un fichier temporaire
+      tempFilePath = path.join(os.tmpdir(), `upload_${Date.now()}.pdf`);
+      fs.writeFileSync(tempFilePath, file.buffer);
+    } else {
+      res.status(400).json({ message: "Erreur lors de la lecture du fichier." });
+      return;
+    }
+
     // 1. Upload du fichier vers l'infrastructure sécurisée de Gemini
-    const uploadResult = await fileManager.uploadFile(file.path, {
-      mimeType: "application/pdf",
-      displayName: file.originalname,
+    const uploadResult = await fileManager.uploadFile(tempFilePath, {
+      mimeType: file.mimetype || "application/pdf",
+      displayName: file.originalname || "document.pdf",
     });
 
     // 2. Configuration du modèle avec le schéma JSON forcé
@@ -96,26 +96,27 @@ export const generateQcmFromPdf = async (req: Request, res: Response): Promise<v
     const responseText = result.response.text();
     const generatedData = JSON.parse(responseText);
 
-   // 5. Formatage pour correspondre au modèle Mongoose "Question"
+    // 5. Formatage pour correspondre au modèle Mongoose "Question"
     const questionsToInsert = generatedData.qcms.map((q: any) => ({
-      texte: q.question, // 📌 Correspond à la colonne "Question"
-      options: q.options, // 📌 Formaté en tableau de string (OptionA à OptionE)
-      reponseCorrecte: q.options[q.correctAnswerIndex], // 📌 Correspond à "BonneReponse"
-      explication: q.explication, // 📌 Correspond à "Explication"
-      type: "qcm", // 📌 Différenciateur de type
-      subject: subject, // Envoyé depuis le frontend
-      exam: examId || "Concours Blanc", // Utilise votre champ "exam"
-      typeEpreuve: req.body.typeEpreuve || "blanc", // À injecter depuis le front, ou "blanc" par défaut
+      texte: q.question, 
+      options: q.options, 
+      reponseCorrecte: q.options[q.correctAnswerIndex], 
+      explication: q.explication, 
+      type: "qcm", 
+      subject: subject, 
+      exam: examId || "Concours Blanc", 
+      typeEpreuve: req.body.typeEpreuve || "blanc", 
       numeroConcoursBlanc: req.body.numeroConcoursBlanc || null,
       note: 1
-      // Les autres champs (isGroup, isFree, image) utiliseront les 'default' de votre schéma Mongoose.
     }));
 
     // 6. Sauvegarde en masse dans la base de données
     await Question.insertMany(questionsToInsert);
 
     // 7. Nettoyage du fichier temporaire local
-    fs.unlinkSync(file.path);
+    if (tempFilePath && fs.existsSync(tempFilePath)) {
+      fs.unlinkSync(tempFilePath);
+    }
 
     // 8. Réponse au client
     res.status(200).json({
@@ -126,9 +127,9 @@ export const generateQcmFromPdf = async (req: Request, res: Response): Promise<v
   } catch (error) {
     console.error("Erreur lors de la génération IA:", error);
     
-    // Sécurité : S'assurer que le fichier est supprimé même si l'IA ou la BDD échoue
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    // Nettoyage en cas d'erreur
+    if (tempFilePath && fs.existsSync(tempFilePath)) {
+      fs.unlinkSync(tempFilePath);
     }
 
     res.status(500).json({
