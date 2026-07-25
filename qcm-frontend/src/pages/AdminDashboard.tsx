@@ -8,14 +8,12 @@ import { useNavigate } from "react-router-dom";
 function logout() {
   localStorage.removeItem("token");
   localStorage.removeItem("adminToken");
-  localStorage.removeItem("studentToken");
-  
+  localStorage.removeItem("studentToken"); 
   document.cookie.split(";").forEach(function (c) {
     document.cookie =
       c.trim().split("=")[0] +
       "=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/";
-  });
-  
+  }); 
   window.location.href = "/";
 }
 
@@ -23,15 +21,13 @@ interface Student {
   _id: string;
   name: string;
   email: string;
-  options?: string[]; // 👈 Ajout du champ pour l'affichage
+  options?: string[];
 }
-
 interface ImportResult {
   question: string;
   status: string;
   details?: string[];
 }
-
 interface Exam {
   _id: string;
   title: string;
@@ -39,29 +35,22 @@ interface Exam {
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
-
   const adminToken = localStorage.getItem("adminToken");
   const itemsPerPage = 10;
 
-  // Onglets
-  const [activeTab, setActiveTab] = useState<"students" | "import" | "summary">("students");
+  // 👈 NOUVEAU : Ajout de l'onglet "ai" dans le state
+  const [activeTab, setActiveTab] = useState<"students" | "import" | "ai" | "summary">("students");
 
-  // ===============================================
   // STATE : ÉTUDIANTS
-  // ===============================================
   const [students, setStudents] = useState<Student[]>([]);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  // 👈 NOUVEAU : State pour les options
   const [options, setOptions] = useState<string[]>([]); 
   const [message, setMessage] = useState("");
-  // 👈 NOUVEAU : Mémorise l'ID de l'étudiant qu'on est en train de modifier
   const [editingId, setEditingId] = useState<string | null>(null);
 
-  // ===============================================
-  // STATE : IMPORT DES QUESTIONS
-  // ===============================================
+  // STATE : IMPORT DES QUESTIONS EXCEL
   const [exams, setExams] = useState<Exam[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [mode, setMode] = useState<"append" | "replace" | "replace-global">("append");
@@ -70,9 +59,7 @@ const AdminDashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedExam, setSelectedExam] = useState<string>("");
   
-  // ===============================================
   // STATE : RÉSUMÉS
-  // ===============================================
   const [subject, setSubject] = useState("");
   const [chapter, setChapter] = useState("");
   const [resumeContent, setResumeContent] = useState("");
@@ -80,18 +67,14 @@ const AdminDashboard: React.FC = () => {
   const [uploadPdfFile, setUploadPdfFile] = useState<File | null>(null);
   const [creationMode, setCreationMode] = useState<"text" | "upload">("text");
 
-  // ===============================================
   // STATE : GÉNÉRATION IA
-  // ===============================================
   const [aiPdfFile, setAiPdfFile] = useState<File | null>(null);
-  const [aiSubject, setAiSubject] = useState(""); // 👈 Ajout du state pour la matière
-  const [aiType, setAiType] = useState<"qcm" | "flashcard">("qcm"); // 👈 Préparation pour les Flashcards
+  const [aiSubject, setAiSubject] = useState("");
+  const [aiType, setAiType] = useState<"qcm" | "flashcard">("qcm");
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
 
-  // ===============================================
   // CHARGEMENT INITIAL (EFFECTS)
-  // ===============================================
   const fetchStudents = async () => {
     if (!adminToken) return;
     try {
@@ -113,11 +96,6 @@ const AdminDashboard: React.FC = () => {
     } 
   }, [activeTab]);
 
-  // ===============================================
-  // ACTIONS : ÉTUDIANTS
-  // ===============================================
-
-  // 👈 NOUVEAU : Gestionnaire de cases à cocher
   const handleOptionToggle = (option: string) => {
     setOptions((prev) =>
       prev.includes(option)
@@ -131,26 +109,21 @@ const AdminDashboard: React.FC = () => {
       setMessage("⚠️ Veuillez remplir tous les champs");
       return;
     }
-
     if (options.length === 0) {
       setMessage("⚠️ Veuillez sélectionner au moins une option (matière)");
       return;
     }
-
     try {
       await axios.post(
         `${API_BASE_URL}/api/admin/create-student`,
-        { name, email, password, options }, // 👈 Envoi des options au backend
-        {
-          headers: { Authorization: `Bearer ${adminToken}` },
-        }
+        { name, email, password, options },
+        { headers: { Authorization: `Bearer ${adminToken}` } }
       );
-
       setMessage("✅ Étudiant ajouté avec succès");
       setName("");
       setEmail("");
       setPassword("");
-      setOptions([]); // Réinitialisation
+      setOptions([]); 
       fetchStudents();
     } catch (err: any) {
       console.error("❌ Création étudiant :", err);
@@ -162,30 +135,25 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // 👈 NOUVEAU : Pré-remplit le formulaire quand on clique sur "Modifier"
   const handleEditClick = (student: Student) => {
     setEditingId(student._id);
     setName(student.name);
     setEmail(student.email);
     setOptions(student.options || []);
-    setPassword(""); // On vide le mot de passe, on ne le change pas ici
+    setPassword(""); 
     setMessage("✏️ Mode modification activé");
-    window.scrollTo({ top: 0, behavior: "smooth" }); // Remonte en haut de page
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  // 👈 NOUVEAU : Envoie la mise à jour au backend
   const handleUpdateStudent = async () => {
-    if (!editingId) return;
-    
+    if (!editingId) return;    
     try {
       await axios.put(
         `${API_BASE_URL}/api/admin/students/${editingId}`,
         { name, email, options },
         { headers: { Authorization: `Bearer ${adminToken}` } }
       );
-
       setMessage("✅ Étudiant mis à jour avec succès");
-      // Réinitialisation du formulaire
       setEditingId(null);
       setName("");
       setEmail("");
@@ -212,18 +180,14 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  // ===============================================
   // ACTIONS : IMPORT DES QUESTIONS
-  // ===============================================
   const handleUpload = async () => {
     if (!file) {
       setImportMessage("⚠️ Veuillez choisir un fichier Excel.");
       return;
     }
-
     const formData = new FormData();
     formData.append("file", file);
-
     try {
       const res = await axios.post(
         `${API_BASE_URL}/api/questions/import?mode=${mode}`,
@@ -235,7 +199,6 @@ const AdminDashboard: React.FC = () => {
           } 
         }
       );
-
       setImportMessage(res.data.message || "✅ Import réussi");
       setDetails(res.data.details || []);
       setCurrentPage(1);
@@ -249,21 +212,18 @@ const AdminDashboard: React.FC = () => {
   const handleGenerateAI = async () => {
     if (!aiPdfFile) return setAiMessage("⚠️ Veuillez choisir un fichier PDF.");
     if (!aiSubject) return setAiMessage("⚠️ Veuillez indiquer la matière.");
-
     setIsGenerating(true);
     setAiMessage("⏳ L'IA analyse le PDF et génère le contenu... Cela peut prendre une minute.");
-
     const formData = new FormData();
     formData.append("file", aiPdfFile);
-    formData.append("subject", aiSubject); // 👈 Dynamique
-    formData.append("examId", "Concours Blanc"); // 👈 Valeur par défaut plus propre
-    formData.append("type", aiType); // 👈 Permet au backend de savoir quoi générer
+    formData.append("subject", aiSubject);
+    formData.append("examId", "Concours Blanc");
+    formData.append("type", aiType);
 
-    // URL dynamique selon ce qu'on veut générer
     const endpoint = aiType === "qcm" 
       ? `${API_BASE_URL}/api/questions/generate-from-pdf` 
       : `${API_BASE_URL}/api/flashcards/generate`;
-
+      
     try {
       const res = await axios.post(endpoint, formData, { 
         headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${adminToken}` } 
@@ -282,15 +242,12 @@ const AdminDashboard: React.FC = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentItems = details.slice(startIndex, startIndex + itemsPerPage);
 
-  // ===============================================
   // ACTIONS : RÉSUMÉS
-  // ===============================================
   const createResumeFromText = async () => {
     if (!subject || !chapter || !resumeContent) {
       alert("Veuillez remplir tous les champs.");
       return;
     }
-
     try {
       const res = await axios.post(`${API_BASE_URL}/api/resume/generate`, {
         subject,
@@ -304,7 +261,6 @@ const AdminDashboard: React.FC = () => {
 
       const finalUrl = res.data?.pdfUrl || res.data?.url;
       if (!finalUrl) return alert("Erreur : URL manquante.");
-
       setGeneratedPdf(finalUrl);
       alert(res.data?.alreadyExists ? "Résumé déjà existant, URL renvoyée." : "PDF généré et uploadé !");
       window.dispatchEvent(new Event("resumesUpdated"));
@@ -319,13 +275,11 @@ const AdminDashboard: React.FC = () => {
       alert("Veuillez remplir tous les champs.");
       return;
     }
-
     try {
       const formData = new FormData();
       formData.append("file", uploadPdfFile);
       formData.append("subject", subject);
       formData.append("chapter", chapter);
-
       const res = await axios.post(
         `${API_BASE_URL}/api/resume/upload`,
         formData,
@@ -336,14 +290,11 @@ const AdminDashboard: React.FC = () => {
           } 
         }
       );
-
       const finalUrl = res.data?.pdfUrl || res.data?.url;
-
       if (!finalUrl) {
         alert("Erreur : URL non reçue après upload.");
         return;
       }
-
       setGeneratedPdf(finalUrl);
       alert(res.data?.alreadyExists ? "Le PDF existe déjà (URL récupérée)." : "PDF uploadé avec succès !");
       window.dispatchEvent(new Event("resumesUpdated"));
@@ -379,19 +330,26 @@ const AdminDashboard: React.FC = () => {
           onClick={() => setActiveTab("students")} 
           className={`px-4 py-2 rounded transition-colors ${activeTab === "students" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
         >
-          🧑‍🎓 Gestion des étudiants
+          🧑‍🎓 Gestion étudiants
         </button>
         <button 
           onClick={() => setActiveTab("import")} 
           className={`px-4 py-2 rounded transition-colors ${activeTab === "import" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
         >
-          📂 Import Questions
+          📂 Import Excel
+        </button>
+        {/* 👈 NOUVEL ONGLET : Génération IA */}
+        <button 
+          onClick={() => setActiveTab("ai")} 
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "ai" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+        >
+          🧠 Génération IA
         </button>
         <button 
           onClick={() => setActiveTab("summary")} 
           className={`px-4 py-2 rounded transition-colors ${activeTab === "summary" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
         >
-          📝 Gestion des résumés
+          📝 Gestion résumés
         </button>
       </div>
 
@@ -414,7 +372,6 @@ const AdminDashboard: React.FC = () => {
                 onChange={e => setEmail(e.target.value)}
                 className="border px-3 py-2 rounded text-black flex-1 focus:ring-2 focus:ring-blue-400 outline-none"
               />
-              {/* Le mot de passe disparaît si on est en train de modifier */}
               {!editingId && (
                 <input
                   type="password"
@@ -426,7 +383,6 @@ const AdminDashboard: React.FC = () => {
               )}
             </div>
             
-            {/* 👈 NOUVEAU : Bloc des options + Bouton Ajouter */}
             <div className="flex flex-col md:flex-row justify-between items-center bg-gray-50 p-3 rounded-lg border">
               <div className="flex flex-wrap items-center gap-4">
                 <span className="font-semibold text-gray-700">Options autorisées :</span>
@@ -489,7 +445,7 @@ const AdminDashboard: React.FC = () => {
                 <tr>
                   <th className="border border-gray-300 px-4 py-3 text-left">Nom</th>
                   <th className="border border-gray-300 px-4 py-3 text-left">Email</th>
-                  <th className="border border-gray-300 px-4 py-3 text-left">Options</th> {/* 👈 NOUVELLE COLONNE */}
+                  <th className="border border-gray-300 px-4 py-3 text-left">Options</th>
                   <th className="border border-gray-300 px-4 py-3 text-center w-32">Actions</th>
                 </tr>
               </thead>
@@ -499,7 +455,6 @@ const AdminDashboard: React.FC = () => {
                     <td className="border border-gray-300 px-4 py-3 font-medium">{s.name}</td>
                     <td className="border border-gray-300 px-4 py-3 text-gray-600">{s.email}</td>
                     <td className="border border-gray-300 px-4 py-3 text-blue-700 font-semibold">
-                      {/* 👈 CORRECTION : Afficher "Aucune option" si le backend renvoie undefined ou un tableau vide */}
                       {s.options && s.options.length > 0 ? s.options.join(", ") : "Aucune option"}
                     </td>
                     <td className="border border-gray-300 px-4 py-3 text-center space-x-2">
@@ -529,7 +484,7 @@ const AdminDashboard: React.FC = () => {
         </div>
       )}
 
-      {/* ----------- Onglet Import ----------- */}
+      {/* ----------- Onglet Import Excel ----------- */}
       {activeTab === "import" && (
         <div className="bg-white p-6 rounded shadow border border-gray-200">
           <h2 className="text-2xl font-bold mb-2 text-gray-800">📂 Importer des questions via Excel</h2>
@@ -537,7 +492,6 @@ const AdminDashboard: React.FC = () => {
             Le système lira automatiquement les matières et les concours depuis les colonnes de votre fichier Excel.
           </p>
 
-          {/* Choix du mode d'importation */}
           <div className="mb-6">
             <label className="font-semibold block mb-2 text-gray-700">⚙️ Mode de traitement des données :</label>
             <div className="flex flex-wrap gap-6 bg-gray-50/50 p-3 rounded-lg border border-dashed">
@@ -556,7 +510,6 @@ const AdminDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Zone d'upload du fichier */}
           <div className="mb-6 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50/30 text-center">
             <label className="block text-sm font-semibold text-gray-700 mb-2">📄 Fichier Excel (.xlsx, .xls)</label>
             <input
@@ -567,7 +520,6 @@ const AdminDashboard: React.FC = () => {
             />
           </div>
 
-          {/* Bouton d'action principal */}
           <button
             onClick={handleUpload}
             className="w-full bg-blue-600 text-white px-6 py-3 rounded-xl hover:bg-blue-700 transition-colors font-bold text-base shadow"
@@ -581,49 +533,6 @@ const AdminDashboard: React.FC = () => {
             </p>
           )}
 
-         {/* --- SECTION : GÉNÉRATION IA --- */}
-          <hr className="my-8 border-gray-200" />
-          <h2 className="text-2xl font-bold mb-2 text-indigo-800">🤖 Générer du contenu avec l'IA (Gemini)</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            {/* 👈 NOUVEAU : Champ pour la matière */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Matière ciblée :</label>
-              <input 
-                type="text" 
-                placeholder="Ex: SVT, Maths..." 
-                value={aiSubject} 
-                onChange={(e) => setAiSubject(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 outline-none"
-              />
-            </div>
-            
-            {/* 👈 NOUVEAU : Sélecteur de type de contenu */}
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Type de contenu :</label>
-              <select 
-                value={aiType} 
-                onChange={(e) => setAiType(e.target.value as "qcm" | "flashcard")}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 outline-none bg-white"
-              >
-                <option value="qcm">QCM (Exercices)</option>
-                <option value="flashcard">Flashcards (Résumés)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="mb-6 p-4 border-2 border-dashed border-indigo-300 rounded-lg bg-indigo-50/30 text-center">
-            <label className="block text-sm font-semibold text-indigo-700 mb-2">📄 Fichier Cours (.pdf)</label>
-            <input type="file" accept=".pdf" onChange={e => setAiPdfFile(e.target.files?.[0] || null)} className="mx-auto block text-sm text-gray-500" />
-          </div>
-
-          <button onClick={handleGenerateAI} disabled={isGenerating} className={`w-full text-white px-6 py-3 rounded-xl font-bold shadow ${isGenerating ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
-            {isGenerating ? "🧠 Analyse en cours..." : `✨ Générer les ${aiType === 'qcm' ? 'QCM' : 'Flashcards'} via l'IA`}
-          </button>
-
-          {aiMessage && <p className={`mt-4 font-semibold p-3 rounded border ${aiMessage.includes('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>{aiMessage}</p>}
-
-          {/* Tableau de restitution des détails */}
           {details.length > 0 && (
             <div className="mt-8">
               <h2 className="text-xl font-bold mb-4">📊 Détails de l'import</h2>
@@ -673,6 +582,52 @@ const AdminDashboard: React.FC = () => {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ----------- NOUVEL ONGLET : Génération IA ----------- */}
+      {activeTab === "ai" && (
+        <div className="bg-white p-6 rounded shadow border border-indigo-200">
+          <h2 className="text-2xl font-bold mb-4 text-indigo-800">🤖 Générer du contenu avec l'IA (Gemini)</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Fournissez un cours au format PDF. L'IA l'analysera et générera automatiquement des questions (QCM) ou des Flashcards.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Matière ciblée :</label>
+              <input 
+                type="text" 
+                placeholder="Ex: SVT, Maths..." 
+                value={aiSubject} 
+                onChange={(e) => setAiSubject(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 outline-none"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Type de contenu :</label>
+              <select 
+                value={aiType} 
+                onChange={(e) => setAiType(e.target.value as "qcm" | "flashcard")}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 outline-none bg-white"
+              >
+                <option value="qcm">QCM (Exercices)</option>
+                <option value="flashcard">Flashcards (Résumés)</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mb-6 p-6 border-2 border-dashed border-indigo-300 rounded-lg bg-indigo-50/30 text-center">
+            <label className="block text-sm font-semibold text-indigo-700 mb-2">📄 Fichier Cours (.pdf)</label>
+            <input type="file" accept=".pdf" onChange={e => setAiPdfFile(e.target.files?.[0] || null)} className="mx-auto block text-sm text-gray-500" />
+          </div>
+
+          <button onClick={handleGenerateAI} disabled={isGenerating} className={`w-full text-white px-6 py-3 rounded-xl font-bold shadow ${isGenerating ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 transition-colors'}`}>
+            {isGenerating ? "🧠 Analyse en cours... (Veuillez patienter)" : `✨ Générer les ${aiType === 'qcm' ? 'QCM' : 'Flashcards'} via l'IA`}
+          </button>
+
+          {aiMessage && <p className={`mt-4 font-semibold p-3 rounded border ${aiMessage.includes('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>{aiMessage}</p>}
         </div>
       )}
 
@@ -758,7 +713,6 @@ const AdminDashboard: React.FC = () => {
           <span className="text-2xl">💡</span> Gestion des Astuces du Soutien
         </button>
       </div>
-
     </div>
   );
 };
