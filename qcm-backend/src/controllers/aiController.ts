@@ -1,8 +1,8 @@
 import { Request, Response } from "express";
-import { GoogleGenerativeAI, SchemaType } from "@google/generative-ai";
 import { GoogleAIFileManager } from "@google/generative-ai/server";
 import fs from "fs";
 import Question from "../models/Question"; // Assurez-vous que le chemin correspond à votre structure
+import { GoogleGenerativeAI, SchemaType, Schema } from "@google/generative-ai";
 
 // Vérification de la clé API
 const apiKey = process.env.GEMINI_API_KEY as string;
@@ -15,7 +15,7 @@ const genAI = new GoogleGenerativeAI(apiKey);
 const fileManager = new GoogleAIFileManager(apiKey);
 
 // Définition stricte du schéma JSON attendu de la part de l'IA
-const qcmSchema = {
+const qcmSchema: Schema = {
   type: SchemaType.OBJECT,
   properties: {
     qcms: {
