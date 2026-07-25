@@ -69,16 +69,16 @@ export const generateQcmFromPdf = async (req: Request, res: Response): Promise<v
       displayName: file.originalname || "document.pdf",
     });
 
-    // 2. Configuration du modèle avec le modèle Gemini 2.5 Flash mis à jour
+    // 2. Configuration du modèle avec le modèle officiel gemini-2.0-flash
     const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash", // 👈 UTILISATION DU MODÈLE À JOUR
+      model: "gemini-2.0-flash", // 👈 NOM DU MODÈLE OFFICIEL
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: qcmSchema,
       },
     });
 
-    const prompt = "Génère 10 questions à choix multiples (QCM) basées strictly sur le contenu de ce document. Assure-toi que les questions sont pertinentes pour un niveau académique/concours. Chaque QCM doit avoir 4 options avec une seule bonne réponse.";
+    const prompt = "Génère 10 questions à choix multiples (QCM) basées strictement sur le contenu de ce document. Assure-toi que les questions sont pertinentes pour un niveau académique/concours. Chaque QCM doit avoir 4 options avec une seule bonne réponse.";
 
     // 3. Appel à l'IA
     const result = await model.generateContent([
