@@ -80,6 +80,11 @@ const AdminDashboard: React.FC = () => {
   const [uploadPdfFile, setUploadPdfFile] = useState<File | null>(null);
   const [creationMode, setCreationMode] = useState<"text" | "upload">("text");
 
+  // STATE : GÉNÉRATION IA
+  const [aiPdfFile, setAiPdfFile] = useState<File | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [aiMessage, setAiMessage] = useState("");
+
   // ===============================================
   // CHARGEMENT INITIAL (EFFECTS)
   // ===============================================
@@ -234,6 +239,39 @@ const AdminDashboard: React.FC = () => {
       console.error("❌ Erreur import :", error.response?.data || error.message);
       setImportMessage("❌ Erreur lors de l'import");
       setDetails([]);
+    }
+  };
+
+  const handleGenerateAI = async () => {
+    if (!aiPdfFile) {
+      setAiMessage("⚠️ Veuillez choisir un fichier PDF.");
+      return;
+    }
+    setIsGenerating(true);
+    setAiMessage("⏳ L'IA analyse le PDF et génère les questions... Cela peut prendre une minute.");
+
+    const formData = new FormData();
+    formData.append("file", aiPdfFile);
+    formData.append("subject", "Médecine"); // Ou un state si vous voulez le rendre dynamique
+    formData.append("examId", "..."); // ID du concours cible
+
+    try {
+      const res = await axios.post(
+        `${API_BASE_URL}/api/questions/generate-from-pdf`,
+        formData,
+        { 
+          headers: { 
+            "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${adminToken}`
+          } 
+        }
+      );
+      setAiMessage(`✅ Succès : ${res.data.count} ${res.data.message}`);
+      setAiPdfFile(null);
+    } catch (error: any) {
+      setAiMessage("❌ Erreur lors de la génération par IA");
+    } finally {
+      setIsGenerating(false);
     }
   };
 
@@ -537,6 +575,37 @@ const AdminDashboard: React.FC = () => {
           {importMessage && (
             <p className={`mt-4 font-semibold p-3 rounded border ${importMessage.includes('❌') || importMessage.includes('⚠️') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-green-50 text-green-700 border-green-200'}`}>
               {importMessage}
+            </p>
+          )}
+
+          {/* --- NOUVELLE SECTION : GÉNÉRATION IA --- */}
+          <hr className="my-8 border-gray-200" />
+          <h2 className="text-2xl font-bold mb-2 text-indigo-800">🤖 Générer des QCM avec l'IA (Gemini)</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Uploadez un support de cours au format PDF. L'IA va l'analyser et créer automatiquement des questions à choix multiples.
+          </p>
+
+          <div className="mb-6 p-4 border-2 border-dashed border-indigo-300 rounded-lg bg-indigo-50/30 text-center">
+            <label className="block text-sm font-semibold text-indigo-700 mb-2">📄 Fichier Cours (.pdf)</label>
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={e => setAiPdfFile(e.target.files?.[0] || null)}
+              className="mx-auto block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-100 file:text-indigo-800 hover:file:bg-indigo-200 cursor-pointer"
+            />
+          </div>
+
+          <button
+            onClick={handleGenerateAI}
+            disabled={isGenerating}
+            className={`w-full text-white px-6 py-3 rounded-xl transition-colors font-bold text-base shadow ${isGenerating ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700'}`}
+          >
+            {isGenerating ? "🧠 Analyse en cours..." : "✨ Générer les questions via l'IA"}
+          </button>
+
+          {aiMessage && (
+            <p className={`mt-4 font-semibold p-3 rounded border ${aiMessage.includes('❌') || aiMessage.includes('⚠️') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>
+              {aiMessage}
             </p>
           )}
 

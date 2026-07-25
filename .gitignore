@@ -25,6 +25,7 @@ coverage/
 *.swo
 .DS_Store
 Thumbs.db
+uploads/
 
 # === Logs ===
 *.log

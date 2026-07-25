@@ -13,6 +13,12 @@ import { authenticateStudent } from "../middleware/authMiddleware";
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
+const aiController = require('../controllers/aiController');
+const { uploadPdf } = require('../utils/multerConfig'); // Assurez-vous d'avoir une config multer pour les PDF
+const { verifyAdmin } = require('../middleware/verifyAdmin');
+
+router.post('/generate-from-pdf', verifyAdmin, uploadPdf.single('file'), aiController.generateQcmFromPdf);
+
 // 📥 Import Excel
 router.post("/import", upload.single("file"), importExcel);
 
