@@ -71,7 +71,7 @@ export const generateQcmFromPdf = async (req: Request, res: Response): Promise<v
 
     // 2. Configuration du modèle avec le modèle officiel gemini-2.0-flash
     const model = genAI.getGenerativeModel({
-      model: "Gemini Embedding 1", // 👈 NOM DU MODÈLE OFFICIEL
+      model: "gemini-2.0-flash", // 👈 NOM DU MODÈLE OFFICIEL
       generationConfig: {
         responseMimeType: "application/json",
         responseSchema: qcmSchema,
