@@ -330,13 +330,13 @@ const AdminDashboard: React.FC = () => {
           onClick={() => setActiveTab("students")} 
           className={`px-4 py-2 rounded transition-colors ${activeTab === "students" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
         >
-          🧑‍🎓 Gestion étudiants
+          🧑‍🎓 Gestion étudiants (AUTORISES)
         </button>
         <button 
           onClick={() => setActiveTab("import")} 
           className={`px-4 py-2 rounded transition-colors ${activeTab === "import" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
         >
-          📂 Import Excel
+          📂 Import Excel (QUESTIONS)
         </button>
         {/* 👈 NOUVEL ONGLET : Génération IA */}
         <button 
