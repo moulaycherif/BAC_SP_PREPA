@@ -2,12 +2,12 @@ import mongoose, { Schema, Document } from "mongoose";
 
 export interface IQuestion extends Document {
   texte?: string;
-  enonce?: string; // 👈 AJOUT : Pour correspondre à la colonne "Enonce" de vos fichiers Excel
+  enonce?: string;
   image?: string | null;
   options?: string[];
   reponseCorrecte?: string;
-  explication?: string; // 👈 AJOUT : Pour la colonne "Explication" Excel et les justifications de l'IA
-  type?: string; // 👈 AJOUT : Pour différencier "qcm" et "faux-juste"
+  explication?: string;
+  type?: string; 
   subject: string;
   exam?: string;
   note?: number;
@@ -21,12 +21,12 @@ export interface IQuestion extends Document {
 const questionSchema = new Schema<IQuestion>(
   {
     texte: { type: String, default: null, trim: true },
-    enonce: { type: String, default: null, trim: true }, // 👈 AJOUT
+    enonce: { type: String, default: null, trim: true },
     image: { type: String, default: null },
     options: { type: [String], default: [] },
     reponseCorrecte: { type: String, default: null },
-    explication: { type: String, default: null }, // 👈 AJOUT
-    type: { type: String, default: "qcm" }, // 👈 AJOUT : "qcm" par défaut
+    explication: { type: String, default: null },
+    type: { type: String, default: "qcm" }, // Accepte désormais 'exercise', 'astuce', 'flashcard'
     subject: { type: String, required: true },
     exam: { type: String, default: "Concours Blanc" }, 
     note: { type: Number, default: 1 },

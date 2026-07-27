@@ -70,9 +70,9 @@ const AdminDashboard: React.FC = () => {
   // STATE : GÉNÉRATION IA
   const [aiPdfFile, setAiPdfFile] = useState<File | null>(null);
   const [aiSubject, setAiSubject] = useState("");
-  const [aiType, setAiType] = useState<"qcm" | "flashcard">("qcm");
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
+  const [aiType, setAiType] = useState<"qcm" | "flashcard" | "exercise" | "astuce">("qcm");
 
   // CHARGEMENT INITIAL (EFFECTS)
   const fetchStudents = async () => {
@@ -214,21 +214,23 @@ const AdminDashboard: React.FC = () => {
     if (!aiSubject) return setAiMessage("⚠️ Veuillez indiquer la matière.");
     setIsGenerating(true);
     setAiMessage("⏳ L'IA analyse le PDF et génère le contenu... Cela peut prendre une minute.");
+    
     const formData = new FormData();
     formData.append("file", aiPdfFile);
     formData.append("subject", aiSubject);
     formData.append("examId", "Concours Blanc");
-    formData.append("type", aiType);
+    formData.append("type", aiType); // Envoyer le type exact au backend unifié
 
-    const endpoint = aiType === "qcm" 
-      ? `${API_BASE_URL}/api/questions/generate-from-pdf` 
-      : `${API_BASE_URL}/api/flashcards/generate`;
+    // On utilise désormais une seule route universelle pour tout le contenu
+    const endpoint = `${API_BASE_URL}/api/questions/generate-from-pdf`;
       
     try {
       const res = await axios.post(endpoint, formData, { 
         headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${adminToken}` } 
       });
-      setAiMessage(`✅ Succès : ${res.data.count} éléments générés et sauvegardés !`);
+      
+      const typeLabel = aiType === 'qcm' ? 'QCM' : aiType === 'exercise' ? 'Exercices' : aiType === 'astuce' ? 'Astuces' : 'Flashcards';
+      setAiMessage(`✅ Succès : ${res.data.count} ${typeLabel} généré(s) et sauvegardé(s) !`);
       setAiPdfFile(null);
       setAiSubject("");
     } catch (error: any) {
@@ -237,6 +239,56 @@ const AdminDashboard: React.FC = () => {
       setIsGenerating(false);
     }
   };
+
+// ... (Dans le rendu JSX (return), mettez à jour la partie de l'onglet IA)
+
+      {/* ----------- ONGLET : Génération IA ----------- */}
+      {activeTab === "ai" && (
+        <div className="bg-white p-6 rounded shadow border border-indigo-200">
+          <h2 className="text-2xl font-bold mb-4 text-indigo-800">🤖 Générer du contenu avec l'IA</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Fournissez un cours au format PDF. L'IA l'analysera et extraira automatiquement le contenu ciblé.
+          </p>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Matière ciblée :</label>
+              <input 
+                type="text" 
+                placeholder="Ex: SVT, Maths..." 
+                value={aiSubject} 
+                onChange={(e) => setAiSubject(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 outline-none"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Format souhaité :</label>
+              <select 
+                value={aiType} 
+                onChange={(e) => setAiType(e.target.value as any)}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 outline-none bg-white"
+              >
+                <option value="qcm">QCM Classiques</option>
+                <option value="exercise">Exercices Pratiques + Corrigés</option>
+                <option value="flashcard">Flashcards de révision</option>
+                <option value="astuce">Astuces & Méthodologie</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="mb-6 p-6 border-2 border-dashed border-indigo-300 rounded-lg bg-indigo-50/30 text-center">
+            <label className="block text-sm font-semibold text-indigo-700 mb-2">📄 Fichier Cours (.pdf)</label>
+            <input type="file" accept=".pdf" onChange={e => setAiPdfFile(e.target.files?.[0] || null)} className="mx-auto block text-sm text-gray-500" />
+          </div>
+
+          <button onClick={handleGenerateAI} disabled={isGenerating} className={`w-full text-white px-6 py-3 rounded-xl font-bold shadow ${isGenerating ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 transition-colors'}`}>
+            {isGenerating ? "🧠 Analyse en cours... (Veuillez patienter)" : `✨ Lancer la génération`}
+          </button>
+
+          {aiMessage && <p className={`mt-4 font-semibold p-3 rounded border ${aiMessage.includes('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>{aiMessage}</p>}
+        </div>
+      )}
 
   const totalPages = Math.ceil(details.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
