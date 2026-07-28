@@ -85,7 +85,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     // Détermination du modèle selon le fournisseur
     let modelName = "gpt-4o-mini";
     if (process.env.AI_PROVIDER === 'GROQ') modelName = "llama3-8b-8192";
-    if (process.env.AI_PROVIDER === 'OPENROUTER') modelName = "mistralai/mistral-7b-instruct:free";
+    if (process.env.AI_PROVIDER === 'OPENROUTER') modelName = "google/gemma-4-31b-it:free";
 
     const response = await openai.chat.completions.create({
       model: modelName,
