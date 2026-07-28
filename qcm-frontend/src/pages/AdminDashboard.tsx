@@ -39,8 +39,7 @@ const AdminDashboard: React.FC = () => {
   const itemsPerPage = 10;
 
   // 👈 NOUVEAU : Ajout de l'onglet "ai" dans le state
-  const [activeTab, setActiveTab] = useState<"students" | "import" | "ai" | "summary">("students");
-
+  const [activeTab, setActiveTab] = useState<"ai" | "students" | "import" | "summary">("ai");
   // STATE : ÉTUDIANTS
   const [students, setStudents] = useState<Student[]>([]);
   const [name, setName] = useState("");
@@ -67,12 +66,14 @@ const AdminDashboard: React.FC = () => {
   const [uploadPdfFile, setUploadPdfFile] = useState<File | null>(null);
   const [creationMode, setCreationMode] = useState<"text" | "upload">("text");
 
-  // STATE : GÉNÉRATION IA
+  // On met "ai" par défaut pour que l'onglet s'ouvre en premier
+  // Ajout du State pour le chapitre et mise à jour des types IA
   const [aiPdfFile, setAiPdfFile] = useState<File | null>(null);
   const [aiSubject, setAiSubject] = useState("");
+  const [aiChapter, setAiChapter] = useState(""); // NOUVEAU
+  const [aiType, setAiType] = useState<"qcm" | "exercise" | "astuce" | "controle" | "resume">("qcm"); // NOUVEAU
   const [isGenerating, setIsGenerating] = useState(false);
   const [aiMessage, setAiMessage] = useState("");
-  const [aiType, setAiType] = useState<"qcm" | "flashcard" | "exercise" | "astuce">("qcm");
 
   // CHARGEMENT INITIAL (EFFECTS)
   const fetchStudents = async () => {
@@ -212,16 +213,17 @@ const AdminDashboard: React.FC = () => {
   const handleGenerateAI = async () => {
     if (!aiPdfFile) return setAiMessage("⚠️ Veuillez choisir un fichier PDF.");
     if (!aiSubject) return setAiMessage("⚠️ Veuillez indiquer la matière.");
+    if (!aiChapter) return setAiMessage("⚠️ Veuillez indiquer le chapitre.");
+    
     setIsGenerating(true);
     setAiMessage("⏳ L'IA analyse le PDF et génère le contenu... Cela peut prendre une minute.");
     
     const formData = new FormData();
     formData.append("file", aiPdfFile);
     formData.append("subject", aiSubject);
-    formData.append("examId", "Concours Blanc");
-    formData.append("type", aiType); // Envoyer le type exact au backend unifié
+    formData.append("chapter", aiChapter); // Ajout du chapitre pour le backend
+    formData.append("type", aiType);
 
-    // On utilise désormais une seule route universelle pour tout le contenu
     const endpoint = `${API_BASE_URL}/api/questions/generate-from-pdf`;
       
     try {
@@ -229,10 +231,10 @@ const AdminDashboard: React.FC = () => {
         headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${adminToken}` } 
       });
       
-      const typeLabel = aiType === 'qcm' ? 'QCM' : aiType === 'exercise' ? 'Exercices' : aiType === 'astuce' ? 'Astuces' : 'Flashcards';
-      setAiMessage(`✅ Succès : ${res.data.count} ${typeLabel} généré(s) et sauvegardé(s) !`);
+      setAiMessage(`✅ Succès : ${res.data.count} éléments générés et sauvegardés pour le chapitre "${aiChapter}" !`);
       setAiPdfFile(null);
       setAiSubject("");
+      setAiChapter("");
     } catch (error: any) {
       setAiMessage(`❌ Erreur : ${error.response?.data?.message || "Échec de la génération IA"}`);
     } finally {
@@ -377,10 +379,10 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Navigation entre les onglets */}
-      <div className="flex flex-wrap justify-center gap-4 mb-8">
+        <div className="flex flex-wrap justify-center gap-4 mb-8">
         <button 
-          onClick={() => setActiveTab("students")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "students" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+          onClick={() => setActiveTab("ai")} 
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "ai" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
         >
           🧑‍🎓 Gestion étudiants
         </button>
@@ -398,8 +400,8 @@ const AdminDashboard: React.FC = () => {
           🧠 Génération IA
         </button>
         <button 
-          onClick={() => setActiveTab("summary")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "summary" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+          onClick={() => setActiveTab("students")} 
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "students" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
         >
           📝 Gestion résumés
         </button>
@@ -640,46 +642,56 @@ const AdminDashboard: React.FC = () => {
       {/* ----------- NOUVEL ONGLET : Génération IA ----------- */}
       {activeTab === "ai" && (
         <div className="bg-white p-6 rounded shadow border border-indigo-200">
-          <h2 className="text-2xl font-bold mb-4 text-indigo-800">🤖 Générer du contenu avec l'IA (Gemini)</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            Fournissez un cours au format PDF. L'IA l'analysera et générera automatiquement des questions (QCM) ou des Flashcards.
-          </p>
+          <h2 className="text-2xl font-bold mb-4 text-indigo-800">🤖 Générer du contenu par Chapitre</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Matière ciblée :</label>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Matière :</label>
               <input 
                 type="text" 
-                placeholder="Ex: SVT, Maths..." 
+                placeholder="Ex: Mathématiques" 
                 value={aiSubject} 
                 onChange={(e) => setAiSubject(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 outline-none"
+                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400"
               />
             </div>
             
             <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">Chapitre :</label>
+              <input 
+                type="text" 
+                placeholder="Ex: Les Nombres Complexes" 
+                value={aiChapter} 
+                onChange={(e) => setAiChapter(e.target.value)}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400"
+              />
+            </div>
+
+            <div>
               <label className="block text-sm font-semibold text-gray-700 mb-1">Type de contenu :</label>
               <select 
                 value={aiType} 
-                onChange={(e) => setAiType(e.target.value as "qcm" | "flashcard")}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 outline-none bg-white"
+                onChange={(e) => setAiType(e.target.value as any)}
+                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 bg-white"
               >
-                <option value="qcm">QCM (Exercices)</option>
-                <option value="flashcard">Flashcards (Résumés)</option>
+                <option value="qcm">QCM</option>
+                <option value="exercise">Exercices</option>
+                <option value="astuce">Astuces</option>
+                <option value="resume">Résumés ou Fiches</option>
+                <option value="controle">Contrôles</option>
               </select>
             </div>
           </div>
 
           <div className="mb-6 p-6 border-2 border-dashed border-indigo-300 rounded-lg bg-indigo-50/30 text-center">
-            <label className="block text-sm font-semibold text-indigo-700 mb-2">📄 Fichier Cours (.pdf)</label>
             <input type="file" accept=".pdf" onChange={e => setAiPdfFile(e.target.files?.[0] || null)} className="mx-auto block text-sm text-gray-500" />
           </div>
 
-          <button onClick={handleGenerateAI} disabled={isGenerating} className={`w-full text-white px-6 py-3 rounded-xl font-bold shadow ${isGenerating ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 transition-colors'}`}>
-            {isGenerating ? "🧠 Analyse en cours... (Veuillez patienter)" : `✨ Générer les ${aiType === 'qcm' ? 'QCM' : 'Flashcards'} via l'IA`}
+          <button onClick={handleGenerateAI} disabled={isGenerating} className={`w-full text-white px-6 py-3 rounded-xl font-bold shadow ${isGenerating ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
+            {isGenerating ? "🧠 Analyse en cours..." : "✨ Générer le contenu"}
           </button>
 
-          {aiMessage && <p className={`mt-4 font-semibold p-3 rounded border ${aiMessage.includes('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>{aiMessage}</p>}
+          {aiMessage && <p className="mt-4 font-semibold p-3 rounded border bg-indigo-50 text-indigo-700 border-indigo-200">{aiMessage}</p>}
         </div>
       )}
 

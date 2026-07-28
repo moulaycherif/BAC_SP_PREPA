@@ -55,13 +55,18 @@ interface Question {
 }
   const chaptersBySubject: Record<string, string[]> = {
         Mathématique: [
-          "Chapitre I : Suites & Sommes",
-          "Chapitre II : Etude de fonctions",
-          "Chapitre III : Equations différentielles",
-          "Chapitre IV : Nombres complexes",
-          "Chapitre V : Intégrales",
-          "Chapitre VI : Géométrie dans l'espace",
-          "Chapitre VII : Probabilité",
+          "Chapitre I : Limites et Continuité",
+          "Chapitre II : Dérivation et étude de fonctions",
+          "Chapitre III : Suites numériques",
+          "Chapitre IV : Fonctions primitives",
+          "Chapitre V : Fonctions logarithmiques",
+          "Chapitre VI : Nombres complexes (Partie 1)",
+          "Chapitre VII : Fonctions exponentielles",
+          "Chapitre VIII : Nombres complexes (Partie 2)",
+          "Chapitre IX : Calcul intégral",
+          "Chapitre X : Equations différentielles",
+          "Chapitre XI : Produit scalaire et produit vectoriel dans l'espace",
+          "Chapitre XII : Dénombrement et probabilités",
         ],
         Physique: [
           "Chapitre I : Les ondes",
@@ -320,6 +325,38 @@ const getAccessibleSubjects = () => {
     }
   }, [selectedAction, selectedChapter, selectedMatiere]);
 
+  useEffect(() => {
+    // On ne lance la requête que si un chapitre et une action sont sélectionnés
+    if (selectedChapter && selectedAction) {
+      const fetchContent = async () => {
+        try {
+          // On fait correspondre "selectedAction" au "type" attendu par le backend
+          let typeActionStr = "qcm"; 
+          if (selectedAction === "Astuces") typeActionStr = "astuce";
+          if (selectedAction === "Résumé") typeActionStr = "resume";
+          if (selectedAction === "Exercises") typeActionStr = "exercise";
+  
+          // L'appel à l'API via la route existante "/"
+          const response = await axios.get('/api/questions', {
+            params: {
+              subject: selectedMatiere,
+              chapter: selectedChapter,
+              type: typeActionStr
+            }
+          });
+          
+          // Mettez à jour votre state de questions avec le résultat
+          setQuestions(response.data);
+          
+        } catch (error) {
+          console.error("Erreur lors du chargement des données", error);
+        }
+      };
+  
+      fetchContent();
+    }
+  }, [selectedMatiere, selectedChapter, selectedAction]);
+
   const resetQcm = () => {
     setCurrentExam(null);
     setCurrentExamId(null);
@@ -511,48 +548,120 @@ if (section === "home") {
       }
 
       return (
-        <div className="p-6 space-y-8 h-full overflow-y-auto">
+        <div className="p-6 space-y-12 h-full overflow-y-auto">
           {accessibleSubjects.map((matiere) => (
-            <div key={matiere} className="bg-white rounded-2xl shadow-lg p-6 border-l-8 border-blue-800">
-              <h2 className="text-3xl font-bold text-blue-900 mb-6 border-b pb-2 text-center">
-                Matière : {matiere}
+            <div key={matiere} className="bg-white rounded-3xl shadow-xl p-8 border-t-8 border-blue-800">
+              
+              {/* 1. Titre de la Matière */}
+              <h2 className="text-4xl font-extrabold text-blue-900 mb-8 border-b-2 border-gray-100 pb-4 text-center uppercase tracking-wide">
+                {matiere}
               </h2>
                   
-              {/* Boutons d'action généraux de la matière */}
-              <div className="flex justify-between items-center mb-6">
-                {/* 1️⃣ LIVE (Tout à gauche) */}
-                <button className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl shadow hover:bg-green-700 transition flex items-center gap-2">
-                  <span className="text-lg">📡</span>
-                  <span className="animate-pulse h-3 w-3 bg-white rounded-full"></span>
-                  LIVE
+              {/* 2. Boutons Globaux (Haut) */}
+              <div className="flex justify-center gap-6 mb-10">
+                <button className="px-8 py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg hover:bg-red-700 hover:-translate-y-1 transition transform flex items-center gap-3">
+                  <span className="text-2xl animate-pulse">🔴</span>
+                  <span className="text-lg">LIVE</span>
                 </button>
 
-                {/* 2️⃣ Vidéos enregistrées (Tout à droite) */}
-                <button className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl shadow hover:bg-red-700 transition flex items-center gap-2">
-                  <span>🎥</span>
-                  Vidéos enregistrées
+                <button className="px-8 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg hover:bg-blue-700 hover:-translate-y-1 transition transform flex items-center gap-3">
+                  <span className="text-2xl">▶️</span>
+                  <span className="text-lg">Vidéos enregistrées</span>
                 </button>
               </div>
 
-              {/* Boutons des chapitres */}
-              <h3 className="text-xl font-semibold text-gray-700 mb-4">Chapitres :</h3>
-              <div className="flex flex-wrap gap-3">
-                {chaptersBySubject[matiere]?.map((chapter, index) => (
-                  <motion.button
-                    key={index}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      setSelectedMatiere(matiere);
-                      setSelectedChapter(chapter);
-                      setSection("soutien");
-                    }}
-                    className="px-4 py-2 bg-blue-100 text-blue-800 font-medium rounded-lg shadow-sm hover:bg-blue-200 transition border border-blue-200"
-                  >
-                    {chapter}
-                  </motion.button>
-                ))}
+              {/* 3. Liste des Chapitres (Mode Accordéon) */}
+              <div className="bg-gray-50 rounded-2xl shadow-inner p-6 mb-10 border border-gray-200">
+                <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                  <span>📚</span> Programme de l'année
+                </h3>
+                
+                <div className="flex flex-col gap-4">
+                  {chaptersBySubject[matiere]?.map((chapter, index) => {
+                    // Vérifie si ce chapitre est celui cliqué par l'étudiant
+                    const isExpanded = selectedChapter === chapter && selectedMatiere === matiere;
+
+                    return (
+                      <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <button
+                          onClick={() => {
+                            setSelectedMatiere(matiere);
+                            // Si on clique sur le chapitre déjà ouvert, on le referme (null), sinon on l'ouvre
+                            setSelectedChapter(isExpanded ? null : chapter);
+                            // On réinitialise l'action pour ne pas charger directement un contenu
+                            setSelectedAction(null); 
+                          }}
+                          className={`w-full text-left p-5 text-lg font-semibold transition-colors flex justify-between items-center ${
+                            isExpanded
+                              ? "bg-blue-800 text-white"
+                              : "bg-white hover:bg-gray-50 text-gray-800"
+                          }`}
+                        >
+                          <span>{chapter}</span>
+                          <span className="text-xl">{isExpanded ? "🔽" : "▶️"}</span>
+                        </button>
+
+                        {/* 4. SOUS-MENU : Les boutons de contenu (Visibles si le chapitre est cliqué) */}
+                        {isExpanded && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            className="flex flex-wrap gap-4 p-5 bg-blue-50 border-t-2 border-blue-100"
+                          >
+                            <button 
+                              onClick={() => setSelectedAction("Exercises")} 
+                              className="flex-1 min-w-[200px] bg-white border border-blue-200 text-blue-800 px-4 py-3 rounded-xl shadow hover:bg-blue-100 hover:border-blue-400 font-bold transition flex flex-col items-center gap-2"
+                            >
+                              <span className="text-2xl">📝</span> QCM & Exercices
+                            </button>
+                            
+                            <button 
+                              onClick={() => setSelectedAction("Astuces")} 
+                              className="flex-1 min-w-[200px] bg-white border border-yellow-200 text-yellow-700 px-4 py-3 rounded-xl shadow hover:bg-yellow-50 hover:border-yellow-400 font-bold transition flex flex-col items-center gap-2"
+                            >
+                              <span className="text-2xl">💡</span> Astuces
+                            </button>
+                            
+                            <button 
+                              onClick={() => setSelectedAction("Résumé")} 
+                              className="flex-1 min-w-[200px] bg-white border border-green-200 text-green-700 px-4 py-3 rounded-xl shadow hover:bg-green-50 hover:border-green-400 font-bold transition flex flex-col items-center gap-2"
+                            >
+                              <span className="text-2xl">📄</span> Fiches ou Résumés
+                            </button>
+                            
+                            <button 
+                              onClick={() => setSelectedAction("Controles")} 
+                              className="flex-1 min-w-[200px] bg-white border border-purple-200 text-purple-700 px-4 py-3 rounded-xl shadow hover:bg-purple-50 hover:border-purple-400 font-bold transition flex flex-col items-center gap-2"
+                            >
+                              <span className="text-2xl">✍️</span> Contrôles
+                            </button>
+                          </motion.div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
+
+              {/* 5. Boutons Globaux (Bas) */}
+              <div className="flex justify-center gap-6 mt-6 border-t-2 border-gray-100 pt-8">
+                <button 
+                  onClick={() => setSection("blancs")}
+                  className="px-8 py-4 bg-gray-800 text-white font-bold rounded-2xl shadow-lg hover:bg-gray-900 transition hover:-translate-y-1 flex items-center gap-3"
+                >
+                  <span className="text-2xl">📚</span>
+                  <span className="text-lg">Contrôles & Examens blancs</span>
+                </button>
+                
+                <button 
+                  onClick={() => setSection("concours")}
+                  className="px-8 py-4 bg-green-700 text-white font-bold rounded-2xl shadow-lg hover:bg-green-800 transition hover:-translate-y-1 flex items-center gap-3"
+                >
+                  <span className="text-2xl">🎓</span>
+                  <span className="text-lg">Examens nationaux</span>
+                </button>
+              </div>
+
             </div>
           ))}
         </div>
@@ -1289,38 +1398,7 @@ if (section === "home") {
         );
       }
 
-     if (selectedChapter) {
-        const actions = [
-          { 
-            label: selectedMatiere === "SVT" ? "📝 Examen blanc" : "💡 Astuces", 
-            value: "Astuces",
-            color: selectedMatiere === "SVT" ? "bg-red-400 text-white" : "bg-yellow-400 text-black" 
-          },
-          { label: "📘 Résumé", value: "Résumé", color: "bg-blue-400 text-black" },
-          { label: "🧩 Exercises", value: "Exercises", color: "bg-green-400 text-black" },
-        ];
-
-        return (
-          <div className="flex flex-col items-center justify-center gap-8 mt-20">
-            <h2 className="text-2xl font-bold text-gray-800 text-center max-w-2xl px-4">{selectedChapter}</h2>
-            <div className="flex gap-8">
-              {actions.map((action, index) => (
-                <motion.button
-                  key={index}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setSelectedAction(action.value)}
-                  className={`${action.color} font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-2xl transition`}
-                >
-                  {action.label}
-                </motion.button>
-              ))}
-            </div>
-          </div>
-        );
-      }
-
-      // 🎯 Rendu par défaut si aucune condition n'est remplie
+    // 🎯 Rendu par défaut si aucune condition n'est remplie
       return <StudentDashboardStats />;
       
   }; // 👈 L'ACCOLADE EST ICI : Elle ferme PROPREMENT renderCenterContent !

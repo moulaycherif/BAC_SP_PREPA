@@ -9,6 +9,7 @@ export interface IQuestion extends Document {
   explication?: string;
   type?: string; 
   subject: string;
+  chapter?: string;
   exam?: string;
   note?: number;
   isGroup: boolean;
@@ -28,6 +29,7 @@ const questionSchema = new Schema<IQuestion>(
     explication: { type: String, default: null },
     type: { type: String, default: "qcm" }, // Accepte désormais 'exercise', 'astuce', 'flashcard'
     subject: { type: String, required: true },
+    chapter: { type: String, default: null },
     exam: { type: String, default: "Concours Blanc" }, 
     note: { type: Number, default: 1 },
     isGroup: { type: Boolean, default: false },

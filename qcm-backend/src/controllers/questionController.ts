@@ -21,17 +21,20 @@ const getCell = (row: any, key: string) => {
 ============================================================ */
 export const getQuestions = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // 👈 NOUVEAU : Ajout de numeroConcoursBlanc et typeEpreuve dans les paramètres attendus
-    const { exam, subject, numeroConcoursBlanc, typeEpreuve } = req.query as any;
+    // 👇 NOUVEAU : On ajoute 'chapter' et 'type' dans la liste des requêtes attendues
+    const { exam, subject, numeroConcoursBlanc, typeEpreuve, chapter, type } = req.query as any;
     const isGuest = req.student?.role === "guest";
     const filter: any = {};
     
     if (exam) filter.exam = { $regex: new RegExp(`^${exam.trim()}$`, "i") };
     if (subject) filter.subject = { $regex: new RegExp(`^${subject.trim()}$`, "i") };
     
-    // 👈 NOUVEAU : Application des filtres pour concours blancs
     if (typeEpreuve) filter.typeEpreuve = typeEpreuve;
     if (numeroConcoursBlanc) filter.numeroConcoursBlanc = numeroConcoursBlanc;
+
+    // 👇 NOUVEAU : Application des filtres pour Chapitre et Type
+    if (chapter) filter.chapter = { $regex: new RegExp(`^${chapter.trim()}$`, "i") };
+    if (type) filter.type = type; // ex: "qcm", "astuce", "resume", "exercise"
 
     let query = Question.find(filter)
       .populate({

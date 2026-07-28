@@ -37,7 +37,8 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 
   try {
     const file = req.file;
-    const { examId, subject, typeEpreuve, numeroConcoursBlanc } = req.body;
+    // 👇 NOUVEAU : Ajout de chapter dans la déstructuration
+    const { examId, subject, chapter, typeEpreuve, numeroConcoursBlanc } = req.body;
     const contentType = req.body.type || "qcm"; // qcm, flashcard, exercise, astuce, resume
 
     if (!file) {
@@ -77,6 +78,11 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       systemPrompt = `Tu es un professeur expert. Génère 5 flashcards/astuces de révision.
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
       { "items": [ { "question": "Concept ou Astuce", "explication": "Définition ou explication...", "options": [] } ] }`;
+    } else if (contentType === "resume") {
+      // 👇 NOUVEAU : Prompt spécifique pour les résumés
+      systemPrompt = `Tu es un professeur expert. Génère un résumé clair et structuré des points clés de ce texte. Découpe-le en 3 à 5 sections importantes.
+      Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
+      { "items": [ { "question": "Titre de la section", "explication": "Contenu du résumé pour cette section...", "options": [] } ] }`;
     }
 
     // 3. Appel à l'IA avec le client universel
@@ -117,6 +123,7 @@ if (process.env.AI_PROVIDER === 'OPENROUTER') {
       explication: item.explication,
       type: contentType,
       subject: subject,
+      chapter: chapter || null, // 👈 NOUVEAU : Sauvegarde du chapitre
       exam: examId || "Concours Blanc",
       typeEpreuve: typeEpreuve || "blanc",
       numeroConcoursBlanc: numeroConcoursBlanc || null,
