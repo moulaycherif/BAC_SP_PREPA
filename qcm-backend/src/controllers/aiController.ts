@@ -87,10 +87,10 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     if (process.env.AI_PROVIDER === 'GROQ') modelName = "llama3-8b-8192";
     if (process.env.AI_PROVIDER === 'OPENROUTER') {
   // Modèle ultra-rapide et très stable en gratuit
-  modelName = "qwen/qwen-2.5-7b-instruct:free"; 
+  // modelName = "qwen/qwen-2.5-7b-instruct:free"; 
   
   // Alternative si vous voulez tester la puissance de Llama 3.3 :
-  // modelName = "meta-llama/llama-3.3-70b-instruct:free";
+   modelName = "meta-llama/llama-3.3-70b-instruct:free";
 }
 
     const response = await openai.chat.completions.create({
