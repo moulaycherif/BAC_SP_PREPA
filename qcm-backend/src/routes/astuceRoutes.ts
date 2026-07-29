@@ -2,7 +2,8 @@ import { Router } from "express";
 import {
   getAstucesByChapter,
   createAstuce,
-  uploadAstucePdf
+  uploadAstucePdf,
+  getAllAstuces
 } from "../controllers/astucesController";
 import Astuce from "../models/Astuce";
 import { supabase } from "../config/supabase";
@@ -91,5 +92,7 @@ router.get("/detail/:id", async (req, res) => {
 
 /* 🟡 ÉTUDIANT — ASTUCES PAR CHAPITRE */
 router.get("/:chapter", authenticateStudent, getAstucesByChapter);
+
+router.get('/', getAllAstuces);
 
 export default router;

@@ -74,8 +74,10 @@ const AdminAstuces: React.FC = () => {
 
   const fetchTips = async () => {
     try {
-      const res = await axios.get(`${API_BASE_URL}/api/astuces`);
-
+      const adminToken = localStorage.getItem("adminToken");
+      const res = await axios.get(`${API_BASE_URL}/api/astuces`, {
+        headers: { Authorization: `Bearer ${adminToken}` },
+      });
       const safeData = res.data.map((tip: any) => ({
         ...tip,
         cases: tip.cases || [],
@@ -97,12 +99,14 @@ const AdminAstuces: React.FC = () => {
     formData.append("file", file);
 
     try {
+      const adminToken = localStorage.getItem("adminToken");
       const res = await axios.post(
         `${API_BASE_URL}/api/astuces/upload-pdf`,
         formData,
         {
           headers: {
             "Content-Type": "multipart/form-data",
+            Authorization: `Bearer ${adminToken}`,
           },
         }
       );
@@ -126,9 +130,16 @@ const AdminAstuces: React.FC = () => {
     formData.append("file", file);
 
     try {
+      const adminToken = localStorage.getItem("adminToken");
       const res = await axios.post(
         `${API_BASE_URL}/api/astuces/upload-image`,
-        formData
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data", // 👈 (Recommandé avec FormData)
+            Authorization: `Bearer ${adminToken}`,
+          }
+        }
       );
 
       const imageUrl = res.data.imageUrl;
@@ -182,12 +193,11 @@ const AdminAstuces: React.FC = () => {
   /* ===================== CREATE ===================== */
 
   const createTip = async () => {
+    const adminToken = localStorage.getItem("adminToken");
     const casesCopy = [...cases]; 
 
     const cleanCases = casesCopy.filter(
-      (c) =>
-        !isEditorEmpty(c.content) ||
-        (c.image && c.image.trim() !== "")
+      (c) => !isEditorEmpty(c.content) || (c.image && c.image.trim() !== "")
     );
 
     await axios.post(`${API_BASE_URL}/api/astuces`, {
@@ -197,6 +207,8 @@ const AdminAstuces: React.FC = () => {
       description,
       cases: mode === "manual" ? cleanCases : [],
       pdfUrl,
+    }, {
+      headers: { Authorization: `Bearer ${adminToken}` }, // <-- AJOUT
     });
 
     setSubject("");

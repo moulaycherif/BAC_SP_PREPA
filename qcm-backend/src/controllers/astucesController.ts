@@ -107,3 +107,25 @@ export const uploadAstucePdf = async (req: AuthenticatedRequest, res: Response) 
     res.status(500).json({ message: "Erreur serveur" });
   }
 };
+
+/* 🔵 TOUTES LES ASTUCES (Pour l'Admin) */
+export const getAllAstuces = async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const astuces = await Astuce.find().sort({ createdAt: -1 });
+    
+    const safeAstuces = astuces.map((tip: any) => ({
+      _id: tip._id,
+      subject: tip.subject,
+      chapter: tip.chapter,
+      title: tip.title,
+      description: tip.description,
+      pdfUrl: tip.pdfUrl,
+      cases: (tip.cases || []).filter(Boolean),
+    }));
+
+    res.json(safeAstuces);
+  } catch (error) {
+    console.error("Erreur getAllAstuces:", error);
+    res.status(500).json({ message: "Erreur serveur" });
+  }
+};
