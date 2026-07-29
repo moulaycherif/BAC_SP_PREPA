@@ -115,7 +115,12 @@ if (process.env.AI_PROVIDER === 'OPENROUTER') {
 
     const generatedData = JSON.parse(responseContent);
 
-    // 4. Formatage et Sauvegarde
+   // 4. Formatage et Sauvegarde
+    // NOUVEAU : On détermine les étiquettes correctes pour ne pas polluer les concours blancs
+    const isControle = contentType === "controle";
+    const finalExamName = isControle ? "Contrôle IA" : (examId || "Génération IA");
+    const finalTypeEpreuve = isControle ? "blanc" : (typeEpreuve || "officiel");
+
     const itemsToInsert = generatedData.items.map((item: any) => ({
       texte: item.question,
       options: item.options || [],
@@ -123,9 +128,9 @@ if (process.env.AI_PROVIDER === 'OPENROUTER') {
       explication: item.explication,
       type: contentType,
       subject: subject,
-      chapter: chapter || null, // 👈 NOUVEAU : Sauvegarde du chapitre
-      exam: examId || "Concours Blanc",
-      typeEpreuve: typeEpreuve || "blanc",
+      chapter: chapter || null, 
+      exam: finalExamName,             // 👈 Modifié
+      typeEpreuve: finalTypeEpreuve,   // 👈 Modifié
       numeroConcoursBlanc: numeroConcoursBlanc || null,
       note: 1
     }));

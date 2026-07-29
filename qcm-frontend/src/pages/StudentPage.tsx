@@ -326,17 +326,15 @@ const getAccessibleSubjects = () => {
   }, [selectedAction, selectedChapter, selectedMatiere]);
 
   useEffect(() => {
-    // On ne lance la requête que si un chapitre et une action sont sélectionnés
     if (selectedChapter && selectedAction) {
       const fetchContent = async () => {
         try {
-          // On fait correspondre "selectedAction" au "type" attendu par le backend
           let typeActionStr = "qcm"; 
           if (selectedAction === "Astuces") typeActionStr = "astuce";
           if (selectedAction === "Résumé") typeActionStr = "resume";
-          if (selectedAction === "Exercises") typeActionStr = "exercise";
+          // On force la recherche de 'qcm' pour la base de données, même si l'UI dit 'Exercises'
+          if (selectedAction === "Exercises") typeActionStr = "qcm"; 
   
-          // L'appel à l'API via la route existante "/"
           const response = await axios.get('/api/questions', {
             params: {
               subject: selectedMatiere,
@@ -345,8 +343,32 @@ const getAccessibleSubjects = () => {
             }
           });
           
-          // Mettez à jour votre state de questions avec le résultat
-          setQuestions(response.data);
+          const aiData = response.data;
+
+          // Formatage spécifique selon le type d'action
+          if (selectedAction === "Exercises") {
+            const formattedForUI = aiData.map((q: any) => ({
+              _id: q._id,
+              contextText: "Questions d'entraînement (Générées par IA)", 
+              subQuestions: [{
+                _id: q._id,
+                questionText: q.texte,
+                options: q.options,
+                correctAnswer: q.reponseCorrecte,
+                explanation: q.explication
+              }]
+            }));
+            setExercises(formattedForUI);
+            setExerciseIndex(0);
+            setExerciseAnswers({});
+            setExerciseSubmitted(false);
+          } 
+          else if (selectedAction === "Résumé") {
+            setResumes(aiData);
+          }
+          else {
+            setQuestions(aiData);
+          }
           
         } catch (error) {
           console.error("Erreur lors du chargement des données", error);
@@ -1219,12 +1241,26 @@ if (section === "home") {
             )}
 
             {selectedResume && (
-              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setSelectedResume(null)}>
-                <div onClick={(e) => e.stopPropagation()} className={`bg-white rounded-2xl shadow-2xl w-full max-w-2xl ${isShortResume ? "max-h-[55vh]" : "max-h-[75vh]"} flex flex-col`}>
-                  <h2 className="text-lg font-bold p-3 text-center border-b">{selectedResume.chapter}</h2>
-                  <div className="flex-1 overflow-y-auto p-2">
-                    <iframe src={selectedResume.pdfUrl + "#toolbar=0"} className="w-full h-full min-h-[300px] rounded-b-2xl" title="Résumé PDF" />
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedResume(null)}>
+                <div onClick={(e) => e.stopPropagation()} className={`bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden ${isShortResume ? "max-h-[60vh]" : "max-h-[85vh]"}`}>
+                  
+                  {/* En-tête du modal de résumé */}
+                  <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+                    <h2 className="text-xl font-bold text-blue-900">{selectedResume.texte || selectedResume.chapter || "Fiche de révision"}</h2>
+                    <button onClick={() => setSelectedResume(null)} className="text-gray-500 hover:text-black font-bold text-2xl px-2">✖</button>
                   </div>
+
+                  {/* Contenu du résumé */}
+                  <div className="flex-1 overflow-y-auto p-6">
+                    {selectedResume.pdfUrl ? (
+                      <iframe src={selectedResume.pdfUrl + "#toolbar=0"} className="w-full h-full min-h-[500px] rounded-b-2xl" title="Résumé PDF" />
+                    ) : (
+                      <div className="text-gray-800 text-lg leading-relaxed bg-blue-50/30 p-6 rounded-xl border border-blue-100">
+                        <MixedContentRenderer text={selectedResume.explication || selectedResume.texte || "Contenu indisponible."} />
+                      </div>
+                    )}
+                  </div>
+                  
                 </div>
               </div>
             )}
