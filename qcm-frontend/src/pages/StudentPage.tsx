@@ -350,18 +350,23 @@ const getAccessibleSubjects = () => {
           console.log("📥 Résultat QCM IA reçus :", resAi.data);
           const aiData = resAi.data || [];
           
-          aiExercises = aiData.map((q: any) => ({
-            _id: q._id,
-            contextText: "Questions d'entraînement (Générées par IA)", 
-            subQuestions: [{
+          if (aiData.length > 0) {
+            const aiSubQuestions = aiData.map((q: any) => ({
               _id: q._id,
               questionText: q.texte,
+              qType: 'qcm', 
               options: q.options || [],
               correctAnswer: q.reponseCorrecte,
               explanation: q.explication,
               image: q.image
-            }]
-          }));
+            }));
+
+            aiExercises = [{
+              _id: "ia-group-" + Date.now(),
+              contextText: "🧠 Questions d'entraînement (Générées par l'IA)", 
+              subQuestions: aiSubQuestions
+            }];
+          }
         } catch (err) { console.error("Erreur Exercices IA", err); }
 
         setExercises([...manualExercises, ...aiExercises]);
@@ -546,7 +551,7 @@ const getAccessibleSubjects = () => {
       return <StudentAstuceDetail id={selectedTipId} onBack={() => setSelectedTipId(null)} />;
     }
     
-if (section === "home") {
+if (section === "home" && !selectedAction) {
       const accessibleSubjects = getAccessibleSubjects();
 
       // 🛡️ NOUVELLE SÉCURITÉ : Si aucune matière n'est trouvée
@@ -1264,7 +1269,7 @@ if (section === "home") {
         );
       }
 
-      if (selectedChapter && selectedAction === "Exercises") {
+      if (selectedChapter && (selectedAction === "Exercises" || selectedAction === "Exercices" || selectedAction === "QCM")) {
         const currentEx = exercises[exerciseIndex];
         if (exercises.length === 0) {
           return <p className="text-center mt-10">Aucun exercice trouvé</p>;
