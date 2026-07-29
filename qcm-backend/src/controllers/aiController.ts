@@ -37,7 +37,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 
   try {
     const file = req.file;
-    // 👇 NOUVEAU : Ajout de chapter dans la déstructuration
     const { examId, subject, chapter, typeEpreuve, numeroConcoursBlanc } = req.body;
     const contentType = req.body.type || "qcm"; // qcm, flashcard, exercise, astuce, resume
 
@@ -64,41 +63,53 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
        return;
     }
 
+    // 👇 NOUVEAU : Consigne stricte pour forcer le formatage LaTeX / KaTeX
+    const baseMathInstruction = `
+    🚨 RÈGLES STRICTES DE FORMATAGE MATHÉMATIQUE (KATEX/LATEX) 🚨 :
+    Tu dois IMPÉRATIVEMENT encadrer TOUTES les formules, variables, fractions et symboles mathématiques avec le délimiteur $ pour qu'ils soient interprétés correctement par le frontend.
+    - MAUVAIS : La limite de x tend vers +infini de f(x) = x^2 + 1
+    - BON : La limite de $x$ tend vers $+\\infty$ de $f(x) = x^2 + 1$
+    N'utilise jamais de texte brut pour les expressions mathématiques ou physiques.
+    ATTENTION CRUCIALE : Puisque tu réponds au format JSON, tu dois DOUBLER les antislashs de tes commandes LaTeX pour qu'elles ne soient pas effacées lors du parsing JSON (exemple : écris \\\\frac au lieu de \\frac, et \\\\infty au lieu de \\infty).
+    `;
+
     // 2. Configuration du Prompt dynamique selon le type demandé
     let systemPrompt = "";
     if (contentType === "qcm") {
       systemPrompt = `Tu es un professeur expert. Génère 10 QCM pertinents à partir du texte fourni. 
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
-      { "items": [ { "question": "...", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 0, "explication": "..." } ] }`;
+      { "items": [ { "question": "...", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 0, "explication": "..." } ] }
+      ${baseMathInstruction}`;
     } else if (contentType === "exercise") {
       systemPrompt = `Tu es un professeur expert. Génère 2 exercices d'application pratiques basés sur ce texte, avec leurs corrigés détaillés.
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
-      { "items": [ { "question": "Énoncé de l'exercice...", "explication": "Corrigé détaillé...", "options": [] } ] }`;
+      { "items": [ { "question": "Énoncé de l'exercice...", "explication": "Corrigé détaillé...", "options": [] } ] }
+      ${baseMathInstruction}`;
     } else if (contentType === "flashcard" || contentType === "astuce") {
       systemPrompt = `Tu es un professeur expert. Génère 5 flashcards/astuces de révision.
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
-      { "items": [ { "question": "Concept ou Astuce", "explication": "Définition ou explication...", "options": [] } ] }`;
+      { "items": [ { "question": "Concept ou Astuce", "explication": "Définition ou explication...", "options": [] } ] }
+      ${baseMathInstruction}`;
     } else if (contentType === "resume") {
-      // 👇 NOUVEAU : Prompt spécifique pour les résumés
       systemPrompt = `Tu es un professeur expert. Génère un résumé clair et structuré des points clés de ce texte. Découpe-le en 3 à 5 sections importantes.
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
-      { "items": [ { "question": "Titre de la section", "explication": "Contenu du résumé pour cette section...", "options": [] } ] }`;
+      { "items": [ { "question": "Titre de la section", "explication": "Contenu du résumé pour cette section...", "options": [] } ] }
+      ${baseMathInstruction}`;
     }
 
     // 3. Appel à l'IA avec le client universel
     const openai = getAIClient();
     
     // Détermination du modèle selon le fournisseur
-  // Dans aiController.ts
-let modelName = "gpt-4o-mini"; // Par défaut
+    let modelName = "gpt-4o-mini"; // Par défaut
 
-if (process.env.AI_PROVIDER === 'GROQ') {
-  modelName = "llama-3.1-8b-instant"; // 👈 Modèle officiel Groq (gratuit et ultra-rapide)
-}
+    if (process.env.AI_PROVIDER === 'GROQ') {
+      modelName = "llama-3.1-8b-instant"; // 👈 Modèle officiel Groq (gratuit et ultra-rapide)
+    }
 
-if (process.env.AI_PROVIDER === 'OPENROUTER') {
-  modelName = "meta-llama/llama-3.3-70b-instruct:free";
-}
+    if (process.env.AI_PROVIDER === 'OPENROUTER') {
+      modelName = "meta-llama/llama-3.3-70b-instruct:free";
+    }
 
     const response = await openai.chat.completions.create({
       model: modelName,
@@ -115,13 +126,12 @@ if (process.env.AI_PROVIDER === 'OPENROUTER') {
 
     const generatedData = JSON.parse(responseContent);
 
-   // 4. Formatage et Sauvegarde
-    // NOUVEAU : On détermine les étiquettes correctes pour ne pas polluer les concours blancs
-   
+    // 4. Formatage et Sauvegarde
+    // On détermine les étiquettes correctes pour ne pas polluer les concours blancs
     const isControle = contentType === "controle";
     const finalExamName = isControle ? "Contrôle IA" : (examId || "Support de cours IA");
     
-    // 👇 CORRECTION ICI : On utilise "ia" (ou "chapitre") pour ne pas déclencher l'affichage dans les examens
+    // On utilise "ia" (ou "chapitre") pour ne pas déclencher l'affichage dans les examens
     const finalTypeEpreuve = isControle ? "blanc" : "ia"; 
 
     const itemsToInsert = generatedData.items.map((item: any) => ({
@@ -133,7 +143,7 @@ if (process.env.AI_PROVIDER === 'OPENROUTER') {
       subject: subject,
       chapter: chapter || null, 
       exam: finalExamName,             
-      typeEpreuve: finalTypeEpreuve,   // 👈 Utilise la nouvelle variable
+      typeEpreuve: finalTypeEpreuve,
       numeroConcoursBlanc: numeroConcoursBlanc || null,
       note: 1
     }));

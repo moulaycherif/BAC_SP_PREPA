@@ -124,6 +124,8 @@ export default function StudentPage() {
   const [selectedTip, setSelectedTip] = useState<Astuce | null>(null);
   const [focusMode, setFocusMode] = useState(false);
 
+  const [controles, setControles] = useState<any[]>([]);
+
   const matieres = ["Mathématique", "Physique", "Chimie", "SVT"];
   const isShortResume = (selectedResume?.chapter?.length ?? 0) < 30;
 
@@ -375,6 +377,22 @@ const getAccessibleSubjects = () => {
         setExerciseSubmitted(false);
         setExerciseScore(null);
       }
+
+// ---------------------------------------------------------
+      // D. GESTION DES CONTRÔLES
+      // ---------------------------------------------------------
+      else if (selectedAction === "Controles") {
+        try {
+          // On utilise type=controle car c'est ce que votre backend génère
+          const res = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=controle`, { headers });
+          console.log("📥 Contrôles reçus :", res.data);
+          setControles(res.data || []);
+        } catch (err) { 
+          console.error("Erreur lors de la récupération des contrôles", err); 
+          setControles([]);
+        }
+      }
+
     };
 
     loadHybridContent();
@@ -400,8 +418,8 @@ const getAccessibleSubjects = () => {
       .replace(/&nbsp;/gi, " ")
       .replace(/<smiles>[\s\S]*?<\/smiles>/gi, "");
 
-    // 2. Regex ultra-tolérante (gère les espaces et retours à la ligne autour de [[IMG=...]])
-    const combinedRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|(?<![\\<])\$[^$\n<>]+?\$|\[\[\s*IMG\s*=\s*[^\]]+\s*\]\])/gi;
+   // 2. Regex ultra-tolérante (gère les sauts de ligne, les symboles < >, et les doubles échappements de l'IA)
+    const combinedRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\\\\\[[\s\S]*?\\\\\]|\\\\\([\s\S]*?\\\\\)|(?<![\\<])\$[^$]+?\$|\[\[\s*IMG\s*=\s*[^\]]+\s*\]\])/gi;
     const parts = processedText.split(combinedRegex);
 
     return (
@@ -1235,7 +1253,8 @@ if (section === "home" && !selectedAction) {
                     }}
                     className="px-5 py-2 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 shadow"
                   >
-                    {sum.chapter}
+                    {/* 🟢 MODIFICATION ICI : On affiche le titre, sinon un texte par défaut */}
+                {sum.title || sum.texte?.substring(0, 30) + "..." || "Résumé généré par l'IA"}
                   </button>
                 ))}
               </div>
@@ -1435,6 +1454,54 @@ if (section === "home" && !selectedAction) {
         );
       }
 
+      if (selectedChapter && selectedAction === "Controles") {
+        return (
+          <div className="p-6 relative text-center">
+            <h2 className="text-3xl font-bold mb-8 text-purple-800">✍️ {selectedChapter} — Contrôles</h2>
+            
+            {controles.length === 0 ? (
+              <div className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-purple-500 inline-block">
+                <span className="text-4xl block mb-4">🚧</span>
+                <p className="text-gray-600 text-lg font-medium">
+                  Aucun contrôle n'est encore disponible pour ce chapitre.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-6 text-left">
+                {controles.map((controle, index) => (
+                  <div key={controle._id || index} className="bg-white p-6 rounded-xl shadow-md border-l-4 border-purple-500">
+                    <div className="flex items-center gap-3 mb-4 border-b pb-2">
+                      <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
+                        Question {index + 1}
+                      </span>
+                      {controle.note && (
+                        <span className="text-gray-500 text-sm font-medium">({controle.note} points)</span>
+                      )}
+                    </div>
+                    
+                    {/* Affichage de l'énoncé du contrôle avec prise en charge du LaTeX et des images */}
+                    <div className="text-lg text-gray-800 font-medium">
+                      <MixedContentRenderer text={controle.texte || controle.question || "Contenu indisponible."} />
+                    </div>
+
+                    {/* Affichage conditionnel des options si le contrôle est un format QCM */}
+                    {controle.options && controle.options.length > 0 && (
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 pl-4">
+                        {controle.options.map((opt: string, i: number) => (
+                          <div key={i} className="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                            <MixedContentRenderer text={opt} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      }
+
     // 🎯 Rendu par défaut si aucune condition n'est remplie
       return <StudentDashboardStats />;
       
@@ -1497,4 +1564,4 @@ if (section === "home" && !selectedAction) {
       </motion.div>
     </div>
   );
-} // 👈 ET CELLE-CI FERME LE COMPOSANT STUDENTPAGE
+} 
