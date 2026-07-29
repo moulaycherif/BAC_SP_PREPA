@@ -117,9 +117,12 @@ if (process.env.AI_PROVIDER === 'OPENROUTER') {
 
    // 4. Formatage et Sauvegarde
     // NOUVEAU : On détermine les étiquettes correctes pour ne pas polluer les concours blancs
+   
     const isControle = contentType === "controle";
-    const finalExamName = isControle ? "Contrôle IA" : (examId || "Génération IA");
-    const finalTypeEpreuve = isControle ? "blanc" : (typeEpreuve || "officiel");
+    const finalExamName = isControle ? "Contrôle IA" : (examId || "Support de cours IA");
+    
+    // 👇 CORRECTION ICI : On utilise "ia" (ou "chapitre") pour ne pas déclencher l'affichage dans les examens
+    const finalTypeEpreuve = isControle ? "blanc" : "ia"; 
 
     const itemsToInsert = generatedData.items.map((item: any) => ({
       texte: item.question,
@@ -129,8 +132,8 @@ if (process.env.AI_PROVIDER === 'OPENROUTER') {
       type: contentType,
       subject: subject,
       chapter: chapter || null, 
-      exam: finalExamName,             // 👈 Modifié
-      typeEpreuve: finalTypeEpreuve,   // 👈 Modifié
+      exam: finalExamName,             
+      typeEpreuve: finalTypeEpreuve,   // 👈 Utilise la nouvelle variable
       numeroConcoursBlanc: numeroConcoursBlanc || null,
       note: 1
     }));

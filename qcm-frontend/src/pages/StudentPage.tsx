@@ -215,20 +215,6 @@ const getAccessibleSubjects = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedAction !== "Résumé" || !selectedChapter) return;
-    const token = localStorage.getItem("token"); 
-    axios
-      .get(`${API_BASE_URL}/api/resume/by-chapter/${encodeURIComponent(selectedChapter)}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then((res) => setResumes(res.data))
-      .catch((err) => {
-        console.error("❌ SUMMARY ERROR =", err);
-        setResumes([]);
-      });
-  }, [selectedAction, selectedChapter]);
-
-  useEffect(() => {
     if (currentExam) {
       let url = `${API_BASE_URL}/api/questions?exam=${encodeURIComponent(currentExam)}`;
       if (selectedMatiere) {
@@ -247,137 +233,126 @@ const getAccessibleSubjects = () => {
     }
   }, [currentExam, selectedMatiere]);
 
+  // =========================================================================
+  // 🌟 USE-EFFECT HYBRIDE : FUSION DU CONTENU MANUEL ET DU CONTENU IA 🌟
+  // =========================================================================
   useEffect(() => {
-    if (!selectedChapter) return;
-    if (selectedAction === "Astuces") {
-      fetchAstucesByChapter(selectedChapter)
-        .then((data) => setAstuces(data as Astuce[]))
-        .catch(() => setAstuces([]));
-    }
-  }, [selectedAction, selectedChapter]);
+    if (!selectedChapter || !selectedAction || !selectedMatiere) return;
 
-  useEffect(() => {
-    const isExerciseAction = selectedAction === "Exercises";
-    const isWhiteExamAction = selectedAction === "Astuces" && selectedMatiere === "SVT";
-
-    if ((isExerciseAction || isWhiteExamAction) && selectedChapter && selectedMatiere) {
+    const loadHybridContent = async () => {
       const token = localStorage.getItem("token");
-      const isWhiteExamParam = isWhiteExamAction ? "true" : "false";
+      const headers = { Authorization: `Bearer ${token}` };
 
-      axios
-        .get(`${API_BASE_URL}/api/exercises/${encodeURIComponent(selectedMatiere)}/${encodeURIComponent(selectedChapter)}?isWhiteExam=${isWhiteExamParam}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        .then((res) => {
+      // ---------------------------------------------------------
+      // A. GESTION DES RÉSUMÉS (PDF Manuels + Textes IA)
+      // ---------------------------------------------------------
+      if (selectedAction === "Résumé") {
+        let manualData: any[] = [], aiData: any[] = [];
+        
+        try {
+          const resManual = await axios.get(`${API_BASE_URL}/api/resume/by-chapter/${encodeURIComponent(selectedChapter)}`, { headers });
+          manualData = resManual.data || [];
+        } catch (err) { console.error("Erreur Résumés manuels", err); }
+
+        try {
+          const resAi = await axios.get(`/api/questions?subject=${selectedMatiere}&chapter=${selectedChapter}&type=resume`, { headers });
+          aiData = resAi.data || [];
+        } catch (err) { console.error("Erreur Résumés IA", err); }
+
+        setResumes([...manualData, ...aiData]);
+      }
+
+      // ---------------------------------------------------------
+      // B. GESTION DES ASTUCES & EXAMENS BLANCS SVT
+      // ---------------------------------------------------------
+      else if (selectedAction === "Astuces") {
+        const isWhiteExamAction = selectedMatiere === "SVT";
+
+        if (isWhiteExamAction) {
+          try {
+            const res = await axios.get(`${API_BASE_URL}/api/exercises/${encodeURIComponent(selectedMatiere)}/${encodeURIComponent(selectedChapter)}?isWhiteExam=true`, { headers });
+            const rawExercises = res.data || [];
+            
+            const normalizeForCompare = (val?: string) => val ? val.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/gi, '').replace(/\s+/g, '').toLowerCase().trim() : "";
+            const groupedExercises: any[] = [];
+            rawExercises.forEach((ex: any) => {
+              const exText = normalizeForCompare(ex.contextText);
+              const exImg = (ex.contextImage || "").trim();
+              const existingGroup = groupedExercises.find((g) => normalizeForCompare(g.contextText) === exText && (g.contextImage || "").trim() === exImg);
+              
+              if (existingGroup) existingGroup.subQuestions = [...existingGroup.subQuestions, ...(ex.subQuestions || [])];
+              else groupedExercises.push({ ...ex, subQuestions: [...(ex.subQuestions || [])] });
+            });
+            setWhiteExams(groupedExercises);
+          } catch (err) { setWhiteExams([]); }
+        } else {
+          let manualData: Astuce[] = [], aiData: any[] = [];
+          
+          try {
+            const data = await fetchAstucesByChapter(selectedChapter);
+            manualData = (data as Astuce[]) || [];
+          } catch (err) { console.error("Erreur Astuces", err); }
+          
+          try {
+            const resAi = await axios.get(`/api/questions?subject=${selectedMatiere}&chapter=${selectedChapter}&type=astuce`, { headers });
+            aiData = resAi.data || [];
+          } catch (err) { console.error("Erreur Astuces IA", err); }
+          
+          setAstuces([...manualData, ...aiData]);
+        }
+      }
+
+      // ---------------------------------------------------------
+      // C. GESTION DES EXERCICES ET QCM
+      // ---------------------------------------------------------
+      else if (selectedAction === "Exercises") {
+        let manualExercises: any[] = [], aiExercises: any[] = [];
+
+        try {
+          const res = await axios.get(`${API_BASE_URL}/api/exercises/${encodeURIComponent(selectedMatiere)}/${encodeURIComponent(selectedChapter)}?isWhiteExam=false`, { headers });
           const rawExercises = res.data || [];
           
-          const normalizeForCompare = (val?: string) => {
-            if (!val) return "";
-            return val
-              .replace(/<[^>]*>?/gm, '') 
-              .replace(/&nbsp;/gi, '')   
-              .replace(/\s+/g, '')       
-              .toLowerCase()             
-              .trim();
-          };
-
+          const normalizeForCompare = (val?: string) => val ? val.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/gi, '').replace(/\s+/g, '').toLowerCase().trim() : "";
           const groupedExercises: any[] = [];
-          
           rawExercises.forEach((ex: any) => {
             const exText = normalizeForCompare(ex.contextText);
             const exImg = (ex.contextImage || "").trim();
-
-            const existingGroup = groupedExercises.find((g) => {
-              const gText = normalizeForCompare(g.contextText);
-              const gImg = (g.contextImage || "").trim();
-              return gText === exText && gImg === exImg;
-            });
+            const existingGroup = groupedExercises.find((g) => normalizeForCompare(g.contextText) === exText && (g.contextImage || "").trim() === exImg);
             
-            if (existingGroup) {
-              existingGroup.subQuestions = [
-                ...existingGroup.subQuestions, 
-                ...(ex.subQuestions || [])
-              ];
-            } else {
-              groupedExercises.push({ 
-                ...ex, 
-                subQuestions: [...(ex.subQuestions || [])] 
-              });
-            }
+            if (existingGroup) existingGroup.subQuestions = [...existingGroup.subQuestions, ...(ex.subQuestions || [])];
+            else groupedExercises.push({ ...ex, subQuestions: [...(ex.subQuestions || [])] });
           });
+          manualExercises = groupedExercises;
+        } catch (err) { console.error("Erreur Exercices Manuels", err); }
 
-          if (isWhiteExamAction) {
-            setWhiteExams(groupedExercises);
-          } else {
-            setExercises(groupedExercises);
-          }
-
-          setExerciseIndex(0);
-          setExerciseAnswers({});
-          setExerciseSubmitted(false);
-          setExerciseScore(null);
-        })
-        .catch((err) => {
-          console.error("❌ Erreur de récupération", err);
-          if (isWhiteExamAction) setWhiteExams([]);
-          else setExercises([]);
-        });
-    }
-  }, [selectedAction, selectedChapter, selectedMatiere]);
-
-  useEffect(() => {
-    if (selectedChapter && selectedAction) {
-      const fetchContent = async () => {
         try {
-          let typeActionStr = "qcm"; 
-          if (selectedAction === "Astuces") typeActionStr = "astuce";
-          if (selectedAction === "Résumé") typeActionStr = "resume";
-          // On force la recherche de 'qcm' pour la base de données, même si l'UI dit 'Exercises'
-          if (selectedAction === "Exercises") typeActionStr = "qcm"; 
-  
-          const response = await axios.get('/api/questions', {
-            params: {
-              subject: selectedMatiere,
-              chapter: selectedChapter,
-              type: typeActionStr
-            }
-          });
+          const resAi = await axios.get(`/api/questions?subject=${selectedMatiere}&chapter=${selectedChapter}&type=qcm`, { headers });
+          const aiData = resAi.data || [];
           
-          const aiData = response.data;
-
-          // Formatage spécifique selon le type d'action
-          if (selectedAction === "Exercises") {
-            const formattedForUI = aiData.map((q: any) => ({
+          aiExercises = aiData.map((q: any) => ({
+            _id: q._id,
+            contextText: "Questions d'entraînement (Générées par IA)", 
+            subQuestions: [{
               _id: q._id,
-              contextText: "Questions d'entraînement (Générées par IA)", 
-              subQuestions: [{
-                _id: q._id,
-                questionText: q.texte,
-                options: q.options,
-                correctAnswer: q.reponseCorrecte,
-                explanation: q.explication
-              }]
-            }));
-            setExercises(formattedForUI);
-            setExerciseIndex(0);
-            setExerciseAnswers({});
-            setExerciseSubmitted(false);
-          } 
-          else if (selectedAction === "Résumé") {
-            setResumes(aiData);
-          }
-          else {
-            setQuestions(aiData);
-          }
-          
-        } catch (error) {
-          console.error("Erreur lors du chargement des données", error);
-        }
-      };
-  
-      fetchContent();
-    }
-  }, [selectedMatiere, selectedChapter, selectedAction]);
+              questionText: q.texte,
+              options: q.options,
+              correctAnswer: q.reponseCorrecte,
+              explanation: q.explication,
+              image: q.image
+            }]
+          }));
+        } catch (err) { console.error("Erreur Exercices IA", err); }
+
+        setExercises([...manualExercises, ...aiExercises]);
+        setExerciseIndex(0);
+        setExerciseAnswers({});
+        setExerciseSubmitted(false);
+        setExerciseScore(null);
+      }
+    };
+
+    loadHybridContent();
+  }, [selectedAction, selectedChapter, selectedMatiere]);
 
   const resetQcm = () => {
     setCurrentExam(null);
