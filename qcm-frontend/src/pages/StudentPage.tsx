@@ -286,7 +286,8 @@ const getAccessibleSubjects = () => {
             setWhiteExams(groupedExercises);
           } catch (err) { setWhiteExams([]); }
         } else {
-          let manualData: Astuce[] = [], aiData: any[] = [];
+         // Logique classique : Astuces Manuelles + IA
+          let manualData: Astuce[] = [], aiData: Astuce[] = [];
           
           try {
             const data = await fetchAstucesByChapter(selectedChapter);
@@ -295,9 +296,25 @@ const getAccessibleSubjects = () => {
           
           try {
             const resAi = await axios.get(`/api/questions?subject=${selectedMatiere}&chapter=${selectedChapter}&type=astuce`, { headers });
-            aiData = resAi.data || [];
+            const rawAiData = resAi.data || [];
+            
+            // 🔄 CORRECTION ICI : On transforme les champs "texte" et "explication" 
+            // de l'IA vers le format "title" et "cases" attendu par l'affichage des Astuces.
+            aiData = rawAiData.map((q: any) => ({
+              _id: q._id,
+              title: q.texte || "Astuce générée par IA", 
+              subject: q.subject,
+              chapter: q.chapter,
+              cases: [
+                {
+                  title: "Explication de l'IA",
+                  content: q.explication || "Aucune explication fournie."
+                }
+              ]
+            }));
           } catch (err) { console.error("Erreur Astuces IA", err); }
           
+          // Fusion
           setAstuces([...manualData, ...aiData]);
         }
       }
