@@ -21,20 +21,23 @@ const getCell = (row: any, key: string) => {
 ============================================================ */
 export const getQuestions = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // 👇 NOUVEAU : On ajoute 'chapter' et 'type' dans la liste des requêtes attendues
     const { exam, subject, numeroConcoursBlanc, typeEpreuve, chapter, type } = req.query as any;
     const isGuest = req.student?.role === "guest";
     const filter: any = {};
     
-    if (exam) filter.exam = { $regex: new RegExp(`^${exam.trim()}$`, "i") };
-    if (subject) filter.subject = { $regex: new RegExp(`^${subject.trim()}$`, "i") };
+    // 🛡️ Fonction pour échapper les caractères spéciaux dans la Regex (ex: :, (, ), ?)
+    const escapeRegex = (text: string) => text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+
+    if (exam) filter.exam = { $regex: new RegExp(escapeRegex(exam.trim()), "i") };
+    
+    // 🔍 Filtre assoupli pour éviter le blocage Singulier / Pluriel
+    if (subject) filter.subject = { $regex: new RegExp(escapeRegex(subject.trim().replace(/s$/i, "")), "i") };
     
     if (typeEpreuve) filter.typeEpreuve = typeEpreuve;
     if (numeroConcoursBlanc) filter.numeroConcoursBlanc = numeroConcoursBlanc;
 
-    // 👇 NOUVEAU : Application des filtres pour Chapitre et Type
-    if (chapter) filter.chapter = { $regex: new RegExp(`^${chapter.trim()}$`, "i") };
-    if (type) filter.type = type; // ex: "qcm", "astuce", "resume", "exercise"
+    if (chapter) filter.chapter = { $regex: new RegExp(escapeRegex(chapter.trim()), "i") };
+    if (type) filter.type = type;
 
     let query = Question.find(filter)
       .populate({

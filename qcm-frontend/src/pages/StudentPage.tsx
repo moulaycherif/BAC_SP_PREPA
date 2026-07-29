@@ -324,7 +324,7 @@ const getAccessibleSubjects = () => {
       // ---------------------------------------------------------
       // C. GESTION DES EXERCICES ET QCM
       // ---------------------------------------------------------
-      else if (selectedAction === "Exercises") {
+      else if (selectedAction === "Exercises" || selectedAction === "Exercices" || selectedAction === "QCM") {
         let manualExercises: any[] = [], aiExercises: any[] = [];
 
         try {
@@ -347,6 +347,7 @@ const getAccessibleSubjects = () => {
         try {
           // 🔄 CORRECTION : Ajout de ${API_BASE_URL}
           const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers });
+          console.log("📥 Résultat QCM IA reçus :", resAi.data);
           const aiData = resAi.data || [];
           
           aiExercises = aiData.map((q: any) => ({
