@@ -242,6 +242,10 @@ const getAccessibleSubjects = () => {
     const loadHybridContent = async () => {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
+      
+      // 🛡️ SÉCURITÉ URL : On encode les espaces et caractères spéciaux
+      const safeMatiere = encodeURIComponent(selectedMatiere);
+      const safeChapter = encodeURIComponent(selectedChapter);
 
       // ---------------------------------------------------------
       // A. GESTION DES RÉSUMÉS (PDF Manuels + Textes IA)
@@ -250,12 +254,13 @@ const getAccessibleSubjects = () => {
         let manualData: any[] = [], aiData: any[] = [];
         
         try {
-          const resManual = await axios.get(`${API_BASE_URL}/api/resume/by-chapter/${encodeURIComponent(selectedChapter)}`, { headers });
+          const resManual = await axios.get(`${API_BASE_URL}/api/resume/by-chapter/${safeChapter}`, { headers });
           manualData = resManual.data || [];
         } catch (err) { console.error("Erreur Résumés manuels", err); }
 
         try {
-          const resAi = await axios.get(`/api/questions?subject=${selectedMatiere}&chapter=${selectedChapter}&type=resume`, { headers });
+          // 🔄 CORRECTION : Ajout de ${API_BASE_URL}
+          const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=resume`, { headers });
           aiData = resAi.data || [];
         } catch (err) { console.error("Erreur Résumés IA", err); }
 
@@ -270,7 +275,7 @@ const getAccessibleSubjects = () => {
 
         if (isWhiteExamAction) {
           try {
-            const res = await axios.get(`${API_BASE_URL}/api/exercises/${encodeURIComponent(selectedMatiere)}/${encodeURIComponent(selectedChapter)}?isWhiteExam=true`, { headers });
+            const res = await axios.get(`${API_BASE_URL}/api/exercises/${safeMatiere}/${safeChapter}?isWhiteExam=true`, { headers });
             const rawExercises = res.data || [];
             
             const normalizeForCompare = (val?: string) => val ? val.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/gi, '').replace(/\s+/g, '').toLowerCase().trim() : "";
@@ -286,7 +291,6 @@ const getAccessibleSubjects = () => {
             setWhiteExams(groupedExercises);
           } catch (err) { setWhiteExams([]); }
         } else {
-         // Logique classique : Astuces Manuelles + IA
           let manualData: Astuce[] = [], aiData: Astuce[] = [];
           
           try {
@@ -295,11 +299,10 @@ const getAccessibleSubjects = () => {
           } catch (err) { console.error("Erreur Astuces", err); }
           
           try {
-            const resAi = await axios.get(`/api/questions?subject=${selectedMatiere}&chapter=${selectedChapter}&type=astuce`, { headers });
+            // 🔄 CORRECTION : Ajout de ${API_BASE_URL}
+            const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=astuce`, { headers });
             const rawAiData = resAi.data || [];
             
-            // 🔄 CORRECTION ICI : On transforme les champs "texte" et "explication" 
-            // de l'IA vers le format "title" et "cases" attendu par l'affichage des Astuces.
             aiData = rawAiData.map((q: any) => ({
               _id: q._id,
               title: q.texte || "Astuce générée par IA", 
@@ -314,7 +317,6 @@ const getAccessibleSubjects = () => {
             }));
           } catch (err) { console.error("Erreur Astuces IA", err); }
           
-          // Fusion
           setAstuces([...manualData, ...aiData]);
         }
       }
@@ -326,7 +328,7 @@ const getAccessibleSubjects = () => {
         let manualExercises: any[] = [], aiExercises: any[] = [];
 
         try {
-          const res = await axios.get(`${API_BASE_URL}/api/exercises/${encodeURIComponent(selectedMatiere)}/${encodeURIComponent(selectedChapter)}?isWhiteExam=false`, { headers });
+          const res = await axios.get(`${API_BASE_URL}/api/exercises/${safeMatiere}/${safeChapter}?isWhiteExam=false`, { headers });
           const rawExercises = res.data || [];
           
           const normalizeForCompare = (val?: string) => val ? val.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/gi, '').replace(/\s+/g, '').toLowerCase().trim() : "";
@@ -343,7 +345,8 @@ const getAccessibleSubjects = () => {
         } catch (err) { console.error("Erreur Exercices Manuels", err); }
 
         try {
-          const resAi = await axios.get(`/api/questions?subject=${selectedMatiere}&chapter=${selectedChapter}&type=qcm`, { headers });
+          // 🔄 CORRECTION : Ajout de ${API_BASE_URL}
+          const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers });
           const aiData = resAi.data || [];
           
           aiExercises = aiData.map((q: any) => ({
@@ -352,7 +355,7 @@ const getAccessibleSubjects = () => {
             subQuestions: [{
               _id: q._id,
               questionText: q.texte,
-              options: q.options,
+              options: q.options || [],
               correctAnswer: q.reponseCorrecte,
               explanation: q.explication,
               image: q.image
