@@ -80,17 +80,17 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     let systemPrompt = "";
     if (contentType === "qcm") {
       systemPrompt = `Tu es un professeur exigeant de Baccalauréat Sciences Physiques. 
-      Génère 10 QCM de HAUT NIVEAU basés sur ce texte. 
-      INTERDIT de poser de simples questions de définitions. Tes QCM doivent évaluer la réflexion profonde : inclure des calculs, des cas limites, des déductions complexes et des pièges conceptuels.
+      Génère 5 QCM (PAS PLUS) de HAUT NIVEAU basés sur ce texte. 
+      Les QCM doivent évaluer la réflexion (calculs, cas limites).
+      CONSIGNE DE LONGUEUR : Sois CONCIS dans le champ "explication" (3 phrases maximum). N'utilise JAMAIS l'environnement LaTeX \\begin{align*} ou de longues démonstrations multi-lignes.
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
-      { "items": [ { "question": "...", "options": ["Option A", "Option B", "Option C", "Option D"], "correctAnswerIndex": 0, "explication": "..." } ] }
+      { "items": [ { "question": "...", "options": ["Option A", "Option B", "Option C", "Option D"], "correctAnswerIndex": 0, "explication": "Explication brève et directe..." } ] }
       ${baseMathInstruction}`;
     } else if (contentType === "exercise") {
       systemPrompt = `Tu es un professeur exigeant de Baccalauréat Sciences Physiques. 
-      Génère 2 Exercices Complexes (type problème d'examen/concours) basés sur ce texte. 
-      AUCUNE question de cours basique. Je veux des exercices nécessitant des démonstrations, des calculs avancés et une résolution à plusieurs étapes.
+     Génère 1 seul Exercice Complexe (type problème d'examen) basé sur ce texte. 
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
-      { "items": [ { "question": "Énoncé complet du problème...", "explication": "Corrigé détaillé pas-à-pas avec démonstration...", "options": [] } ] }
+      { "items": [ { "question": "Énoncé...", "explication": "Corrigé détaillé et CONCIS, sans développements LaTeX excessifs...", "options": [] } ] }
       ${baseMathInstruction}`;
     } else if (contentType === "flashcard" || contentType === "astuce") {
       systemPrompt = `Tu es un expert pédagogique. Génère 5 flashcards ou astuces de niveau avancé pour retenir les concepts les plus difficiles du texte.
@@ -134,6 +134,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       ],
       response_format: { type: "json_object" },
       temperature: 0.3,
+      max_tokens: 8192,
     });
 
    const responseContent = response.choices[0]?.message?.content;
