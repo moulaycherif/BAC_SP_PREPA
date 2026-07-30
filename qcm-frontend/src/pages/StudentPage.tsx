@@ -508,6 +508,54 @@ const getAccessibleSubjects = () => {
       </span>
     );
   }
+ 
+      // 🃏 COMPOSANT FLASHCARD À AJOUTER EN HAUT DU FICHIER
+const Flashcard = ({ title, content }: { title: string, content: string }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  return (
+    <div 
+      className="relative w-full h-80 cursor-pointer group"
+      style={{ perspective: '1000px' }}
+      onClick={() => setIsFlipped(!isFlipped)}
+    >
+      <div 
+        className="relative w-full h-full transition-transform duration-700 ease-in-out"
+        style={{ 
+          transformStyle: 'preserve-3d', 
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' 
+        }}
+      >
+        {/* --- FACE AVANT (RECTO) : LE CONCEPT --- */}
+        <div 
+          className="absolute w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center text-center text-white border-2 border-indigo-400 hover:shadow-2xl transition-shadow"
+          style={{ backfaceVisibility: 'hidden' }}
+        >
+          <span className="text-4xl mb-4 block">💡</span>
+          <h3 className="text-2xl font-bold leading-tight">
+            <MixedContentRenderer text={title} />
+          </h3>
+          <p className="absolute bottom-5 text-indigo-200 text-sm font-medium animate-pulse">
+            Cliquez pour retourner ↺
+          </p>
+        </div>
+
+        {/* --- FACE ARRIÈRE (VERSO) : L'EXPLICATION --- */}
+        <div 
+          className="absolute w-full h-full bg-white rounded-2xl shadow-xl p-6 overflow-y-auto flex items-center justify-center border-4 border-indigo-100 custom-scrollbar"
+          style={{ 
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)'
+          }}
+        >
+          <div className="text-gray-800 text-lg font-medium w-full text-left">
+            <MixedContentRenderer text={content} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
   // =========================================================================
   function renderContent(content?: string) {
@@ -1237,59 +1285,79 @@ if (section === "home" && !selectedAction) {
         );
       }
 
-      if (selectedChapter && selectedAction === "Résumé") {
+      if (selectedChapter && (selectedAction === "Résumé" || selectedAction === "Fiches ou résumés")) {
         return (
-          <div className="p-6 relative">
-            <h2 className="text-3xl font-bold text-center mb-8">📘 {selectedChapter} — Résumés</h2>
-            {resumes.length === 0 ? (
-              <p className="text-center text-gray-500 font-bold">En option (sur demande)…</p>
+          <div className="p-6 relative max-w-7xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-4xl font-extrabold text-indigo-900 mb-4">
+                🧠 Flashcards de Révision
+              </h2>
+              <p className="text-gray-600 text-lg">
+                Chapitre : <span className="font-bold text-indigo-600">{selectedChapter}</span>
+              </p>
+            </div>
+            
+            {(!resumes || resumes.length === 0) ? (
+               <div className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-indigo-400 text-center max-w-lg mx-auto">
+                 <span className="text-5xl block mb-4">📭</span>
+                 <p className="text-gray-600 text-lg font-medium">
+                   Aucune fiche n'a encore été générée pour ce chapitre.
+                 </p>
+               </div>
             ) : (
-              <div className="flex flex-wrap gap-3 justify-center">
-                {resumes.map((sum) => (
-                  <button
-                    key={sum._id}
-                    onClick={async () => {
-                      setSelectedResume(sum);
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                {resumes.map((resume, index) => {
+                  
+                  // 1. CAS EXCEPTIONNEL : Si c'est un ancien résumé au format PDF manuel
+                  if (resume.pdfUrl) {
+                    return (
+                      <button
+                        key={resume._id || index}
+                        onClick={() => setSelectedResume(resume)}
+                        className="h-80 w-full bg-gradient-to-br from-red-500 to-red-700 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center text-white hover:scale-105 transition-transform"
+                      >
+                        <span className="text-5xl mb-4 block">📄</span>
+                        <h3 className="text-2xl font-bold">Ouvrir le PDF</h3>
+                        <p className="mt-2 text-red-100">{resume.title || "Fiche de cours"}</p>
+                      </button>
+                    );
+                  }
+
+                  // 2. CAS CLASSIQUE : Flashcard générée par l'IA
+                  const cardTitle = resume.texte || resume.title || `Concept ${index + 1}`;
+                  const cardContent = resume.explication || "Aucune explication détaillée disponible.";
+
+                  return (
+                    <div key={resume._id || index} onClick={async () => {
+                      // Optionnel : On garde votre logique de tracking d'activité quand l'étudiant clique sur une carte
                       try {
                         const token = localStorage.getItem("token");
-                        await axios.post(`${API_BASE_URL}/api/student-activity`, {
-                          type: "RESUME",
-                          subject: selectedMatiere,
-                          chapter: selectedChapter,
-                          referenceId: sum._id,
-                        }, { headers: { Authorization: `Bearer ${token}` } });
+                        if (token) {
+                          await axios.post(`${API_BASE_URL}/api/student-activity`, {
+                            type: "RESUME",
+                            subject: selectedMatiere,
+                            chapter: selectedChapter,
+                            referenceId: resume._id,
+                          }, { headers: { Authorization: `Bearer ${token}` } });
+                        }
                       } catch (err) { console.error(err); }
-                    }}
-                    className="px-5 py-2 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 shadow"
-                  >
-                    {/* 🟢 MODIFICATION ICI : On affiche le titre, sinon un texte par défaut */}
-                {sum.title || sum.texte?.substring(0, 30) + "..." || "Résumé généré par l'IA"}
-                  </button>
-                ))}
+                    }}>
+                      <Flashcard title={cardTitle} content={cardContent} />
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {selectedResume && (
+            {/* Modal conservé UNIQUEMENT pour afficher les anciens PDF si on clique dessus */}
+            {selectedResume && selectedResume.pdfUrl && (
               <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedResume(null)}>
-                <div onClick={(e) => e.stopPropagation()} className={`bg-white rounded-2xl shadow-2xl w-full max-w-3xl flex flex-col overflow-hidden ${isShortResume ? "max-h-[60vh]" : "max-h-[85vh]"}`}>
-                  
-                  {/* En-tête du modal de résumé */}
+                <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden">
                   <div className="flex justify-between items-center p-4 border-b bg-gray-50">
-                    <h2 className="text-xl font-bold text-blue-900">{selectedResume.texte || selectedResume.chapter || "Fiche de révision"}</h2>
+                    <h2 className="text-xl font-bold text-red-900">{selectedResume.title || "Document PDF"}</h2>
                     <button onClick={() => setSelectedResume(null)} className="text-gray-500 hover:text-black font-bold text-2xl px-2">✖</button>
                   </div>
-
-                  {/* Contenu du résumé */}
-                  <div className="flex-1 overflow-y-auto p-6">
-                    {selectedResume.pdfUrl ? (
-                      <iframe src={selectedResume.pdfUrl + "#toolbar=0"} className="w-full h-full min-h-[500px] rounded-b-2xl" title="Résumé PDF" />
-                    ) : (
-                      <div className="text-gray-800 text-lg leading-relaxed bg-blue-50/30 p-6 rounded-xl border border-blue-100">
-                        <MixedContentRenderer text={selectedResume.explication || selectedResume.texte || "Contenu indisponible."} />
-                      </div>
-                    )}
-                  </div>
-                  
+                  <iframe src={selectedResume.pdfUrl + "#toolbar=0"} className="w-full h-full" title="Résumé PDF" />
                 </div>
               </div>
             )}

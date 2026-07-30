@@ -63,48 +63,53 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
        return;
     }
 
-    // Consigne stricte pour forcer le formatage LaTeX / KaTeX
+    // 🚨 Consigne stricte pour forcer le formatage LaTeX / KaTeX
     const baseMathInstruction = `
-    🚨 RÈGLES VITALES DE FORMATAGE MATHÉMATIQUE (POUR JSON + KATEX) 🚨 :
-    1. Tu dois IMPÉRATIVEMENT encadrer TOUTES les formules, variables isolées (f, x, a, y...), fractions et symboles avec le délimiteur $. 
-       - MAUVAIS : Soit f(x) = 1/x et a=1.
-       - BON : Soit $f(x) = \\\\frac{1}{x}$ et $a=1$.
-    2. DANGER JSON : Tu dois OBLIGATOIREMENT "échapper" (doubler) chaque antislash LaTeX.
-       - Écris "\\\\frac" au lieu de "\\frac".
-       - Écris "\\\\forall" au lieu de "\\forall".
-       - Écris "\\\\varepsilon" au lieu de "epsilon" ou "\\varepsilon".
-       - Écris "+\\\\infty" au lieu de "+infty" ou "+\\infty".
-    3. N'écris JAMAIS les symboles en toutes lettres.
-    4. Ne coupe pas les formules ! Encadre l'intégralité de l'expression mathématique dans un seul bloc $.
+    RÈGLES VITALES DE FORMATAGE (POUR JSON + KATEX) :
+    1. MATHÉMATIQUES COMPLETES : Encadre TOUJOURS la formule entière dans un seul bloc $. Ne hache jamais les expressions.
+       - MAUVAIS : si $|x-a|, alors $f(x)-l
+       - BON : si $|x-a| < \\\\delta$, alors $|f(x)-l| < \\\\varepsilon$
+    2. SYMBOLES EXACTS : Utilise les vraies commandes LaTeX. N'écris JAMAIS "mathbbR", "epsilon" ou "delta" en toutes lettres. Utilise \\\\mathbb{R}, \\\\varepsilon, \\\\delta, \\\\forall, \\\\exists.
+    3. DOUBLE ANTISLASH OBLIGATOIRE : Tu DOIS écrire 2 antislashs pour CHAQUE commande, sinon le code plantera.
+       - Écris \\\\forall (PAS \\forall)
+       - Écris \\\\frac (PAS \\frac)
     RÈGLE DE STRUCTURE : Le champ "options" doit être un tableau de simples chaînes de caractères.
     `;
 
-    // 2. Configuration du Prompt dynamique selon le type demandé
+    // 🧠 Configuration des Prompts (NIVEAU AVANCÉ / PRÉPA)
     let systemPrompt = "";
     if (contentType === "qcm") {
-      systemPrompt = `Tu es un professeur expert. Génère 10 QCM pertinents à partir du texte fourni. 
+      systemPrompt = `Tu es un professeur exigeant de Baccalauréat Sciences Physiques. 
+      Génère 10 QCM de HAUT NIVEAU basés sur ce texte. 
+      INTERDIT de poser de simples questions de définitions. Tes QCM doivent évaluer la réflexion profonde : inclure des calculs, des cas limites, des déductions complexes et des pièges conceptuels.
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
       { "items": [ { "question": "...", "options": ["Option A", "Option B", "Option C", "Option D"], "correctAnswerIndex": 0, "explication": "..." } ] }
       ${baseMathInstruction}`;
     } else if (contentType === "exercise") {
-      systemPrompt = `Tu es un professeur expert. Génère 2 exercices d'application pratiques basés sur ce texte, avec leurs corrigés détaillés.
+      systemPrompt = `Tu es un professeur exigeant de Baccalauréat Sciences Physiques. 
+      Génère 2 Exercices Complexes (type problème d'examen/concours) basés sur ce texte. 
+      AUCUNE question de cours basique. Je veux des exercices nécessitant des démonstrations, des calculs avancés et une résolution à plusieurs étapes.
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
-      { "items": [ { "question": "Énoncé de l'exercice...", "explication": "Corrigé détaillé...", "options": [] } ] }
+      { "items": [ { "question": "Énoncé complet du problème...", "explication": "Corrigé détaillé pas-à-pas avec démonstration...", "options": [] } ] }
       ${baseMathInstruction}`;
     } else if (contentType === "flashcard" || contentType === "astuce") {
-      systemPrompt = `Tu es un professeur expert. Génère 5 flashcards/astuces de révision.
+      systemPrompt = `Tu es un expert pédagogique. Génère 5 flashcards ou astuces de niveau avancé pour retenir les concepts les plus difficiles du texte.
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
-      { "items": [ { "question": "Concept ou Astuce", "explication": "Définition ou explication...", "options": [] } ] }
+      { "items": [ { "question": "Concept ou Astuce à retenir", "explication": "Explication approfondie...", "options": [] } ] }
       ${baseMathInstruction}`;
     } else if (contentType === "resume") {
-      systemPrompt = `Tu es un professeur expert. Génère un résumé clair et structuré des points clés de ce texte. Découpe-le en 3 à 5 sections importantes.
+      // 💡 TRANSFORMATION DU RÉSUMÉ EN FLASHCARDS DE RÉVISION
+      systemPrompt = `Tu es un expert pédagogique. L'étudiant a besoin de "Flashcards de révision" ultra-efficaces et denses.
+      Extrais les 4 ou 5 concepts, théorèmes ou formules les plus critiques du texte. Transforme-les en fiches mémos (Concept visé + Formule/Démonstration).
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
-      { "items": [ { "question": "Titre de la section", "explication": "Contenu du résumé pour cette section...", "options": [] } ] }
+      { "items": [ { "question": "Théorème / Concept : [Nom]", "explication": "Définition précise mathématiquement et conditions d'application...", "options": [] } ] }
       ${baseMathInstruction}`;
     } else if (contentType === "controle") {
-      systemPrompt = `Tu es un professeur expert. Conçois un contrôle d'évaluation basé sur ce texte.
+      systemPrompt = `Tu es un concepteur de sujets d'examen niveau Baccalauréat Sciences Physiques. 
+      Conçois un contrôle d'évaluation exigeant basé sur ce texte.
+      UNIQUEMENT des problèmes de réflexion, des études d'expressions ou des démonstrations. AUCUNE simple restitution de connaissances ou de définitions. L'étudiant doit transpirer.
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
-      { "items": [ { "question": "Énoncé complet de la question...", "explication": "Corrigé détaillé et barème...", "options": [] } ] }
+      { "items": [ { "question": "Sujet de l'exercice...", "explication": "Corrigé détaillé et barème d'évaluation...", "options": [] } ] }
       ${baseMathInstruction}`;
     }
 
@@ -134,9 +139,16 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
    const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
-    // 🛡️ BOUCLIER ANTI-CRASH : On corrige les antislashs oubliés par l'IA avant de lire le JSON.
-    // Si l'IA a écrit "\frac" (invalide en JSON), on le transforme en "\\frac" (valide).
-    const cleanResponseContent = responseContent.replace(/\\(?!["\\/bfnrt])/g, "\\\\");
+    // 🛡️ NETTOYEUR EXTRÊME DE JSON ET LATEX
+    // 1. Regex Magique : Transforme tout \f, \b, \r isolé en \\f, \\b, \\r pour bloquer les erreurs de parsage JSON
+    let cleanResponseContent = responseContent.replace(/(?<!\\)\\(?=[a-zA-Z])/g, "\\\\");
+    
+    // 2. Remplacements forcés pour corriger la paresse de l'IA
+    cleanResponseContent = cleanResponseContent
+      .replace(/\bmathbbR\b/g, "\\\\mathbb{R}")
+      .replace(/\bepsilon\b/g, "\\\\varepsilon")
+      .replace(/\bdelta\b/g, "\\\\delta")
+      .replace(/\binfty\b/g, "\\\\infty");
 
     let generatedData;
     try {
