@@ -5,6 +5,7 @@ import path from "path";
 import pdfParse from "pdf-parse";
 import OpenAI from "openai";
 import Question from "../models/Question";
+import { jsonrepair } from 'jsonrepair';
 
 // Initialisation dynamique du client IA
 const getAIClient = () => {
@@ -144,46 +145,23 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 
    // 🛡️ NETTOYEUR EXTRÊME ET EXTRACTEUR CHIRURGICAL
 
-    // 1. Isoler uniquement le bloc JSON
+    // 1. Isoler grossièrement le bloc (du premier { au dernier })
     const firstBrace = responseContent.indexOf('{');
     const lastBrace = responseContent.lastIndexOf('}');
     if (firstBrace === -1 || lastBrace === -1) {
-      throw new Error("L'IA n'a pas renvoyé de structure JSON valide.");
+      throw new Error("L'IA n'a pas renvoyé de structure JSON.");
     }
-    let jsonStr = responseContent.substring(firstBrace, lastBrace + 1);
+    let rawJsonStr = responseContent.substring(firstBrace, lastBrace + 1);
 
-    // 🛡️ 2. LE BOUCLIER ANTI-CRASH (Traitement radical des antislashs)
-    // a. On met à l'abri les vrais guillemets échappés du JSON
-    jsonStr = jsonStr.replace(/\\"/g, "___QUOTE___");
-    
-    // b. On force TOUTES les séquences d'antislashs (\, \\, \\\) à devenir un parfait double antislash (\\)
-    // Ainsi, \lim ou \$ deviennent \\lim et \\$, ce qui est du JSON 100% valide !
-    jsonStr = jsonStr.replace(/\\+/g, "\\\\");
-    
-    // c. On remet les guillemets à leur place
-    jsonStr = jsonStr.replace(/___QUOTE___/g, '\\"');
-
-    // 3. Harmonisation et correction des hallucinations mathématiques de l'IA
-    jsonStr = jsonStr
-      .replace(/\\\\inft(?!y)/gi, "\\\\infty") // Corrige le fameux \inft en \infty
-      .replace(/\\\\?b?infty\b/gi, "\\\\infty") 
-      .replace(/\bmathbbR\b/g, "\\\\mathbb{R}")
-      .replace(/\bepsilon\b/g, "\\\\varepsilon")
-      .replace(/\bdelta\b/g, "\\\\delta");
-
-    // 4. Emballage automatique des symboles s'ils traînent hors d'un bloc $
-    jsonStr = jsonStr.replace(
-      /([^$])(\\\\(forall|exists|in|delta|varepsilon|infty|frac|lim)[^$]+)([^$])/g,
-      "$1$$$2$$$4"
-    );
-
+    // 2. Parser avec la librairie tolérante aux pannes
     let generatedData;
     try {
-      generatedData = JSON.parse(jsonStr);
+      // jsonrepair va automatiquement enlever le $}, réparer les guillemets, et corriger les antislashs
+      const repairedJson = jsonrepair(rawJsonStr); 
+      generatedData = JSON.parse(repairedJson);
     } catch (parseError) {
-      console.error("Erreur de parsing JSON de l'IA :", parseError);
-      console.error("Contenu nettoyé :", jsonStr);
-      throw new Error("L'IA a généré un format de données invalide malgré le nettoyage.");
+      console.error("Même jsonrepair a échoué. Contenu brut :", rawJsonStr);
+      throw new Error("Le format renvoyé par l'IA est totalement irrécupérable.");
     }
 
     // 4. Formatage et Sauvegarde avec Assainissement (Sanitization) des types
