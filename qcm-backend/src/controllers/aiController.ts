@@ -66,12 +66,14 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     // Consigne stricte pour forcer le formatage LaTeX / KaTeX
     const baseMathInstruction = `
     🚨 RÈGLES STRICTES DE FORMATAGE MATHÉMATIQUE (KATEX/LATEX) 🚨 :
-    Tu dois IMPÉRATIVEMENT encadrer TOUTES les formules, variables, fractions et symboles mathématiques avec le délimiteur $ pour qu'ils soient interprétés correctement par le frontend.
-    - MAUVAIS : La limite de x tend vers +infini de f(x) = x^2 + 1
-    - BON : La limite de $x$ tend vers $+\\infty$ de $f(x) = x^2 + 1$
-    N'utilise jamais de texte brut pour les expressions mathématiques ou physiques.
-    ATTENTION CRUCIALE : Puisque tu réponds au format JSON, tu dois DOUBLER les antislashs de tes commandes LaTeX pour qu'elles ne soient pas effacées lors du parsing JSON (exemple : écris \\\\frac au lieu de \\frac, et \\\\infty au lieu de \\infty).
-    RÈGLE DE STRUCTURE : Le champ "options" doit être un tableau de simples chaînes de caractères ex: ["Option A", "Option B"], JAMAIS un tableau d'objets ou de clef-valeurs.
+    1. Tu dois IMPÉRATIVEMENT encadrer TOUTES les formules, variables (a, b, x, y...), fractions, intervalles et symboles avec le délimiteur $. 
+    2. N'écris JAMAIS les symboles en toutes lettres : utilise $\\\\varepsilon$ et non "epsilon", utilise $+\\\\infty$ et non "+infty".
+    3. Utilise les commandes LaTeX correctes pour les ensembles (ex: $\\\\mathbb{R}$ au lieu de mathbbR).
+    4. Ne hache pas les formules ! Encadre l'intégralité de l'expression mathématique dans un seul bloc $.
+       - MAUVAIS : $\\\\forall \\\\varepsilon > 0$, telle que ∀x∈(a−δ,a+δ), $f(x) < \\\\varepsilon$
+       - BON : $\\\\forall \\\\varepsilon > 0, \\\\exists \\\\delta > 0$ telle que $\\\\forall x \\\\in (a-\\\\delta, a+\\\\delta) \\\\setminus \\\\{a\\\\}, |f(x) - l| < \\\\varepsilon$
+    ATTENTION CRUCIALE : Puisque tu réponds au format JSON, tu dois DOUBLER les antislashs de TOUTES tes commandes LaTeX (ex: \\\\mathbb, \\\\infty, \\\\frac, \\\\varepsilon, \\\\forall).
+    RÈGLE DE STRUCTURE : Le champ "options" doit être un tableau de simples chaînes de caractères.
     `;
 
     // 2. Configuration du Prompt dynamique selon le type demandé

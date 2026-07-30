@@ -323,7 +323,7 @@ const getAccessibleSubjects = () => {
         }
       }
 
-      // ---------------------------------------------------------
+     // ---------------------------------------------------------
       // C. GESTION DES EXERCICES ET QCM
       // ---------------------------------------------------------
       else if (selectedAction === "Exercises" || selectedAction === "Exercices" || selectedAction === "QCM") {
@@ -347,25 +347,34 @@ const getAccessibleSubjects = () => {
         } catch (err) { console.error("Erreur Exercices Manuels", err); }
 
         try {
-          // 🔄 CORRECTION : Ajout de ${API_BASE_URL}
-          const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers });
-          console.log("📥 Résultat QCM IA reçus :", resAi.data);
-          const aiData = resAi.data || [];
+          // 👇 NOUVEAU : On lance 2 requêtes simultanées pour récupérer les QCM ET les Exercices
+          const [resAiQcm, resAiExo] = await Promise.all([
+            axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers }),
+            axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=exercise`, { headers })
+          ]);
+          
+          console.log("📥 Résultat QCM IA reçus :", resAiQcm.data);
+          console.log("📥 Résultat Exercices IA reçus :", resAiExo.data);
+          
+          // On fusionne les deux tableaux de résultats
+          const aiData = [...(resAiQcm.data || []), ...(resAiExo.data || [])];
           
           if (aiData.length > 0) {
             const aiSubQuestions = aiData.map((q: any) => ({
               _id: q._id,
               questionText: q.texte,
-              qType: 'qcm', 
+              // On adapte le type : "qcm" pour les QCM, et on peut utiliser "open" (question ouverte) pour les exercices
+              qType: q.type === 'exercise' ? 'open' : 'qcm', 
               options: q.options || [],
               correctAnswer: q.reponseCorrecte,
+              // Pour un exercice, le corrigé se trouve dans l'explication
               explanation: q.explication,
               image: q.image
             }));
 
             aiExercises = [{
               _id: "ia-group-" + Date.now(),
-              contextText: "🧠 Questions d'entraînement (Générées par l'IA)", 
+              contextText: "🧠 Questions d'entraînement (QCM & Exercices générés par l'IA)", 
               subQuestions: aiSubQuestions
             }];
           }
