@@ -65,14 +65,17 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 
     // Consigne stricte pour forcer le formatage LaTeX / KaTeX
     const baseMathInstruction = `
-    🚨 RÈGLES STRICTES DE FORMATAGE MATHÉMATIQUE (KATEX/LATEX) 🚨 :
-    1. Tu dois IMPÉRATIVEMENT encadrer TOUTES les formules, variables (a, b, x, y...), fractions, intervalles et symboles avec le délimiteur $. 
-    2. N'écris JAMAIS les symboles en toutes lettres : utilise $\\\\varepsilon$ et non "epsilon", utilise $+\\\\infty$ et non "+infty".
-    3. Utilise les commandes LaTeX correctes pour les ensembles (ex: $\\\\mathbb{R}$ au lieu de mathbbR).
-    4. Ne hache pas les formules ! Encadre l'intégralité de l'expression mathématique dans un seul bloc $.
-       - MAUVAIS : $\\\\forall \\\\varepsilon > 0$, telle que ∀x∈(a−δ,a+δ), $f(x) < \\\\varepsilon$
-       - BON : $\\\\forall \\\\varepsilon > 0, \\\\exists \\\\delta > 0$ telle que $\\\\forall x \\\\in (a-\\\\delta, a+\\\\delta) \\\\setminus \\\\{a\\\\}, |f(x) - l| < \\\\varepsilon$
-    ATTENTION CRUCIALE : Puisque tu réponds au format JSON, tu dois DOUBLER les antislashs de TOUTES tes commandes LaTeX (ex: \\\\mathbb, \\\\infty, \\\\frac, \\\\varepsilon, \\\\forall).
+    🚨 RÈGLES VITALES DE FORMATAGE MATHÉMATIQUE (POUR JSON + KATEX) 🚨 :
+    1. Tu dois IMPÉRATIVEMENT encadrer TOUTES les formules, variables isolées (f, x, a, y...), fractions et symboles avec le délimiteur $. 
+       - MAUVAIS : Soit f(x) = 1/x et a=1.
+       - BON : Soit $f(x) = \\\\frac{1}{x}$ et $a=1$.
+    2. DANGER JSON : Tu dois OBLIGATOIREMENT "échapper" (doubler) chaque antislash LaTeX.
+       - Écris "\\\\frac" au lieu de "\\frac".
+       - Écris "\\\\forall" au lieu de "\\forall".
+       - Écris "\\\\varepsilon" au lieu de "epsilon" ou "\\varepsilon".
+       - Écris "+\\\\infty" au lieu de "+infty" ou "+\\infty".
+    3. N'écris JAMAIS les symboles en toutes lettres.
+    4. Ne coupe pas les formules ! Encadre l'intégralité de l'expression mathématique dans un seul bloc $.
     RÈGLE DE STRUCTURE : Le champ "options" doit être un tableau de simples chaînes de caractères.
     `;
 
@@ -128,10 +131,21 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       temperature: 0.3,
     });
 
-    const responseContent = response.choices[0]?.message?.content;
+   const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
-    const generatedData = JSON.parse(responseContent);
+    // 🛡️ BOUCLIER ANTI-CRASH : On corrige les antislashs oubliés par l'IA avant de lire le JSON.
+    // Si l'IA a écrit "\frac" (invalide en JSON), on le transforme en "\\frac" (valide).
+    const cleanResponseContent = responseContent.replace(/\\(?!["\\/bfnrt])/g, "\\\\");
+
+    let generatedData;
+    try {
+      generatedData = JSON.parse(cleanResponseContent);
+    } catch (parseError) {
+      console.error("Erreur de parsing JSON de l'IA :", parseError);
+      console.error("Contenu brut :", cleanResponseContent);
+      throw new Error("L'IA a généré un format de données invalide.");
+    }
 
     // 4. Formatage et Sauvegarde avec Assainissement (Sanitization) des types
     const isControle = contentType === "controle";
