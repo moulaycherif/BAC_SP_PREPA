@@ -153,14 +153,19 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     }
     let rawJsonStr = responseContent.substring(firstBrace, lastBrace + 1);
 
-    // 2. Parser avec la librairie tolérante aux pannes
+    // 2. PRÉ-TRAITEMENT LATEX : Protéger les antislashs avant le parsing
+    rawJsonStr = rawJsonStr
+      .replace(/\\/g, '\\\\')    // Double absolument tous les antislashs (empêche \frac de devenir rac)
+      .replace(/\\\\"/g, '\\"'); // Laisse les guillemets échappés intacts pour ne pas casser le JSON
+
+    // 3. Réparer et Parser avec jsonrepair
     let generatedData;
     try {
-      // jsonrepair va automatiquement enlever le $}, réparer les guillemets, et corriger les antislashs
+      // jsonrepair s'occupe des virgules, accolades manquantes et du $} à la fin
       const repairedJson = jsonrepair(rawJsonStr); 
       generatedData = JSON.parse(repairedJson);
     } catch (parseError) {
-      console.error("Même jsonrepair a échoué. Contenu brut :", rawJsonStr);
+      console.error("Erreur avec jsonrepair. Contenu brut :", rawJsonStr);
       throw new Error("Le format renvoyé par l'IA est totalement irrécupérable.");
     }
 
