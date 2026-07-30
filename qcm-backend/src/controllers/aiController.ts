@@ -96,6 +96,13 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       { "items": [ { "question": "Titre de la section", "explication": "Contenu du résumé pour cette section...", "options": [] } ] }
       ${baseMathInstruction}`;
     }
+    // 👇 NOUVEAU BLOC À AJOUTER POUR LES CONTRÔLES 👇
+    else if (contentType === "controle") {
+      systemPrompt = `Tu es un professeur expert. Conçois un contrôle d'évaluation (5 questions de réflexion ou problèmes) basé sur ce texte.
+      Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
+      { "items": [ { "question": "Énoncé complet de la question ou du problème...", "explication": "Corrigé détaillé et barème attendu...", "options": [] } ] }
+      ${baseMathInstruction}`;
+    }
 
     // 3. Appel à l'IA avec le client universel
     const openai = getAIClient();
