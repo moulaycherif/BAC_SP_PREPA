@@ -130,11 +130,13 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       model: modelName,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Texte du document :\n${extractedText.substring(0, 15000)}` }
+        // 🟢 1. On réduit la taille du texte extrait pour économiser des jetons en entrée
+        { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
       ],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_tokens: 4096,
+      // 🟢 2. On ajuste le max_tokens pour que (Texte + max_tokens) soit toujours inférieur à 6000
+      max_tokens: 2500, 
     });
 
    const responseContent = response.choices[0]?.message?.content;
