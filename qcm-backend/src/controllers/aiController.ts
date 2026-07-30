@@ -38,7 +38,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
   try {
     const file = req.file;
     const { examId, subject, chapter, typeEpreuve, numeroConcoursBlanc } = req.body;
-    const contentType = req.body.type || "qcm"; // qcm, flashcard, exercise, astuce, resume
+    const contentType = req.body.type || "qcm"; // qcm, flashcard, exercise, astuce, resume, controle
 
     if (!file) {
       res.status(400).json({ message: "Aucun fichier PDF fourni." });
@@ -63,7 +63,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
        return;
     }
 
-    // 👇 NOUVEAU : Consigne stricte pour forcer le formatage LaTeX / KaTeX
+    // Consigne stricte pour forcer le formatage LaTeX / KaTeX
     const baseMathInstruction = `
     🚨 RÈGLES STRICTES DE FORMATAGE MATHÉMATIQUE (KATEX/LATEX) 🚨 :
     Tu dois IMPÉRATIVEMENT encadrer TOUTES les formules, variables, fractions et symboles mathématiques avec le délimiteur $ pour qu'ils soient interprétés correctement par le frontend.
@@ -71,6 +71,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     - BON : La limite de $x$ tend vers $+\\infty$ de $f(x) = x^2 + 1$
     N'utilise jamais de texte brut pour les expressions mathématiques ou physiques.
     ATTENTION CRUCIALE : Puisque tu réponds au format JSON, tu dois DOUBLER les antislashs de tes commandes LaTeX pour qu'elles ne soient pas effacées lors du parsing JSON (exemple : écris \\\\frac au lieu de \\frac, et \\\\infty au lieu de \\infty).
+    RÈGLE DE STRUCTURE : Le champ "options" doit être un tableau de simples chaînes de caractères ex: ["Option A", "Option B"], JAMAIS un tableau d'objets ou de clef-valeurs.
     `;
 
     // 2. Configuration du Prompt dynamique selon le type demandé
@@ -78,7 +79,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     if (contentType === "qcm") {
       systemPrompt = `Tu es un professeur expert. Génère 10 QCM pertinents à partir du texte fourni. 
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
-      { "items": [ { "question": "...", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 0, "explication": "..." } ] }
+      { "items": [ { "question": "...", "options": ["Option A", "Option B", "Option C", "Option D"], "correctAnswerIndex": 0, "explication": "..." } ] }
       ${baseMathInstruction}`;
     } else if (contentType === "exercise") {
       systemPrompt = `Tu es un professeur expert. Génère 2 exercices d'application pratiques basés sur ce texte, avec leurs corrigés détaillés.
@@ -95,23 +96,20 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
       { "items": [ { "question": "Titre de la section", "explication": "Contenu du résumé pour cette section...", "options": [] } ] }
       ${baseMathInstruction}`;
-    }
-    // 👇 NOUVEAU BLOC À AJOUTER POUR LES CONTRÔLES 👇
-    else if (contentType === "controle") {
-      systemPrompt = `Tu es un professeur expert. Conçois un contrôle d'évaluation (5 questions de réflexion ou problèmes) basé sur ce texte.
+    } else if (contentType === "controle") {
+      systemPrompt = `Tu es un professeur expert. Conçois un contrôle d'évaluation basé sur ce texte.
       Réponds UNIQUEMENT avec un objet JSON valide suivant cette structure exacte :
-      { "items": [ { "question": "Énoncé complet de la question ou du problème...", "explication": "Corrigé détaillé et barème attendu...", "options": [] } ] }
+      { "items": [ { "question": "Énoncé complet de la question...", "explication": "Corrigé détaillé et barème...", "options": [] } ] }
       ${baseMathInstruction}`;
     }
 
     // 3. Appel à l'IA avec le client universel
     const openai = getAIClient();
     
-    // Détermination du modèle selon le fournisseur
     let modelName = "gpt-4o-mini"; // Par défaut
 
     if (process.env.AI_PROVIDER === 'GROQ') {
-      modelName = "llama-3.1-8b-instant"; // 👈 Modèle officiel Groq (gratuit et ultra-rapide)
+      modelName = "llama-3.1-8b-instant";
     }
 
     if (process.env.AI_PROVIDER === 'OPENROUTER') {
@@ -122,9 +120,9 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       model: modelName,
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: `Texte du document :\n${extractedText.substring(0, 15000)}` } // Limite pour éviter les dépassements de tokens
+        { role: "user", content: `Texte du document :\n${extractedText.substring(0, 15000)}` }
       ],
-      response_format: { type: "json_object" }, // Force le format JSON (Supporté par OpenAI, Groq, et la plupart des modèles OpenRouter)
+      response_format: { type: "json_object" },
       temperature: 0.3,
     });
 
@@ -133,27 +131,55 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 
     const generatedData = JSON.parse(responseContent);
 
-    // 4. Formatage et Sauvegarde
-    // On détermine les étiquettes correctes pour ne pas polluer les concours blancs
+    // 4. Formatage et Sauvegarde avec Assainissement (Sanitization) des types
     const isControle = contentType === "controle";
     const finalExamName = isControle ? "Contrôle IA" : (examId || "Support de cours IA");
-    
-    // On utilise "ia" (ou "chapitre") pour ne pas déclencher l'affichage dans les examens
     const finalTypeEpreuve = isControle ? "blanc" : "ia"; 
 
-    const itemsToInsert = generatedData.items.map((item: any) => ({
-      texte: item.question,
-      options: item.options || [],
-      reponseCorrecte: item.options && item.options.length > 0 ? item.options[item.correctAnswerIndex || 0] : null,
-      explication: item.explication,
-      type: contentType,
-      subject: subject,
-      chapter: chapter || null, 
-      exam: finalExamName,             
-      typeEpreuve: finalTypeEpreuve,
-      numeroConcoursBlanc: numeroConcoursBlanc || null,
-      note: 1
-    }));
+    const itemsToInsert = generatedData.items.map((item: any) => {
+      // 🛡️ ASSAINISSEMENT DES OPTIONS : Forcer la conversion en chaînes simples (string[])
+      let rawOptions = item.options || [];
+      let cleanOptions: string[] = [];
+
+      if (Array.isArray(rawOptions)) {
+        cleanOptions = rawOptions.map((opt: any) => {
+          if (typeof opt === 'object' && opt !== null) {
+            // Si l'IA a renvoyé { a: '0' }, on extrait la valeur '0'
+            const values = Object.values(opt);
+            return values.length > 0 ? String(values[0]) : JSON.stringify(opt);
+          }
+          return String(opt);
+        });
+      }
+
+      // 🛡️ ASSAINISSEMENT DE LA REPONSE CORRECTE : Forcer la conversion en chaîne simple (string)
+      let cleanReponseCorrecte: string | null = null;
+      if (cleanOptions.length > 0) {
+        const idx = typeof item.correctAnswerIndex === 'number' ? item.correctAnswerIndex : 0;
+        cleanReponseCorrecte = cleanOptions[idx] || cleanOptions[0];
+      } else if (item.reponseCorrecte) {
+        if (typeof item.reponseCorrecte === 'object' && item.reponseCorrecte !== null) {
+          const values = Object.values(item.reponseCorrecte);
+          cleanReponseCorrecte = values.length > 0 ? String(values[0]) : null;
+        } else {
+          cleanReponseCorrecte = String(item.reponseCorrecte);
+        }
+      }
+
+      return {
+        texte: item.question,
+        options: cleanOptions,
+        reponseCorrecte: cleanReponseCorrecte,
+        explication: item.explication,
+        type: contentType,
+        subject: subject,
+        chapter: chapter || null, 
+        exam: finalExamName,             
+        typeEpreuve: finalTypeEpreuve,
+        numeroConcoursBlanc: numeroConcoursBlanc || null,
+        note: 1
+      };
+    });
 
     await Question.insertMany(itemsToInsert);
 
