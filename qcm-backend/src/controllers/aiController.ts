@@ -139,16 +139,23 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
    const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
-    // 🛡️ NETTOYEUR EXTRÊME DE JSON ET LATEX
-    // 1. Regex Magique : Transforme tout \f, \b, \r isolé en \\f, \\b, \\r pour bloquer les erreurs de parsage JSON
+    // 🛡️ NETTOYEUR EXTRÊME ET HARMONISATION LATEX
+    // 1. Corrige les antislashs pour le JSON
     let cleanResponseContent = responseContent.replace(/(?<!\\)\\(?=[a-zA-Z])/g, "\\\\");
-    
-    // 2. Remplacements forcés pour corriger la paresse de l'IA
+
+    // 2. Harmonisation des symboles mathématiques oubliés par l'IA
     cleanResponseContent = cleanResponseContent
+      .replace(/\\?b?infty\b/gi, "\\\\infty") // Corrige infty, \infty, binfty
       .replace(/\bmathbbR\b/g, "\\\\mathbb{R}")
       .replace(/\bepsilon\b/g, "\\\\varepsilon")
-      .replace(/\bdelta\b/g, "\\\\delta")
-      .replace(/\binfty\b/g, "\\\\infty");
+      .replace(/\bdelta\b/g, "\\\\delta");
+
+    // 3. Emballage automatique : Si une formule contient \forall, \exists ou \in sans $, on l'encadre de $
+    // (Évite les bugs d'affichage sur les Flashcards)
+    cleanResponseContent = cleanResponseContent.replace(
+      /([^$])(\\?\\(forall|exists|in|delta|varepsilon|infty|frac|lim)[^$]+)([^$])/g,
+      "$1$$$2$$$4"
+    );
 
     let generatedData;
     try {
