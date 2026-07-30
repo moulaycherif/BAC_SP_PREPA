@@ -142,9 +142,9 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
    const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
-    // 🛡️ NETTOYEUR EXTRÊME ET EXTRACTEUR CHIRURGICAL
+   // 🛡️ NETTOYEUR EXTRÊME ET EXTRACTEUR CHIRURGICAL
 
-    // 1. Isoler uniquement le bloc JSON (Ignore les parasites comme un "$" à la fin ou du blabla au début)
+    // 1. Isoler uniquement le bloc JSON
     const firstBrace = responseContent.indexOf('{');
     const lastBrace = responseContent.lastIndexOf('}');
     if (firstBrace === -1 || lastBrace === -1) {
@@ -152,18 +152,21 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     }
     let jsonStr = responseContent.substring(firstBrace, lastBrace + 1);
 
-    // 2. Corriger TOUS les antislashs (même devant les symboles comme \{, \pi, \frac, \varepsilon)
-    // Remplace un antislash isolé par un double antislash (sauf s'il échappe déjà des guillemets)
+    // 2. 🟢 LA CORRECTION EST ICI : Suppression des "$" parasites avant les accolades/crochets
+    jsonStr = jsonStr.replace(/\$\s*\}/g, '}'); 
+    jsonStr = jsonStr.replace(/\$\s*\]/g, ']');
+
+    // 3. Corriger TOUS les antislashs (même devant les symboles)
     jsonStr = jsonStr.replace(/(?<!\\)\\(?!["\\])/g, "\\\\");
 
-    // 3. Harmonisation des symboles mathématiques oubliés par l'IA
+    // 4. Harmonisation des symboles mathématiques oubliés par l'IA
     jsonStr = jsonStr
-      .replace(/\\?b?infty\b/gi, "\\\\infty") // Corrige infty, \infty, binfty
+      .replace(/\\?b?infty\b/gi, "\\\\infty")
       .replace(/\bmathbbR\b/g, "\\\\mathbb{R}")
       .replace(/\bepsilon\b/g, "\\\\varepsilon")
       .replace(/\bdelta\b/g, "\\\\delta");
 
-    // 4. Emballage automatique des symboles s'ils traînent hors d'un bloc $
+    // 5. Emballage automatique des symboles hors des blocs $
     jsonStr = jsonStr.replace(
       /([^$])(\\?\\(forall|exists|in|delta|varepsilon|infty|frac|lim)[^$]+)([^$])/g,
       "$1$$$2$$$4"
