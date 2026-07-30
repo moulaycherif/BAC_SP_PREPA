@@ -134,7 +134,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       ],
       response_format: { type: "json_object" },
       temperature: 0.3,
-      max_tokens: 8192,
+      max_tokens: 4096,
     });
 
    const responseContent = response.choices[0]?.message?.content;
