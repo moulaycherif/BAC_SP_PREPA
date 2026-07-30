@@ -139,31 +139,40 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
    const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
-    // 🛡️ NETTOYEUR EXTRÊME ET HARMONISATION LATEX
-    // 1. Corrige les antislashs pour le JSON
-    let cleanResponseContent = responseContent.replace(/(?<!\\)\\(?=[a-zA-Z])/g, "\\\\");
+    // 🛡️ NETTOYEUR EXTRÊME ET EXTRACTEUR CHIRURGICAL
 
-    // 2. Harmonisation des symboles mathématiques oubliés par l'IA
-    cleanResponseContent = cleanResponseContent
+    // 1. Isoler uniquement le bloc JSON (Ignore les parasites comme un "$" à la fin ou du blabla au début)
+    const firstBrace = responseContent.indexOf('{');
+    const lastBrace = responseContent.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1) {
+      throw new Error("L'IA n'a pas renvoyé de structure JSON valide.");
+    }
+    let jsonStr = responseContent.substring(firstBrace, lastBrace + 1);
+
+    // 2. Corriger TOUS les antislashs (même devant les symboles comme \{, \pi, \frac, \varepsilon)
+    // Remplace un antislash isolé par un double antislash (sauf s'il échappe déjà des guillemets)
+    jsonStr = jsonStr.replace(/(?<!\\)\\(?!["\\])/g, "\\\\");
+
+    // 3. Harmonisation des symboles mathématiques oubliés par l'IA
+    jsonStr = jsonStr
       .replace(/\\?b?infty\b/gi, "\\\\infty") // Corrige infty, \infty, binfty
       .replace(/\bmathbbR\b/g, "\\\\mathbb{R}")
       .replace(/\bepsilon\b/g, "\\\\varepsilon")
       .replace(/\bdelta\b/g, "\\\\delta");
 
-    // 3. Emballage automatique : Si une formule contient \forall, \exists ou \in sans $, on l'encadre de $
-    // (Évite les bugs d'affichage sur les Flashcards)
-    cleanResponseContent = cleanResponseContent.replace(
+    // 4. Emballage automatique des symboles s'ils traînent hors d'un bloc $
+    jsonStr = jsonStr.replace(
       /([^$])(\\?\\(forall|exists|in|delta|varepsilon|infty|frac|lim)[^$]+)([^$])/g,
       "$1$$$2$$$4"
     );
 
     let generatedData;
     try {
-      generatedData = JSON.parse(cleanResponseContent);
+      generatedData = JSON.parse(jsonStr);
     } catch (parseError) {
       console.error("Erreur de parsing JSON de l'IA :", parseError);
-      console.error("Contenu brut :", cleanResponseContent);
-      throw new Error("L'IA a généré un format de données invalide.");
+      console.error("Contenu nettoyé :", jsonStr);
+      throw new Error("L'IA a généré un format de données invalide malgré le nettoyage.");
     }
 
     // 4. Formatage et Sauvegarde avec Assainissement (Sanitization) des types
