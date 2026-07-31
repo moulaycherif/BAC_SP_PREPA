@@ -11,15 +11,19 @@ import { authenticateStudent } from "../middleware/authMiddleware";
 import { authenticateAdmin } from "../middleware/authAdmin"; 
 
 const router = express.Router();
+
 // Import du nouveau contrôleur IA
 const aiController = require('../controllers/aiController');
 const { upload } = require('../utils/multerConfig');
 const { verifyAdmin } = require('../middleware/verifyAdmin');
 
-// 👇 Route IA mise à jour pour être générique
+// 👇 1. Route pour générer les questions et TÉLÉCHARGER LE FICHIER EXCEL
 router.post('/generate-from-pdf', authenticateAdmin, verifyAdmin, upload.single('file'), aiController.generateContentFromPdf);
 
-// Import Excel
+// 👇 2. NOUVELLE ROUTE : Pour UPLOADER LE FICHIER EXCEL CORRIGÉ
+router.post('/import-ai-excel', authenticateAdmin, verifyAdmin, upload.single('file'), aiController.importCorrectedExcel);
+
+// Import Excel Classique
 router.post("/import", authenticateAdmin, verifyAdmin, upload.single("file"), importExcel);
 
 // Questions (Étudiants)
