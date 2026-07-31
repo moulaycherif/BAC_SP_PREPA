@@ -40,6 +40,9 @@ function AdminAIGenerator() {
   const [chapter, setChapter] = useState('');
   const [contentType, setContentType] = useState('qcm');
   
+  // 👈 NOUVEAU : Ajout du niveau académique par défaut
+  const [level, setLevel] = useState('Baccalauréat Sciences Physiques'); 
+  
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -56,6 +59,7 @@ function AdminAIGenerator() {
       formData.append("subject", subject);
       formData.append("chapter", chapter);
       formData.append("type", contentType);
+      formData.append("level", level); // 👈 NOUVEAU : On envoie le niveau au backend
 
       const response = await axios.post(`${API_BASE_URL}/api/questions/generate-from-pdf`, formData, {
         headers: {
@@ -129,6 +133,22 @@ function AdminAIGenerator() {
         </p>
 
         <form onSubmit={handleGenerateExcel} className="space-y-4">
+          
+          {/* NOUVEAU : Sélecteur de Niveau */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Niveau académique cible :</label>
+            <select
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              className="p-3 border rounded-xl w-full bg-indigo-50 font-semibold text-indigo-900"
+            >
+              <option value="Baccalauréat Sciences Physiques">Baccalauréat Sciences Physiques (PC)</option>
+              <option value="Baccalauréat Sciences Mathématiques">Baccalauréat Sciences Mathématiques (SM)</option>
+              <option value="Baccalauréat Sciences de la Vie et de la Terre">Baccalauréat SVT</option>
+              <option value="1ère Année Baccalauréat">1ère Année Baccalauréat</option>
+            </select>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               type="text"

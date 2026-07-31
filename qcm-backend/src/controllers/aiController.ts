@@ -1,12 +1,23 @@
 import { Request, Response } from "express";
 import fs from "fs";
-import os from "os";
-import path from "path";
-import pdfParse from "pdf-parse";
+import pdfParse from "pdf-parse"; // os et path ont été retirés car devenus inutiles
 import OpenAI from "openai";
 import Question from "../models/Question";
 import { jsonrepair } from 'jsonrepair';
 import * as xlsx from 'xlsx';
+
+// Typage strict pour éviter les erreurs "any"
+interface IAItemResponse {
+  question?: string;
+  options?: string[];
+  correctAnswerIndex?: number;
+  reponseCorrecte?: string | number;
+  explication?: string;
+}
+
+interface IAGeneratedData {
+  items: IAItemResponse[];
+}
 
 // Initialisation dynamique du client IA
 const getAIClient = () => {
@@ -26,8 +37,6 @@ const getAIClient = () => {
  * 1️⃣ GÉNÉRATION : Appelle l'IA et renvoie un fichier EXCEL (Human-in-the-Loop)
  */
 export const generateContentFromPdf = async (req: Request, res: Response): Promise<void> => {
-  let tempFilePath = "";
-
   try {
     const file = req.file;
     const { examId, subject, chapter, typeEpreuve, numeroConcoursBlanc } = req.body;
@@ -38,14 +47,18 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       return;
     }
 
-    if (file.path) {
-      tempFilePath = file.path;
-    } else if (file.buffer) {
-      tempFilePath = path.join(os.tmpdir(), `upload_${Date.now()}.pdf`);
-      fs.writeFileSync(tempFilePath, file.buffer);
+    // Gestion optimisée en mémoire (pas d'écriture inutile sur le disque dur)
+    let dataBuffer: Buffer;
+    if (file.buffer) {
+      dataBuffer = file.buffer;
+    } else if (file.path) {
+      dataBuffer = fs.readFileSync(file.path);
+      fs.unlinkSync(file.path); // Nettoyage immédiat du disque
+    } else {
+      res.status(400).json({ message: "Format de fichier non supporté." });
+      return;
     }
 
-    const dataBuffer = fs.readFileSync(tempFilePath);
     const pdfData = await pdfParse(dataBuffer);
     const extractedText = pdfData.text;
 
@@ -54,29 +67,34 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
        return;
     }
 
+    // Instructions générales renforcées pour le Bac Sciences Physiques
     const baseMathInstruction = `
+    NIVEAU CIBLE : Baccalauréat Sciences Physiques (Terminale Scientifique).
+    Le contenu, le vocabulaire, la rigueur scientifique et les calculs doivent correspondre EXACTEMENT aux attentes d'une épreuve de Physique-Chimie du Bac.
+
     RÈGLES VITALES DE FORMATAGE (POUR JSON + KATEX) :
     1. MATHÉMATIQUES COMPLETES : Encadre TOUJOURS la formule entière dans un seul bloc $.
-    2. SYMBOLES EXACTS : Utilise les vraies commandes LaTeX (\\\\mathbb{R}, \\\\varepsilon, \\\\delta).
-    3. DOUBLE ANTISLASH OBLIGATOIRE : Tu DOIS écrire 2 antislashs pour CHAQUE commande (\\\\frac, \\\\lim).
+    2. SYMBOLES EXACTS : Utilise les vraies commandes LaTeX (\\mathbb{R}, \\varepsilon, \\delta, \\Omega).
+    3. DOUBLE ANTISLASH OBLIGATOIRE : Tu DOIS écrire 2 antislashs pour CHAQUE commande (\\frac, \\lim).
     RÈGLE DE STRUCTURE : Le champ "options" doit être un tableau de simples chaînes de caractères.
     `;
 
+    // Personnalisation selon le type (Orienté Physique-Chimie)
     let systemPrompt = "";
     if (contentType === "qcm") {
-      systemPrompt = `Tu es un professeur exigeant de Bac. Génère 5 QCM (PAS PLUS) de HAUT NIVEAU basés sur ce texte.
+      systemPrompt = `Tu es un professeur expert de Physique-Chimie. Génère 5 QCM (PAS PLUS) de HAUT NIVEAU (type Bac Sciences Physiques) basés sur ce texte. L'étudiant doit raisonner et faire des calculs.
       Réponds avec JSON strict : { "items": [ { "question": "...", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 0, "explication": "..." } ] } \n${baseMathInstruction}`;
     } else if (contentType === "exercise") {
-      systemPrompt = `Tu es un professeur de Bac. Génère 1 seul Exercice Complexe basé sur ce texte.
+      systemPrompt = `Tu es un professeur expert de Physique-Chimie. Génère 1 seul Exercice Complexe (type problème de l'épreuve du Bac Sciences Physiques) basé sur ce texte.
       Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
     } else if (contentType === "flashcard" || contentType === "astuce") {
-      systemPrompt = `Génère 5 flashcards ou astuces niveau avancé.
+      systemPrompt = `Génère 5 flashcards ou astuces de niveau avancé, indispensables pour préparer l'épreuve du Bac Sciences Physiques.
       Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
     } else if (contentType === "resume") {
-      systemPrompt = `Extrais les 4-5 concepts critiques. 
-      Réponds avec JSON strict : { "items": [ { "question": "Théorème: ...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
+      systemPrompt = `Extrais les 4-5 concepts, lois physiques ou théorèmes chimiques critiques niveau Bac Sciences Physiques présents dans le document. 
+      Réponds avec JSON strict : { "items": [ { "question": "Loi/Théorème: ...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
     } else if (contentType === "controle") {
-      systemPrompt = `Conçois un contrôle d'évaluation exigeant basé sur ce texte. L'étudiant doit transpirer.
+      systemPrompt = `Conçois un contrôle d'évaluation exigeant type Baccalauréat Sciences Physiques basé sur ce texte. L'étudiant doit transpirer et mobiliser plusieurs concepts.
       Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
     }
 
@@ -105,10 +123,10 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     const lastBrace = responseContent.lastIndexOf('}');
     if (firstBrace === -1 || lastBrace === -1) throw new Error("L'IA n'a pas renvoyé de JSON.");
     
-    let rawJsonStr = responseContent.substring(firstBrace, lastBrace + 1);
-    rawJsonStr = rawJsonStr.replace(/\\/g, '\\\\').replace(/\\\\"/g, '\\"');
+    // Le replace capricieux a été retiré. jsonrepair fera le travail proprement.
+    const rawJsonStr = responseContent.substring(firstBrace, lastBrace + 1);
 
-    let generatedData;
+    let generatedData: IAGeneratedData;
     try {
       const repairedJson = jsonrepair(rawJsonStr); 
       generatedData = JSON.parse(repairedJson);
@@ -116,13 +134,17 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       throw new Error("Le format renvoyé par l'IA est irrécupérable.");
     }
 
-    // Préparation des métadonnées pour garder une trace
+    // Sécurité Anti-Crash : On s'assure que "items" existe bien
+    if (!generatedData || !Array.isArray(generatedData.items)) {
+      throw new Error("La structure JSON retournée par l'IA ne contient pas le tableau 'items' attendu.");
+    }
+
     const isControle = contentType === "controle";
     const finalExamName = isControle ? "Contrôle IA" : (examId || "Support de cours IA");
     const finalTypeEpreuve = isControle ? "blanc" : "ia"; 
 
-    // Transformation en format plat pour Excel
-    const excelRows = generatedData.items.map((item: any, index: number) => {
+    // Transformation en format plat pour Excel avec Typage Fort
+    const excelRows = generatedData.items.map((item: IAItemResponse) => {
       let rawOptions = item.options || [];
       let cleanOptions = Array.isArray(rawOptions) ? rawOptions.map(String) : [];
       
@@ -136,7 +158,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 
       return {
         Question: item.question || "",
-        Options: cleanOptions.join(" || "), // On sépare les options avec " || "
+        Options: cleanOptions.join(" || "),
         ReponseCorrecte: cleanReponseCorrecte,
         Explication: item.explication || "",
         Type: contentType,
@@ -154,17 +176,14 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     xlsx.utils.book_append_sheet(workbook, worksheet, "Generations_IA");
     const excelBuffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
 
-    // Nettoyage du PDF
-    if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
-
-    // Envoi du fichier Excel au navigateur (téléchargement direct)
+    // Envoi du fichier Excel
     res.setHeader('Content-Disposition', `attachment; filename="Generations_IA_${contentType}.xlsx"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(excelBuffer);
 
   } catch (error) {
     console.error("Erreur IA:", error);
-    if (tempFilePath && fs.existsSync(tempFilePath)) fs.unlinkSync(tempFilePath);
+    if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); // Sécurité anti-fuite de mémoire
     res.status(500).json({ message: "Erreur lors de la génération par l'IA.", error: error instanceof Error ? error.message : "Erreur inconnue" });
   }
 };
@@ -180,22 +199,31 @@ export const importCorrectedExcel = async (req: Request, res: Response): Promise
       return;
     }
 
-    // Lecture du fichier (buffer ou disque selon la config Multer)
-    let buffer;
+    let buffer: Buffer;
     if (file.buffer) {
       buffer = file.buffer;
     } else if (file.path) {
       buffer = fs.readFileSync(file.path);
+    } else {
+      res.status(400).json({ message: "Fichier illisible." });
+      return;
     }
 
     const workbook = xlsx.read(buffer, { type: 'buffer' });
     const worksheet = workbook.Sheets[workbook.SheetNames[0]];
     const rawData: any[] = xlsx.utils.sheet_to_json(worksheet);
 
+    if (rawData.length === 0) {
+      res.status(400).json({ message: "Le fichier Excel est vide." });
+      return;
+    }
+
     // Reconstruction du format Base de Données
     const itemsToInsert = rawData.map(row => {
-      // Re-séparer les options avec " || "
-      const optionsArray = row.Options ? String(row.Options).split(" || ").filter(opt => opt.trim() !== "") : [];
+      // Nettoyage robuste des espaces autour des "||"
+      const optionsArray = row.Options 
+        ? String(row.Options).split(" || ").map(opt => opt.trim()).filter(opt => opt !== "") 
+        : [];
 
       return {
         texte: row.Question,
@@ -212,15 +240,14 @@ export const importCorrectedExcel = async (req: Request, res: Response): Promise
       };
     });
 
-    // Sauvegarde officielle dans MongoDB
     await Question.insertMany(itemsToInsert);
 
-    // Nettoyage du fichier temporaire d'upload
     if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
 
     res.status(200).json({ message: "Excel corrigé importé avec succès !", count: itemsToInsert.length });
   } catch (error) {
     console.error("Erreur Import Excel IA :", error);
+    if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
     res.status(500).json({ message: "Erreur lors de l'importation de l'Excel corrigé." });
   }
 };
