@@ -130,13 +130,20 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     const response = await openai.chat.completions.create({
       model: modelName,
       messages: [
-        { role: "system", content: systemPrompt },
-        // 🟢 1. On réduit la taille du texte extrait pour économiser des jetons en entrée
+        { 
+          role: "system", 
+          // On ajoute une consigne stricte anti-bégaiement directement dans le prompt
+          content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis dans tes explications mathématiques. Ne répète JAMAIS la même équation, phrase ou étape de calcul. Va directement au résultat final sans boucler." 
+        },
         { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
       ],
       response_format: { type: "json_object" },
-      temperature: 0.3,
-      // 🟢 2. On ajuste le max_tokens pour que (Texte + max_tokens) soit toujours inférieur à 6000
+      // 🟢 On augmente un peu la température pour casser le côté "mécanique" qui crée les boucles
+      temperature: 0.5, 
+      // 🟢 NOUVEAU : frequency_penalty empêche strictement de répéter les mêmes séquences de mots
+      frequency_penalty: 0.8, 
+      // 🟢 NOUVEAU : presence_penalty force l'IA à aborder de nouveaux sujets/étapes
+      presence_penalty: 0.3,
       max_tokens: 2500, 
     });
 
