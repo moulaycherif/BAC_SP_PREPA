@@ -6,13 +6,12 @@ const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// 🔹 1. Intercepteur de Requête Adaptatif (Optionnel mais recommandé pour injecter les tokens automatiquement)
+// 🔹 1. Intercepteur de Requête Adaptatif
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
     const adminToken = localStorage.getItem("adminToken");
 
-    // On injecte le token admin s'il existe, sinon le token étudiant
     if (adminToken) {
       config.headers.Authorization = `Bearer ${adminToken}`;
     } else if (token) {
@@ -23,7 +22,7 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// 🔒 2. INTERCEPTEUR DE RÉPONSE (Unique, fusionné et sécurisé)
+// 🔒 2. INTERCEPTEUR DE RÉPONSE
 api.interceptors.response.use(
   (response) => response,
   (error) => {
@@ -33,10 +32,9 @@ api.interceptors.response.use(
       const isGuest = localStorage.getItem("isGuest") === "true";
       const url = error.config.url || "";
       
-      // 🎯 Détection blindée des requêtes de connexion (insensible à la casse et au baseURL)
       const isLoginRequest = url.toLowerCase().includes("login");
 
-      // 🛡️ CAS A : SI ON EST EN MODE INVITÉ ET QUE CE N'EST PAS UNE TENTATIVE DE CONNEXION
+      // 🛡️ CAS A : SI ON EST EN MODE INVITÉ
       if (isGuest && !isLoginRequest) {
         console.warn("⚠️ Mode Démo : Requête restreinte ou en attente, ignorée pour la visite", url);
         
@@ -44,12 +42,16 @@ api.interceptors.response.use(
         if (
           url.includes("student-activity") || 
           url.includes("stats") || 
-          url.includes("logout")
+          url.includes("logout") ||
+          url.includes("bac") // 🚀 NOUVEAU : Ajout pour éviter les erreurs API du Bac Simulator en mode démo
         ) {
           return Promise.resolve({
             status: 200,
             statusText: "OK",
-            data: url.includes("student-activity") ? { message: "Activité simulée Démo" } : {},
+            // Si c'est une requête de filtres du Bac, on renvoie de fausses données pour la démo
+            data: url.includes("filters") 
+              ? { years: [2023, 2022], sessions: ["Normale"], themes: ["Mécanique"] } 
+              : { message: "Activité simulée Démo" },
             headers: error.response.headers,
             config: error.config,
           });
@@ -58,7 +60,7 @@ api.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      // 🔑 CAS B : COMPORTEMENT NORMAL (Pour les vrais Étudiants / Admins OU requêtes de Login)
+      // 🔑 CAS B : COMPORTEMENT NORMAL
       if (!isLoginRequest && (status === 403 || status === 401 || errorCode === "SESSION_KICKED")) {
         localStorage.removeItem("token");
         localStorage.removeItem("adminToken");
@@ -71,7 +73,7 @@ api.interceptors.response.use(
         }
 
         window.location.href = "/login";
-        return new Promise(() => {}); // Bloque la propagation du crash
+        return new Promise(() => {}); 
       }
     }
 

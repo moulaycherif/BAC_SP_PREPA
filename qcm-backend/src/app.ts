@@ -15,6 +15,7 @@ import rankingRoutes from "./routes/rankingRoutes";
 import statsRoutes from "./routes/statsRoutes";
 import uploadRoutes from "./routes/uploadRoutes";
 import astuceRoutes from "./routes/astuceRoutes";
+import bacRoutes from "./routes/bacRoutes";
 
 dotenv.config();
 
@@ -72,6 +73,7 @@ app.use("/api/exercises", exerciseRoutes);
 app.use("/api/stats", statsRoutes); // Déclaré une seule fois ici
 app.use("/api/upload", uploadRoutes);
 app.use("/api/astuces", astuceRoutes);
+app.use("/api/bac", bacRoutes);
 
 // Fichiers statiques
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
