@@ -1,7 +1,23 @@
-import { Request, Response } from "express";
-import BacExam from "../models/BacExam";
 import OpenAI from "openai";
+import BacExam from "../models/BacExam";
+import { Request, Response } from "express";
 import { jsonrepair } from "jsonrepair";
+
+// 🛡️ Initialisation avec OPENROUTER (via le SDK OpenAI)
+let openai: OpenAI | null = null;
+
+try {
+  if (process.env.OPENROUTER_API_KEY) {
+    openai = new OpenAI({ 
+      baseURL: "https://openrouter.ai/api/v1", // 👈 On redirige vers OpenRouter
+      apiKey: process.env.OPENROUTER_API_KEY,  // 👈 On utilise la clé existante
+    });
+  } else {
+    console.warn("⚠️ AVERTISSEMENT : OPENROUTER_API_KEY est manquante.");
+  }
+} catch (error) {
+  console.error("Erreur lors de l'initialisation de l'IA :", error);
+}
 
 /**
  * 1️⃣ Obtenir les filtres disponibles (Années, Sessions, Thèmes)
@@ -9,12 +25,10 @@ import { jsonrepair } from "jsonrepair";
  */
 export const getFilters = async (req: Request, res: Response): Promise<void> => {
   try {
-    // On demande à MongoDB de nous lister toutes les valeurs uniques pour chaque champ
     const years = await BacExam.distinct("annee");
     const sessions = await BacExam.distinct("session");
     const themes = await BacExam.distinct("theme");
 
-    // On trie les années par ordre décroissant (le plus récent en premier)
     const sortedYears = years.sort((a, b) => b - a);
 
     res.status(200).json({
@@ -36,13 +50,11 @@ export const getExercisesByFilters = async (req: Request, res: Response): Promis
   try {
     const { annee, session, theme } = req.query;
 
-    // Construction dynamique du filtre de recherche
     const query: any = {};
     if (annee) query.annee = Number(annee);
     if (session) query.session = session;
     if (theme) query.theme = theme;
 
-    // On cherche les exercices correspondants
     const exercises = await BacExam.find(query);
 
     if (exercises.length === 0) {
@@ -58,7 +70,7 @@ export const getExercisesByFilters = async (req: Request, res: Response): Promis
 };
 
 /**
- * 3️⃣ (Optionnel pour le moment) Ajouter un nouvel exercice Bac depuis le panneau Admin
+ * 3️⃣ Ajouter un nouvel exercice Bac depuis le panneau Admin
  */
 export const createBacExercise = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -70,14 +82,18 @@ export const createBacExercise = async (req: Request, res: Response): Promise<vo
     res.status(500).json({ message: "Erreur lors de la création de l'exercice." });
   }
 };
-// Initialisation du client OpenAI (Assurez-vous d'utiliser une clé valide dans .env)
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 /**
  * 4️⃣ PHASE 4 : Analyser la photo de la copie et corriger avec GPT-4o (Vision)
  */
 export const correctStudentCopy = async (req: Request, res: Response): Promise<void> => {
   try {
+    // 🛑 On bloque si l'IA n'a pas pu s'initialiser
+    if (!openai) {
+      res.status(503).json({ message: "Le service de correction IA est temporairement indisponible (Clé API manquante)." });
+      return;
+    }
+    
     const imageFile = req.file;
     const { exerciseId } = req.body;
 
@@ -91,21 +107,21 @@ export const correctStudentCopy = async (req: Request, res: Response): Promise<v
       return;
     }
 
-    // 1. Récupération du contexte de l'exercice dans la BDD
+    // 1. Récupération du contexte de l'exercice
     const exercise = await BacExam.findById(exerciseId);
     if (!exercise) {
       res.status(404).json({ message: "Exercice introuvable dans la base de données." });
       return;
     }
 
-    // 2. Conversion de l'image Buffer en Base64 pour l'API Vision
+    // 2. Conversion de l'image Buffer en Base64
     const base64Image = imageFile.buffer.toString("base64");
     const mimeType = imageFile.mimetype || "image/jpeg";
     const dataURI = `data:${mimeType};base64,${base64Image}`;
 
-    // 3. Préparation des données pour le Prompt
-    const corrigeOfficiel = exercise.indices.niveau3_corrige;
-    const grilleBareme = JSON.stringify(exercise.checklist.map(c => ({ critere: c.description, points: c.points })));
+    // 3. Préparation du Prompt
+    const corrigeOfficiel = exercise.indices?.niveau3_corrige || "Corrigé non disponible";
+    const grilleBareme = JSON.stringify(exercise.checklist?.map(c => ({ critere: c.description, points: c.points })) || []);
 
     const systemPrompt = `Tu es un professeur de Sciences Physiques ultra-compétent, correcteur officiel du Baccalauréat. 
 Ta mission est d'analyser la photo de la copie manuscrite d'un étudiant et de la corriger de manière stricte.
@@ -138,11 +154,11 @@ Tu dois IMPÉRATIVEMENT répondre avec un objet JSON strict correspondant à cet
   "feedbackGlobal": "Bilan"
 }`;
 
-    // 4. Appel à GPT-4o (Modèle multimodal)
+    // 4. Appel à l'IA via OpenRouter (Modèle gpt-4o)
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "openai/gpt-4o", // Le bon format pour OpenRouter
       response_format: { type: "json_object" },
-      temperature: 0.2, // Température basse pour une correction factuelle et constante
+      temperature: 0.2,
       messages: [
         { 
           role: "system", 
@@ -170,7 +186,7 @@ Tu dois IMPÉRATIVEMENT répondre avec un objet JSON strict correspondant à cet
     const repairedJson = jsonrepair(rawJsonStr);
     const correctionReport = JSON.parse(repairedJson);
 
-    // 6. Renvoi du rapport d'évaluation au Frontend
+    // 6. Renvoi du rapport
     res.status(200).json({
       message: "Correction effectuée avec succès.",
       report: correctionReport
