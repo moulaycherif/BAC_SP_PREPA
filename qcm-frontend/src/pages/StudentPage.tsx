@@ -952,30 +952,67 @@ if (section === "home" && !selectedAction) {
 
     if (section === "concours") {
       return (
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-wrap gap-6 justify-start items-start min-h-full"
-        >
-          {exams.map((exam) => (
+        <div className="p-6">
+          <h2 className="text-3xl font-bold text-center mb-8 text-green-700 border-b-2 border-green-200 pb-4">
+            🎓 Examens nationaux
+          </h2>
+          
+          {exams.length === 0 ? (
+            <div className="text-center mt-10">
+              <p className="text-gray-500 text-lg bg-gray-50 p-8 rounded-xl border border-gray-200 inline-block shadow-sm">
+                Aucun examen national n'est disponible pour le moment.
+              </p>
+            </div>
+          ) : (
             <motion.div
-              key={exam._id}
-              whileHover={{ scale: 1.05 }}
-              className="relative cursor-pointer rounded-2xl overflow-hidden shadow-lg bg-white/90 hover:bg-white transition-all"
-              onClick={() => {
-                resetQcm();
-                setSection("qcm");
-                setCurrentExam(exam.title);
-                setCurrentExamId(exam._id);
-              }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-wrap gap-6 justify-center items-start min-h-full"
             >
-              <img src={concoursImg} className="w-48 h-48 object-cover" alt={exam.title} />
-              <div className="absolute bottom-0 left-0 right-0 bg-white/60 text-black text-center py-2 font-semibold">
-                {exam.title}
-              </div>
+              {exams.map((exam) => (
+                <motion.div
+                  key={exam._id}
+                  whileHover={{ scale: 1.05 }}
+                  className="relative cursor-pointer rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-white to-gray-100 hover:from-green-50 hover:to-white transition-all border-l-4 border-green-500 w-64 h-48 flex flex-col items-center justify-center p-4 text-center"
+                  onClick={() => {
+                    const examTitle = exam.title || exam._id;
+                    
+                    // --- Logique d'extraction des paramètres pour le simulateur ---
+                    // Valeurs par défaut
+                    let selectedSubject = "SP";
+                    let selectedYear = "2026";
+                    let selectedSession = "normale";
+                    
+                    // 1. Extraction de la matière et de l'année (Format attendu: BAC-SP-2026...)
+                    const match = examTitle.match(/BAC-([A-Z]+)-(\d{4})/i);
+                    if (match) {
+                      selectedSubject = match[1].toUpperCase();
+                      selectedYear = match[2];
+                    }
+                    
+                    // 2. Extraction de la session (Normale ou Rattrapage)
+                    if (examTitle.toLowerCase().includes("rattrapage")) {
+                      selectedSession = "rattrapage";
+                    } else if (examTitle.toLowerCase().includes("normale")) {
+                      selectedSession = "normale";
+                    }
+
+                    // 3. Redirection vers le simulateur
+                    navigate(`/bac-simulator/${selectedSubject}/${selectedYear}/${selectedSession}`);
+                  }}
+                >
+                  <span className="text-5xl mb-4">🎓</span>
+                  <div className="font-bold text-green-800 text-lg">
+                    {exam.title || exam._id}
+                  </div>
+                  <div className="mt-2 text-xs font-semibold text-gray-500 bg-gray-200 px-3 py-1 rounded-full">
+                    Simulateur de note
+                  </div>
+                </motion.div>
+              ))}
             </motion.div>
-          ))}
-        </motion.div>
+          )}
+        </div>
       );
     }
 

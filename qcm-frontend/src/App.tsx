@@ -17,6 +17,7 @@ import PdfPage from "./pages/PdfPage";
 // 🚀 NOUVEAU : Import des pages du Bac Simulator
 import BacSimulatorIndex from "./pages/BacSimulator/Index";
 import BacSimulatorWorkspace from "./pages/BacSimulator/Workspace";
+import BacSimulator from "./pages/BacSimulator";
 
 // 🧩 Import des composants
 import Navbar from "./components/Navbar";
@@ -47,6 +48,7 @@ export default function App() {
           {/* 🚀 NOUVEAU : Routes du Bac Simulator */}
           <Route path="/student/bac-simulator" element={<BacSimulatorIndex />} />
           <Route path="/student/bac-simulator/workspace" element={<BacSimulatorWorkspace />} />
+          <Route path="/bac-simulator/:subject/:year/:session" element={<BacSimulator />} />
 
           {/* 👑 Pages Admin */}
           <Route path="/admin" element={<AdminDashboard />} />
