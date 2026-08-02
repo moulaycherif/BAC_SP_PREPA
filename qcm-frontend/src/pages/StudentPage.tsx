@@ -768,6 +768,7 @@ if (section === "home" && !selectedAction) {
     </button>
   </div>
 </div>
+</div>
           ))}
         </div>
       );
