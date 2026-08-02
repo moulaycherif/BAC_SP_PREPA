@@ -49,6 +49,7 @@ export default function App() {
           <Route path="/student/bac-simulator" element={<BacSimulatorIndex />} />
           <Route path="/student/bac-simulator/workspace" element={<BacSimulatorWorkspace />} />
           <Route path="/bac-simulator/:subject/:year/:session" element={<BacSimulator />} />
+          <Route path="/examens-nationaux" element={<BacSimulatorIndex />}/>
 
           {/* 👑 Pages Admin */}
           <Route path="/admin" element={<AdminDashboard />} />

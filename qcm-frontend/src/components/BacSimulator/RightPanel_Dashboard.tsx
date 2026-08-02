@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { BacExercise } from '../../services/bacService';
+import AiCorrectionScanner from './AiCorrectionScanner';
 
 interface Props {
   exercise: BacExercise;
@@ -146,11 +147,7 @@ const RightPanel_Dashboard: React.FC<Props> = ({ exercise }) => {
             </div>
           ) : (
             /* --- PHASE 4 : UPLOAD IA (En attente d'implémentation UI) --- */
-            <div className="text-center p-6">
-              <h3 className="font-bold text-lg mb-4">Scanner avec l'IA</h3>
-              <input type="file" accept="image/*" className="mb-4" />
-              <p className="text-sm text-gray-500">Ici viendra la logique pour envoyer la photo vers /api/bac/correct.</p>
-            </div>
+            <AiCorrectionScanner />
           )}
         </div>
       )}

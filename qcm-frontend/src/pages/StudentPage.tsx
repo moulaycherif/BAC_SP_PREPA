@@ -10,11 +10,13 @@ import concoursImg from "../assets/CONCOURS.jfif";
 import mathsImg from "../assets/MATHS.jfif";
 import physiqueImg from "../assets/PHYSIQUE.jfif";
 import chimieImg from "../assets/CHIMIE.jfif";
+import physique_chimieImg from "../assets/PHYSIQUE-CHIMIE.jpg";
 import svtImg from "../assets/SVT.jfif";
 import bgImage from "/Image3.jfif";
 import StudentDashboardStats from "../components/stats/StudentDashboardStats";
 import StudentAstuceDetail from "./StudentAstuceDetail";
 import PdfViewer from "../components/PdfViewer";
+import React from 'react';
 
 // Indispensable pour l'interprétation globale
 (window as any).katex = katex;
@@ -741,26 +743,31 @@ if (section === "home" && !selectedAction) {
                 </div>
               </div>
 
-              {/* 5. Boutons Globaux (Bas) */}
-              <div className="flex justify-center gap-6 mt-6 border-t-2 border-gray-100 pt-8">
-                <button 
-                  onClick={() => setSection("blancs")}
-                  className="px-8 py-4 bg-gray-800 text-white font-bold rounded-2xl shadow-lg hover:bg-gray-900 transition hover:-translate-y-1 flex items-center gap-3"
-                >
-                  <span className="text-2xl">📚</span>
-                  <span className="text-lg">Contrôles & Examens blancs</span>
-                </button>
-                
-                <button 
-                  onClick={() => setSection("concours")}
-                  className="px-8 py-4 bg-green-700 text-white font-bold rounded-2xl shadow-lg hover:bg-green-800 transition hover:-translate-y-1 flex items-center gap-3"
-                >
-                  <span className="text-2xl">🎓</span>
-                  <span className="text-lg">Examens nationaux</span>
-                </button>
-              </div>
-
-            </div>
+              {/* 5. Boutons Globaux (Bas) - Section des Examens */}
+<div className="flex flex-col items-center mt-10 border-t-2 border-gray-100 pt-8">
+  <h2 className="text-2xl font-bold mb-6 text-gray-800">Entraînement & Évaluation</h2>
+  
+  <div className="flex flex-col sm:flex-row justify-center gap-6 w-full max-w-4xl">
+    {/* Bouton Contrôles & Examens Blancs */}
+    <button 
+      onClick={() => setSection("blancs")}
+      className="flex-1 px-8 py-4 bg-gray-800 text-white font-bold rounded-2xl shadow-lg hover:bg-gray-900 transition hover:-translate-y-1 flex items-center justify-center gap-3"
+    >
+      <span className="text-2xl">📚</span>
+      <span className="text-lg">Contrôles & Examens blancs</span>
+    </button>
+    
+    {/* Bouton Examens Nationaux (Redirection) */}
+    <button 
+      // 👇 La redirection clé vers la page de filtrage
+      onClick={() => navigate('/examens-nationaux')}
+      className="flex-1 px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition hover:-translate-y-1 flex items-center justify-center gap-3"
+    >
+      <span className="text-2xl">🎓</span>
+      <span className="text-lg text-center">Examens nationaux (Bac Simulator)</span>
+    </button>
+  </div>
+</div>
           ))}
         </div>
       );
