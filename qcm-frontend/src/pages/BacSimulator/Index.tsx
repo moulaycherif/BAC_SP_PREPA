@@ -79,6 +79,8 @@ export default function BacSimulatorIndex() {
             >
               <option value="">Choisir...</option>
               {themes.map(t => <option key={t} value={t}>{t}</option>)}
+              {/* 👇 AJOUT DE L'OPTION GLOBALE ICI */}
+              <option value="Toute l'épreuve" className="font-bold text-blue-700">🏆 Toute l'épreuve</option>
             </select>
           </div>
 
