@@ -69,6 +69,7 @@ interface Question {
           "Chapitre X : Equations différentielles",
           "Chapitre XI : Produit scalaire et produit vectoriel dans l'espace",
           "Chapitre XII : Dénombrement et probabilités",
+          "Toute l'épreuve"
         ],
         Physique: [
           "Chapitre I : Les ondes",
@@ -76,12 +77,14 @@ interface Question {
           "Chapitre III : Electricité",
           "Chapitre IV : Lois de Newton & Théorème d'énergie cinétique",
           "Chapitre V : Système oscillant & Pendule élastique",
+          "Toute l'épreuve"
         ],
         Chimie: [
           "Chapitre I : Chimie des solutions",
           "Chapitre II : Cinétique chimique",
           "Chapitre III : Les piles",
           "Chapitre IV : Chimie organique",
+          "Toute l'épreuve"
         ],
         SVT: [
           "Chapitre 1 : Les réactions responsables de la libération de l'énergie emmagasinée dans la matière organique",
@@ -90,7 +93,8 @@ interface Question {
           "Chapitre 4 : Le génie génétique",
           "Chapitre 5 : La génétique humaine",
           "Chapitre 6 : La génétique des populations",
-          "Chapitre 7 : L'immunité"
+          "Chapitre 7 : L'immunité",
+          "Toute l'épreuve"
         ],
       };
 
@@ -180,8 +184,7 @@ const getAccessibleSubjects = () => {
 
   if (safeOptions.includes("MATH")) subjects.push("Mathématique");
   if (safeOptions.includes("PC")) {
-    subjects.push("Physique");
-    subjects.push("Chimie");
+    subjects.push("Physique-Chimie");
   }
   if (safeOptions.includes("SVT")) subjects.push("SVT");
   
@@ -631,7 +634,6 @@ const Flashcard = ({ title, content }: { title: string, content: string }) => {
 if (section === "home" && !selectedAction) {
       const accessibleSubjects = getAccessibleSubjects();
 
-      // 🛡️ NOUVELLE SÉCURITÉ : Si aucune matière n'est trouvée
       if (accessibleSubjects.length === 0) {
         return (
           <div className="flex flex-col items-center justify-center h-full p-6 text-center">
@@ -647,128 +649,125 @@ if (section === "home" && !selectedAction) {
         );
       }
 
+      // Fonction utilitaire pour rendre un chapitre (Accordéon)
+      const renderChapterAccordion = (chapter: string, matiereAPI: string, matiereAffichage: string) => {
+        const isExpanded = selectedChapter === chapter && selectedMatiere === matiereAPI;
+        return (
+          <div key={`${matiereAPI}-${chapter}`} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-4">
+            <button
+              onClick={() => {
+                setSelectedMatiere(matiereAPI); // Important pour que l'API cherche la bonne matière (Physique ou Chimie)
+                setSelectedChapter(isExpanded ? null : chapter);
+                setSelectedAction(null); 
+              }}
+              className={`w-full text-left p-5 text-lg font-semibold transition-colors flex justify-between items-center ${
+                isExpanded ? "bg-blue-800 text-white" : "bg-white hover:bg-gray-50 text-gray-800"
+              }`}
+            >
+              <span className={chapter === "Toute l'épreuve" ? "text-purple-300 font-extrabold flex items-center gap-2" : ""}>
+                {chapter === "Toute l'épreuve" && "🏆 "} {chapter}
+              </span>
+              <span className="text-xl">{isExpanded ? "🔽" : "▶️"}</span>
+            </button>
+
+            {isExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="flex flex-wrap gap-4 p-5 bg-blue-50 border-t-2 border-blue-100"
+              >
+                <button onClick={() => setSelectedAction("Exercises")} className="flex-1 min-w-[200px] bg-white border border-blue-200 text-blue-800 px-4 py-3 rounded-xl shadow hover:bg-blue-100 hover:border-blue-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">📝</span> QCM & Exercices
+                </button>
+                <button onClick={() => setSelectedAction("Astuces")} className="flex-1 min-w-[200px] bg-white border border-yellow-200 text-yellow-700 px-4 py-3 rounded-xl shadow hover:bg-yellow-50 hover:border-yellow-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">💡</span> Astuces
+                </button>
+                <button onClick={() => setSelectedAction("Résumé")} className="flex-1 min-w-[200px] bg-white border border-green-200 text-green-700 px-4 py-3 rounded-xl shadow hover:bg-green-50 hover:border-green-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">📄</span> Fiches ou Résumés
+                </button>
+                <button onClick={() => setSelectedAction("Controles")} className="flex-1 min-w-[200px] bg-white border border-purple-200 text-purple-700 px-4 py-3 rounded-xl shadow hover:bg-purple-50 hover:border-purple-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">✍️</span> Contrôles
+                </button>
+              </motion.div>
+            )}
+          </div>
+        );
+      };
+
       return (
         <div className="p-6 space-y-12 h-full overflow-y-auto">
           {accessibleSubjects.map((matiere) => (
             <div key={matiere} className="bg-white rounded-3xl shadow-xl p-8 border-t-8 border-blue-800">
               
-              {/* 1. Titre de la Matière */}
               <h2 className="text-4xl font-extrabold text-blue-900 mb-8 border-b-2 border-gray-100 pb-4 text-center uppercase tracking-wide">
                 {matiere}
               </h2>
                   
-              {/* 2. Boutons Globaux (Haut) */}
-              <div className="flex justify-center gap-6 mb-10">
-                <button className="px-8 py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg hover:bg-red-700 hover:-translate-y-1 transition transform flex items-center gap-3">
-                  <span className="text-2xl animate-pulse">🔴</span>
-                  <span className="text-lg">LIVE</span>
-                </button>
-
+              {/* Boutons Globaux (Haut) - Extrême Gauche et Extrême Droite */}
+              <div className="flex justify-between items-center mb-10 w-full">
                 <button className="px-8 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg hover:bg-blue-700 hover:-translate-y-1 transition transform flex items-center gap-3">
                   <span className="text-2xl">▶️</span>
                   <span className="text-lg">Vidéos enregistrées</span>
                 </button>
+                
+                <button className="px-8 py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg hover:bg-red-700 hover:-translate-y-1 transition transform flex items-center gap-3">
+                  <span className="text-2xl animate-pulse">🔴</span>
+                  <span className="text-lg">LIVE</span>
+                </button>
               </div>
 
-              {/* 3. Liste des Chapitres (Mode Accordéon) */}
-              <div className="bg-gray-50 rounded-2xl shadow-inner p-6 mb-10 border border-gray-200">
-                <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                  <span>📚</span> Programme de l'année
-                </h3>
-                
-                <div className="flex flex-col gap-4">
-                  {chaptersBySubject[matiere]?.map((chapter, index) => {
-                    // Vérifie si ce chapitre est celui cliqué par l'étudiant
-                    const isExpanded = selectedChapter === chapter && selectedMatiere === matiere;
+              {/* Contenu principal de la matière */}
+              {matiere === "Physique-Chimie" ? (
+                /* --- DISPOSITION SPÉCIFIQUE PHYSIQUE-CHIMIE (2 COLONNES) --- */
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+                  {/* Colonne Gauche : CHIMIE */}
+                  <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                      <span>🧪</span> Chimie
+                    </h3>
+                    <div className="flex flex-col">
+                      {chaptersBySubject["Chimie"]?.map((chapter) => renderChapterAccordion(chapter, "Chimie", matiere))}
+                    </div>
+                  </div>
+                  
+                  {/* Colonne Droite : PHYSIQUE */}
+                  <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
+                    <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                      <span>⚡</span> Physique
+                    </h3>
+                    <div className="flex flex-col">
+                      {chaptersBySubject["Physique"]?.map((chapter) => renderChapterAccordion(chapter, "Physique", matiere))}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                /* --- DISPOSITION STANDARD (1 COLONNE) --- */
+                <div className="bg-gray-50 rounded-2xl shadow-inner p-6 mb-10 border border-gray-200 w-full max-w-4xl mx-auto">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <span>📚</span> Programme de l'année
+                  </h3>
+                  <div className="flex flex-col">
+                    {chaptersBySubject[matiere]?.map((chapter) => renderChapterAccordion(chapter, matiere, matiere))}
+                  </div>
+                </div>
+              )}
 
-                    return (
-                      <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <button
-                          onClick={() => {
-                            setSelectedMatiere(matiere);
-                            // Si on clique sur le chapitre déjà ouvert, on le referme (null), sinon on l'ouvre
-                            setSelectedChapter(isExpanded ? null : chapter);
-                            // On réinitialise l'action pour ne pas charger directement un contenu
-                            setSelectedAction(null); 
-                          }}
-                          className={`w-full text-left p-5 text-lg font-semibold transition-colors flex justify-between items-center ${
-                            isExpanded
-                              ? "bg-blue-800 text-white"
-                              : "bg-white hover:bg-gray-50 text-gray-800"
-                          }`}
-                        >
-                          <span>{chapter}</span>
-                          <span className="text-xl">{isExpanded ? "🔽" : "▶️"}</span>
-                        </button>
-
-                        {/* 4. SOUS-MENU : Les boutons de contenu (Visibles si le chapitre est cliqué) */}
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            className="flex flex-wrap gap-4 p-5 bg-blue-50 border-t-2 border-blue-100"
-                          >
-                            <button 
-                              onClick={() => setSelectedAction("Exercises")} 
-                              className="flex-1 min-w-[200px] bg-white border border-blue-200 text-blue-800 px-4 py-3 rounded-xl shadow hover:bg-blue-100 hover:border-blue-400 font-bold transition flex flex-col items-center gap-2"
-                            >
-                              <span className="text-2xl">📝</span> QCM & Exercices
-                            </button>
-                            
-                            <button 
-                              onClick={() => setSelectedAction("Astuces")} 
-                              className="flex-1 min-w-[200px] bg-white border border-yellow-200 text-yellow-700 px-4 py-3 rounded-xl shadow hover:bg-yellow-50 hover:border-yellow-400 font-bold transition flex flex-col items-center gap-2"
-                            >
-                              <span className="text-2xl">💡</span> Astuces
-                            </button>
-                            
-                            <button 
-                              onClick={() => setSelectedAction("Résumé")} 
-                              className="flex-1 min-w-[200px] bg-white border border-green-200 text-green-700 px-4 py-3 rounded-xl shadow hover:bg-green-50 hover:border-green-400 font-bold transition flex flex-col items-center gap-2"
-                            >
-                              <span className="text-2xl">📄</span> Fiches ou Résumés
-                            </button>
-                            
-                            <button 
-                              onClick={() => setSelectedAction("Controles")} 
-                              className="flex-1 min-w-[200px] bg-white border border-purple-200 text-purple-700 px-4 py-3 rounded-xl shadow hover:bg-purple-50 hover:border-purple-400 font-bold transition flex flex-col items-center gap-2"
-                            >
-                              <span className="text-2xl">✍️</span> Contrôles
-                            </button>
-                          </motion.div>
-                        )}
-                      </div>
-                    );
-                  })}
+              {/* Boutons Globaux (Bas) - Section des Examens */}
+              <div className="flex flex-col items-center mt-10 border-t-2 border-gray-100 pt-8">
+                <h2 className="text-2xl font-bold mb-6 text-gray-800">Entraînement & Évaluation</h2>
+                <div className="flex flex-col sm:flex-row justify-center gap-6 w-full max-w-4xl">
+                  <button onClick={() => setSection("blancs")} className="flex-1 px-8 py-4 bg-gray-800 text-white font-bold rounded-2xl shadow-lg hover:bg-gray-900 transition hover:-translate-y-1 flex items-center justify-center gap-3">
+                    <span className="text-2xl">📚</span>
+                    <span className="text-lg">Contrôles & Examens blancs</span>
+                  </button>
+                  <button onClick={() => navigate('/examens-nationaux')} className="flex-1 px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition hover:-translate-y-1 flex items-center justify-center gap-3">
+                    <span className="text-2xl">🎓</span>
+                    <span className="text-lg text-center">Examens nationaux (Bac Simulator)</span>
+                  </button>
                 </div>
               </div>
 
-              {/* 5. Boutons Globaux (Bas) - Section des Examens */}
-<div className="flex flex-col items-center mt-10 border-t-2 border-gray-100 pt-8">
-  <h2 className="text-2xl font-bold mb-6 text-gray-800">Entraînement & Évaluation</h2>
-  
-  <div className="flex flex-col sm:flex-row justify-center gap-6 w-full max-w-4xl">
-    {/* Bouton Contrôles & Examens Blancs */}
-    <button 
-      onClick={() => setSection("blancs")}
-      className="flex-1 px-8 py-4 bg-gray-800 text-white font-bold rounded-2xl shadow-lg hover:bg-gray-900 transition hover:-translate-y-1 flex items-center justify-center gap-3"
-    >
-      <span className="text-2xl">📚</span>
-      <span className="text-lg">Contrôles & Examens blancs</span>
-    </button>
-    
-    {/* Bouton Examens Nationaux (Redirection) */}
-    <button 
-      // 👇 La redirection clé vers la page de filtrage
-      onClick={() => navigate('/examens-nationaux')}
-      className="flex-1 px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition hover:-translate-y-1 flex items-center justify-center gap-3"
-    >
-      <span className="text-2xl">🎓</span>
-      <span className="text-lg text-center">Examens nationaux (Bac Simulator)</span>
-    </button>
-  </div>
-</div>
-</div>
+            </div>
           ))}
         </div>
       );
