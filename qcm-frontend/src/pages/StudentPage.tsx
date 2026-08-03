@@ -68,23 +68,20 @@ interface Question {
           "Chapitre IX : Calcul intégral",
           "Chapitre X : Equations différentielles",
           "Chapitre XI : Produit scalaire et produit vectoriel dans l'espace",
-          "Chapitre XII : Dénombrement et probabilités",
-          "Toute l'épreuve"
+          "Chapitre XII : Dénombrement et probabilités"
         ],
         Physique: [
           "Chapitre I : Les ondes",
           "Chapitre II : Nucléaire",
           "Chapitre III : Electricité",
           "Chapitre IV : Lois de Newton & Théorème d'énergie cinétique",
-          "Chapitre V : Système oscillant & Pendule élastique",
-          "Toute l'épreuve"
+          "Chapitre V : Système oscillant & Pendule élastique"
         ],
         Chimie: [
           "Chapitre I : Chimie des solutions",
           "Chapitre II : Cinétique chimique",
           "Chapitre III : Les piles",
-          "Chapitre IV : Chimie organique",
-          "Toute l'épreuve"
+          "Chapitre IV : Chimie organique"
         ],
         SVT: [
           "Chapitre 1 : Les réactions responsables de la libération de l'énergie emmagasinée dans la matière organique",
@@ -93,8 +90,7 @@ interface Question {
           "Chapitre 4 : Le génie génétique",
           "Chapitre 5 : La génétique humaine",
           "Chapitre 6 : La génétique des populations",
-          "Chapitre 7 : L'immunité",
-          "Toute l'épreuve"
+          "Chapitre 7 : L'immunité"
         ],
       };
 

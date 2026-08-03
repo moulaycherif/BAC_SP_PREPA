@@ -2,11 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import DualPanelLayout from '../../components/BacSimulator/DualPanelLayout';
 import { fetchExercises, BacExercise } from '../../services/bacService';
+import { useNavigate } from 'react-router-dom';
 
 export default function BacSimulatorWorkspace() {
   const [searchParams] = useSearchParams();
   const [exercise, setExercise] = useState<BacExercise | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadExercise = async () => {
@@ -35,6 +37,13 @@ export default function BacSimulatorWorkspace() {
 
   return (
     <div className="h-[calc(100vh-64px)] w-full"> 
+     {/* 👇 LE BOUTON DE RETOUR À AJOUTER EN HAUT DE PAGE */}
+      <button
+        onClick={() => navigate(-1)} // "-1" permet de revenir à la page précédente dans l'historique
+        className="mb-6 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition z-10 font-semibold shadow-md flex items-center gap-2 w-fit"
+      >
+        <span>🔙</span> Retour
+      </button>
       {/* On passe les données de l'exercice au Layout qui va les redistribuer */}
       <DualPanelLayout exercise={exercise} />
     </div>
