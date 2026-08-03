@@ -15,15 +15,16 @@ const BacSimulatorIndex = () => {
   const availableSessions = ['Normale', 'Rattrapage'];
   const availableThemes = ['Electricite', 'Mécanique', 'Ondes', 'Nucléaire'];
 
-  const handleStartExam = () => {
-    // Validation basique
+ const handleStartExam = () => {
     if (!selectedYear || !selectedSession || !selectedTheme) return;
 
-    // Formatage des paramètres pour l'URL (minuscules, sans accents idéalement)
     const formattedSession = selectedSession.toLowerCase();
-    const formattedTheme = selectedTheme.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    
+    // Gère "Toute l'épreuve" sans altérer la chaîne de caractères avec la regex
+    const formattedTheme = selectedTheme === "Toute l'épreuve" 
+      ? "toute-lepreuve" 
+      : selectedTheme.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    // Redirection vers l'espace de travail (Step 2)
     navigate(`/bac-simulator/physique/${selectedYear}/${formattedSession}/${formattedTheme}`);
   };
 
@@ -72,6 +73,8 @@ const BacSimulatorIndex = () => {
             {availableThemes.map(theme => (
               <option key={theme} value={theme}>{theme}</option>
             ))}
+            {/* 👇 AJOUTEZ CETTE LIGNE À LA FIN DES OPTIONS */}
+  <option value="Toute l'épreuve" className="font-bold text-indigo-600">🏆 Toute l'épreuve</option>
           </select>
         </div>
       </div>

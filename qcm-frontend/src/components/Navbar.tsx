@@ -69,12 +69,6 @@ export default function Navbar() {
 
       <div className="hidden md:flex gap-6 text-gray-700 font-medium">
         <Link to="/" className="text-2xl font-bold text-blue-600 hover:text-blue-500 transition">Accueil</Link>      
-{/* 🚀 NOUVEAU : Lien vers le Bac Simulator affiché uniquement si connecté */}
-        {isAuthenticated && (
-          <Link to="/student/bac-simulator" className="text-2xl font-bold text-green-600 hover:text-green-500 transition">
-            Bac Simulator
-          </Link>
-        )}
         <Link to="/contact" className="text-2xl font-bold text-blue-600 hover:text-blue-500 transition">Contact</Link>
       </div>
 
