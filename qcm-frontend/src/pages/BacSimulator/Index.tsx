@@ -26,7 +26,13 @@ export default function BacSimulatorIndex() {
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-3xl mx-auto bg-white rounded-xl shadow-md overflow-hidden p-8 border border-gray-200">
-        
+        {/* 👇 LE BOUTON DE RETOUR À AJOUTER EN HAUT DE PAGE */}
+      <button
+        onClick={() => navigate(-1)} // "-1" permet de revenir à la page précédente dans l'historique
+        className="mb-6 px-4 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-800 transition z-10 font-semibold shadow-md flex items-center gap-2 w-fit"
+      >
+        <span>🔙</span> Retour
+      </button>
         <div className="text-center mb-10">
           <h1 className="text-4xl font-extrabold text-blue-700 mb-2">BAC SIMULATOR</h1>
           <p className="text-lg text-gray-500">
