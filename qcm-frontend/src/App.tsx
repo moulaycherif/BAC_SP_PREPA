@@ -23,6 +23,7 @@ import BacSimulator from "./pages/BacSimulator";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SessionGuard from "./components/SessionGuard"; // 👈 On importe proprement le gardien séparé
+import AdminExamUpload from "./pages/AdminExamUpload";
 
 export default function App() {
   return (
@@ -55,6 +56,7 @@ export default function App() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/exercises" element={<AdminExercises />} />
           <Route path="/admin/astuces" element={<AdminAstuces />} />
+          <Route path="/admin/upload" element={<AdminExamUpload />} />
 
           {/* ❌ Page introuvable (404) */}
           <Route path="/*" element={<div className="p-10 text-center text-red-600 font-semibold text-xl">Page non trouvée</div>} />
