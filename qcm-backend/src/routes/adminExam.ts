@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import multer from 'multer';
 import * as XLSX from 'xlsx';
-import BacExam from '../models/BacExam'; // 👈 L'importation est corrigée ici
+import BacExam from '../models/BacExam';
 import { generateSolutionAndHints } from '../services/aiService';
 
 const router = express.Router();
@@ -20,54 +20,76 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
 
     const importedQuestions = [];
     let currentContext = ""; 
-    let currentTitle = ""; 
+    let currentTitle = ""; // Va garder en mémoire "1)" pour les sous-questions qui suivent
 
     for (const row of rows) {
       const type = row['TYPE'];
       
+      // Nettoyage des textes pour éviter les espaces invisibles ou les "undefined"
+      const mainText = row['Texte de la question'] ? String(row['Texte de la question']).trim() : "";
+      const subText = row['Sub_Question'] ? String(row['Sub_Question']).trim() : "";
+      
       // 1. Gestion du contexte (l'énoncé global de l'exercice)
       if (type === 'Groupe') {
-        currentContext = row['Texte de la question'] || ""; 
+        currentContext = mainText; 
         continue; 
       }
 
       // 2. Gestion des questions (sous-questions de l'exercice)
       if (type === 'Question') {
-        const mainText = row['Texte de la question'] || "";
-        const subText = row['Sub_Question'] || "";
+        
+        // Si les deux colonnes sont totalement vides, on ignore la ligne
+        if (!mainText && !subText) {
+          continue;
+        }
 
-        if (mainText && !subText) {
-             currentTitle = mainText; 
-             continue; 
-        } else if (mainText && subText) {
-             currentTitle = mainText;
+        // Si la colonne "Texte de la question" contient quelque chose, on la mémorise
+        if (mainText) {
+          currentTitle = mainText;
+        }
+
+        let questionLabel = "";
+
+        // 🧠 Traitement selon vos deux cas de figure :
+        if (subText) {
+          // Cas 1 : Il y a une sous-question (ex: "a)"). 
+          // On combine le titre mémorisé avec la sous-question.
+          questionLabel = `${currentTitle} ${subText}`;
+        } else {
+          // Cas 2 : Question simple sans sous-question (ex: "2)").
+          questionLabel = currentTitle;
         }
 
         // Création de l'énoncé complet à envoyer à l'IA et à afficher à l'étudiant
-        const fullStatement = `**Contexte :**\n${currentContext}\n\n**Question :**\n${currentTitle} ${subText}`;
+        const fullStatement = `**Contexte :**\n${currentContext}\n\n**Question :**\n${questionLabel}`;
 
-        // 🧠 Appel à l'IA (OpenRouter) pour générer le scaffolding et la checklist
-        const aiResult = await generateSolutionAndHints(fullStatement);
+        try {
+          // 🧠 Appel à l'IA (OpenRouter) pour générer le scaffolding et la checklist
+          const aiResult = await generateSolutionAndHints(fullStatement);
 
-        // 🛠️ Mapping avec votre modèle BacExam.ts
-        const questionData = {
-            annee: Number(row['Année']),
-            session: row['Session'] as "Normale" | "Rattrapage",
-            theme: row['Thème'] || "Non classé",
-            titreExercice: row["Numéro d'exercice"] + (currentTitle ? ` - ${currentTitle}` : ""),
-            enonceTexte: fullStatement, 
-            imageUrl: row['Image'] || undefined,
-            indices: {
-                niveau1_piste: aiResult.indices.niveau1_piste,
-                niveau2_formule: aiResult.indices.niveau2_formule,
-                niveau3_corrige: aiResult.indices.niveau3_corrige
-            },
-            checklist: aiResult.checklist
-        };
+          // 🛠️ Mapping avec votre modèle BacExam.ts
+          const questionData = {
+              annee: Number(row['Année']),
+              session: row['Session'] as "Normale" | "Rattrapage",
+              theme: row['Thème'] || "Non classé",
+              titreExercice: row["Numéro d'exercice"] + (currentTitle ? ` - ${currentTitle}` : ""),
+              enonceTexte: fullStatement, 
+              imageUrl: row['Image'] || undefined,
+              indices: {
+                  niveau1_piste: aiResult.indices.niveau1_piste,
+                  niveau2_formule: aiResult.indices.niveau2_formule,
+                  niveau3_corrige: aiResult.indices.niveau3_corrige
+              },
+              checklist: aiResult.checklist
+          };
 
-        // Sauvegarde dans la collection BacExam
-        const savedQuestion = await BacExam.create(questionData);
-        importedQuestions.push(savedQuestion);
+          // Sauvegarde dans la collection BacExam
+          const savedQuestion = await BacExam.create(questionData);
+          importedQuestions.push(savedQuestion);
+        } catch (aiError) {
+          console.error(`Erreur IA lors du traitement de la question : ${questionLabel}`, aiError);
+          // On ne fait pas planter le script, on passe simplement à la question suivante
+        }
       }
     }
 
