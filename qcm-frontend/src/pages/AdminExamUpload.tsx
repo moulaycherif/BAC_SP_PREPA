@@ -16,7 +16,7 @@ export default function AdminExamUpload() {
     setStatusMessage("⏳ Importation en cours et génération des indices par l'IA (veillez à ne pas fermer la page)...");
 
     try {
-      const res = await axios.post('/admin/upload-excel', formData, {
+      const res = await axios.post('/api/admin/upload-excel', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
         timeout: 120000 // ⏱️ On augmente le délai d'attente à 2 minutes côté client
       });

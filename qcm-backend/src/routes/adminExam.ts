@@ -7,7 +7,7 @@ import { generateSolutionAndHints } from '../services/aiService';
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage() });
 
-router.post('/admin/upload-excel', upload.single('file'), async (req: Request, res: Response): Promise<void> => {
+router.post('/upload-excel', upload.single('file'), async (req: Request, res: Response): Promise<void> => {
   try {
     if (!req.file) {
       res.status(400).json({ message: "Aucun fichier fourni." });
