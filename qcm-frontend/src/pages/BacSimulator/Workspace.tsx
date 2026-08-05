@@ -2,9 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { fetchExercises, BacExercise } from '../../services/bacService';
 
-// 🚀 IMPORTS POUR LE RENDU LATEX
 import 'katex/dist/katex.min.css';
 import Latex from 'react-latex-next';
+
+// 💡 Assurez-vous que votre interface BacExercise dans bacService.ts correspond à ces champs
+// export interface BacExercise {
+//   _id: string;
+//   type: string; // 'GROUP' ou 'QUESTION'
+//   texteQuestion: string; // La colonne "Texte de la question"
+//   subQuestion: string; // La colonne "sub_Question"
+//   imageUrl?: string;
+// }
 
 export default function BacSimulatorWorkspace() {
   const [searchParams] = useSearchParams();
@@ -54,10 +62,13 @@ export default function BacSimulatorWorkspace() {
     );
   }
 
-  // 🧠 LOGIQUE D'EXTRACTION DU CONTEXTE
-  const rawFirstStatement = questions[0].enonceTexte;
-  const contextPart = rawFirstStatement.split('**Question :**')[0];
-  const cleanContext = contextPart.replace(/\*\*Contexte :\*\*/gi, '').trim();
+  // 🧠 ISOLER LE CONTEXTE (Ligne de type 'GROUP')
+  // On cherche la première ligne qui sert de contexte global à l'exercice
+  const groupRow = questions.find(q => q.type === 'GROUP');
+  const globalContext = groupRow ? groupRow.texteQuestion : null;
+
+  // 📝 ISOLER LES QUESTIONS (On exclut la ligne GROUP)
+  const exerciseQuestions = questions.filter(q => q.type !== 'GROUP');
 
   return (
     <div className="min-h-screen bg-gray-50 py-10 px-4">
@@ -71,59 +82,64 @@ export default function BacSimulatorWorkspace() {
           >
             🔙 Quitter
           </button>
-          <h1 className="text-2xl font-extrabold text-blue-800 uppercase tracking-wider">
-            EXERCICE : {theme} ({annee} - {session})
+          <h1 className="text-2xl font-extrabold text-blue-800 uppercase tracking-wider text-center flex-1">
+            EXERCICE : {theme} <br/> <span className="text-lg text-gray-600">({annee} - {session})</span>
           </h1>
           <div className="w-24"></div>
         </div>
 
-        {/* 📖 BLOC DU CONTEXTE GLOBAL */}
-        {cleanContext && (
+        {/* 📖 BLOC DU CONTEXTE GLOBAL (Issu de la ligne GROUP) */}
+        {globalContext && (
           <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 mb-8">
             <div className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap">
-              {/* On enveloppe le texte avec <Latex> pour transformer les $...$ */}
-              <Latex>{cleanContext}</Latex>
+              <Latex>{globalContext}</Latex>
             </div>
           </div>
         )}
 
         {/* 📝 LISTE DES QUESTIONS */}
         <div className="space-y-6">
-          {questions.map((q, index) => {
-            const parts = q.enonceTexte.split('**Question :**');
-            const cleanQuestion = parts.length > 1 ? parts[1].trim() : q.enonceTexte.trim();
-
-            return (
-              <div key={q._id} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex flex-col md:flex-row gap-6">
+          {exerciseQuestions.map((q) => (
+            <div key={q._id} className="bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex flex-col md:flex-row gap-6">
                 
-                {/* Section Question */}
-                <div className="flex-1">
-                  {q.imageUrl && (
-                    <img 
-                      src={q.imageUrl} 
-                      alt="Illustration de la question" 
-                      className="mb-4 max-h-64 object-contain rounded border border-gray-200" 
-                    />
-                  )}
-                  <div className="text-gray-900 font-semibold text-lg whitespace-pre-wrap">
-                    {/* On enveloppe la question avec <Latex> */}
-                    <Latex>{cleanQuestion}</Latex>
+              {/* Section Texte Question */}
+              <div className="flex-1 flex flex-col gap-3">
+                {/* Illustration éventuelle */}
+                {q.imageUrl && (
+                  <img 
+                    src={q.imageUrl} 
+                    alt="Illustration" 
+                    className="mb-4 max-h-64 object-contain rounded border border-gray-200 self-start" 
+                  />
+                )}
+                
+                {/* 1️⃣ Affichage de la "Donnée" (Texte de la question) */}
+                {q.texteQuestion && q.texteQuestion.trim() !== "" && (
+                  <div className="text-gray-900 font-bold text-lg whitespace-pre-wrap">
+                    <Latex>{q.texteQuestion}</Latex>
                   </div>
-                </div>
+                )}
 
-                {/* Section Actions */}
-                <div className="flex flex-col gap-3 min-w-[200px] border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 justify-center">
-                  <button className="w-full py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded transition">
-                    💡 Demander un Indice
-                  </button>
-                  <button className="w-full py-2 bg-green-100 hover:bg-green-200 text-green-800 font-bold rounded transition">
-                    📸 Scanner ma réponse
-                  </button>
-                </div>
-
+                {/* 2️⃣ Affichage de la "Sous-question" (sub_Question) */}
+                {q.subQuestion && q.subQuestion.trim() !== "" && (
+                  <div className="text-gray-800 font-medium text-lg whitespace-pre-wrap ml-0 md:ml-6 border-l-4 border-blue-400 pl-4 py-1 bg-blue-50/50 rounded-r-lg">
+                    <Latex>{q.subQuestion}</Latex>
+                  </div>
+                )}
               </div>
-            );
-          })}
+
+              {/* Section Actions (Boutons) */}
+              <div className="flex flex-col gap-3 min-w-[200px] border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 justify-center">
+                <button className="w-full py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded transition shadow-sm">
+                  💡 Indice
+                </button>
+                <button className="w-full py-2 bg-green-100 hover:bg-green-200 text-green-800 font-bold rounded transition shadow-sm">
+                  📸 Scanner réponse
+                </button>
+              </div>
+
+            </div>
+          ))}
         </div>
 
       </div>
