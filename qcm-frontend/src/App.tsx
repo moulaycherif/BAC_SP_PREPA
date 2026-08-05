@@ -14,10 +14,9 @@ import StudentAstuceDetail from "./pages/StudentAstuceDetail";
 import StudentQuiz from "./pages/StudentQuiz";
 import PdfPage from "./pages/PdfPage";
 
-// 🚀 NOUVEAU : Import des pages du Bac Simulator
+// 🚀 Import des pages du Bac Simulator (Version centralisée)
 import BacSimulatorIndex from "./pages/BacSimulator/Index";
 import BacSimulatorWorkspace from "./pages/BacSimulator/Workspace";
-import BacSimulator from "./pages/BacSimulator";
 
 // 🧩 Import des composants
 import Navbar from "./components/Navbar";
@@ -46,10 +45,9 @@ export default function App() {
           <Route path="/student/quiz/:tipId" element={<StudentQuiz />} />
           <Route path="/student/pdf/:id" element={<PdfPage />} />
 
-          {/* 🚀 NOUVEAU : Routes du Bac Simulator */}
+          {/* 🚀 Routes du Bac Simulator */}
           <Route path="/student/bac-simulator" element={<BacSimulatorIndex />} />
           <Route path="/student/bac-simulator/workspace" element={<BacSimulatorWorkspace />} />
-          <Route path="/bac-simulator/:subject/:year/:session" element={<BacSimulator />} />
           <Route path="/examens-nationaux" element={<BacSimulatorIndex />}/>
 
           {/* 👑 Pages Admin */}
