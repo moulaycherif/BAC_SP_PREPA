@@ -16,7 +16,7 @@ export default function AdminExamUpload() {
     setStatusMessage("Importation en cours et génération des indices par l'IA...");
 
     try {
-      const res = await axios.post('/api/admin/upload-excel', formData, {
+      const res = await axios.post('/admin/upload-excel', formData, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setStatusMessage(`✅ Success: ${res.data.message}`);

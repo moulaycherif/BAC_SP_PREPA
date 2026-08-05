@@ -1,20 +1,26 @@
 import React, { useState } from 'react';
 import { BacExercise } from '../../services/bacService';
 import AiCorrectionScanner from './AiCorrectionScanner';
+// 👇 Import des outils de rendu Markdown et LaTeX
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
 
 interface Props {
   exercise: BacExercise;
 }
 
+// 👇 Petit composant réutilisable pour éviter de répéter le code de rendu
+const MarkdownRenderer = ({ content }: { content: string }) => (
+  <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]} className="prose max-w-none text-sm mt-1">
+    {content}
+  </ReactMarkdown>
+);
+
 const RightPanel_Dashboard: React.FC<Props> = ({ exercise }) => {
-  // État pour le Scaffolding (Phase 2)
   const [helpLevel, setHelpLevel] = useState<number>(0);
-  
-  // États pour l'Auto-évaluation (Phase 3 & 4)
   const [isFinished, setIsFinished] = useState<boolean>(false);
   const [correctionMode, setCorrectionMode] = useState<'checklist' | 'ia' | null>(null);
-  
-  // État pour le calcul du score (Checklist)
   const [checkedItems, setCheckedItems] = useState<boolean[]>(new Array(exercise.checklist.length).fill(false));
 
   const handleHelpClick = () => {
@@ -27,7 +33,6 @@ const RightPanel_Dashboard: React.FC<Props> = ({ exercise }) => {
     setCheckedItems(newChecked);
   };
 
-  // Calcul dynamique du score
   const scoreObtenu = exercise.checklist.reduce((total, critere, index) => {
     return total + (checkedItems[index] ? critere.points : 0);
   }, 0);
@@ -36,41 +41,40 @@ const RightPanel_Dashboard: React.FC<Props> = ({ exercise }) => {
   return (
     <div className="p-8 flex flex-col h-full bg-gray-50">
       
-      {/* --- EN TÊTE --- */}
       <div className="bg-white p-4 rounded-lg shadow-sm mb-6 border border-gray-200">
         <h2 className="text-lg font-bold text-gray-800">Espace de Travail</h2>
         <p className="text-sm text-gray-500">Rédige sur ton cahier, puis valide ton travail.</p>
       </div>
 
       {!isFinished ? (
-        /* =========================================================
-           PHASE 2 : SYSTÈME D'AIDE PROGRESSIF (SCAFFOLDING)
-           ========================================================= */
         <div className="flex-grow flex flex-col justify-between">
           <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
             <h3 className="font-semibold text-gray-800 mb-4">💡 Système d'Indice</h3>
             
             <div className="space-y-3">
               {helpLevel >= 1 && (
-                <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 rounded">
-                  <strong>Piste réflexive :</strong> {exercise.indices.niveau1_piste}
+                <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-900 rounded">
+                  <strong className="text-yellow-900 block mb-1">Piste réflexive :</strong> 
+                  <MarkdownRenderer content={exercise.indices.niveau1_piste} />
                 </div>
               )}
               {helpLevel >= 2 && (
-                <div className="p-3 bg-orange-50 border-l-4 border-orange-400 text-orange-800 rounded">
-                  <strong>Outil / Formule :</strong> {exercise.indices.niveau2_formule}
+                <div className="p-3 bg-orange-50 border-l-4 border-orange-400 text-orange-900 rounded">
+                  <strong className="text-orange-900 block mb-1">Outil / Formule :</strong> 
+                  <MarkdownRenderer content={exercise.indices.niveau2_formule} />
                 </div>
               )}
               {helpLevel >= 3 && (
-                <div className="p-3 bg-red-50 border-l-4 border-red-400 text-red-800 rounded">
-                  <strong>Corrigé détaillé :</strong> {exercise.indices.niveau3_corrige}
+                <div className="p-3 bg-red-50 border-l-4 border-red-400 text-red-900 rounded">
+                  <strong className="text-red-900 block mb-1">Corrigé détaillé :</strong> 
+                  <MarkdownRenderer content={exercise.indices.niveau3_corrige} />
                 </div>
               )}
 
               {helpLevel < 3 && (
                 <button 
                   onClick={handleHelpClick}
-                  className="w-full py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded transition"
+                  className="w-full mt-2 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium rounded transition"
                 >
                   Débloquer l'indice {helpLevel + 1}
                 </button>
@@ -86,9 +90,7 @@ const RightPanel_Dashboard: React.FC<Props> = ({ exercise }) => {
           </button>
         </div>
       ) : (
-        /* =========================================================
-           PHASE 3 & 4 : AUTO-ÉVALUATION ET CORRECTION
-           ========================================================= */
+        /* PHASE 3 & 4 (Checklist & IA) restent identiques à votre code d'origine */
         <div className="flex-grow flex flex-col">
           {!correctionMode ? (
             <div className="space-y-4">
@@ -110,7 +112,6 @@ const RightPanel_Dashboard: React.FC<Props> = ({ exercise }) => {
               </button>
             </div>
           ) : correctionMode === 'checklist' ? (
-            /* --- PHASE 3 : LA CHECKLIST --- */
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200 flex-grow overflow-y-auto">
               <div className="flex justify-between items-center mb-6 border-b pb-4">
                 <h3 className="font-bold text-gray-800 text-lg">Grille Officielle</h3>
@@ -131,7 +132,10 @@ const RightPanel_Dashboard: React.FC<Props> = ({ exercise }) => {
                       onChange={() => handleCheck(index)}
                     />
                     <div className="flex-grow">
-                      <span className="text-gray-800 block">{critere.description}</span>
+                      <span className="text-gray-800 block">
+                        {/* Optionnel : Rendre aussi le markdown dans la checklist si l'IA y met des maths */}
+                        <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>{critere.description}</ReactMarkdown>
+                      </span>
                       <span className="text-xs font-bold text-green-600">+{critere.points} pt</span>
                     </div>
                   </label>
@@ -139,14 +143,13 @@ const RightPanel_Dashboard: React.FC<Props> = ({ exercise }) => {
               </div>
 
               <button 
-                onClick={() => alert("Résultat enregistré dans tes statistiques ! (À relier au backend)")}
+                onClick={() => alert("Résultat enregistré ! (À relier au backend)")}
                 className="w-full mt-6 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-lg shadow transition"
               >
                 💾 Enregistrer mon score
               </button>
             </div>
           ) : (
-            /* --- PHASE 4 : UPLOAD IA (En attente d'implémentation UI) --- */
             <AiCorrectionScanner />
           )}
         </div>

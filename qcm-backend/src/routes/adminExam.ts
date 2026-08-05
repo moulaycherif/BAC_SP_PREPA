@@ -20,59 +20,57 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
 
     const importedQuestions = [];
     let currentContext = ""; 
-    let currentTitle = ""; // Va garder en mémoire "1)" pour les sous-questions qui suivent
+    let currentTitle = ""; 
 
     for (const row of rows) {
       const type = row['TYPE'];
       
-      // Nettoyage des textes pour éviter les espaces invisibles ou les "undefined"
       const mainText = row['Texte de la question'] ? String(row['Texte de la question']).trim() : "";
       const subText = row['Sub_Question'] ? String(row['Sub_Question']).trim() : "";
       
-      // 1. Gestion du contexte (l'énoncé global de l'exercice)
+      // 1. Gestion du contexte
       if (type === 'Groupe') {
         currentContext = mainText; 
         continue; 
       }
 
-      // 2. Gestion des questions (sous-questions de l'exercice)
+      // 2. Gestion des questions
       if (type === 'Question') {
         
-        // Si les deux colonnes sont totalement vides, on ignore la ligne
-        if (!mainText && !subText) {
-          continue;
-        }
+        if (!mainText && !subText) continue;
 
-        // Si la colonne "Texte de la question" contient quelque chose, on la mémorise
         if (mainText) {
           currentTitle = mainText;
         }
 
         let questionLabel = "";
+        let subQuestionMarker = ""; // 👈 Nouvelle variable pour stocker "a)", "b)", etc.
 
-        // 🧠 Traitement selon vos deux cas de figure :
+        // 🧠 Traitement et extraction
         if (subText) {
-          // Cas 1 : Il y a une sous-question (ex: "a)"). 
-          // On combine le titre mémorisé avec la sous-question.
+          // Cette Regex capture intelligemment les marqueurs comme "a)", "b.", "1)", "II." au début du texte
+          const match = subText.match(/^([a-zA-Z0-9]+[)\.-])/);
+          if (match) {
+            subQuestionMarker = ` ${match[1]}`; // Ex: " a)" ou " b)"
+          }
+
           questionLabel = `${currentTitle} ${subText}`;
         } else {
-          // Cas 2 : Question simple sans sous-question (ex: "2)").
           questionLabel = currentTitle;
         }
 
-        // Création de l'énoncé complet à envoyer à l'IA et à afficher à l'étudiant
         const fullStatement = `**Contexte :**\n${currentContext}\n\n**Question :**\n${questionLabel}`;
 
         try {
-          // 🧠 Appel à l'IA (OpenRouter) pour générer le scaffolding et la checklist
+          // Appel à l'IA
           const aiResult = await generateSolutionAndHints(fullStatement);
 
-          // 🛠️ Mapping avec votre modèle BacExam.ts
           const questionData = {
               annee: Number(row['Année']),
               session: row['Session'] as "Normale" | "Rattrapage",
               theme: row['Thème'] || "Non classé",
-              titreExercice: row["Numéro d'exercice"] + (currentTitle ? ` - ${currentTitle}` : ""),
+              // 🎯 AJOUT ICI : On fusionne le numéro d'exercice, le titre principal, ET le marqueur de sous-question
+              titreExercice: row["Numéro d'exercice"] + (currentTitle ? ` - ${currentTitle}` : "") + subQuestionMarker,
               enonceTexte: fullStatement, 
               imageUrl: row['Image'] || undefined,
               indices: {
@@ -83,12 +81,10 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
               checklist: aiResult.checklist
           };
 
-          // Sauvegarde dans la collection BacExam
           const savedQuestion = await BacExam.create(questionData);
           importedQuestions.push(savedQuestion);
         } catch (aiError) {
           console.error(`Erreur IA lors du traitement de la question : ${questionLabel}`, aiError);
-          // On ne fait pas planter le script, on passe simplement à la question suivante
         }
       }
     }

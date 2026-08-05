@@ -1,5 +1,10 @@
 import React from 'react';
 import { BacExercise } from '../../services/bacService';
+// 👇 Import des outils de rendu Markdown et LaTeX
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import 'katex/dist/katex.min.css'; // Indispensable pour le style des maths
 
 interface Props {
   exercise: BacExercise;
@@ -20,7 +25,6 @@ const LeftPanel_Exam: React.FC<Props> = ({ exercise }) => {
       <div className="prose max-w-none text-gray-700">
         <h2 className="text-xl font-semibold mb-6 text-blue-900">{exercise.titreExercice}</h2>
         
-        {/* Affichage de l'image (Circuit électrique, graphe, etc.) si elle existe */}
         {exercise.imageUrl && (
           <div className="mb-8 flex justify-center">
             <img 
@@ -31,13 +35,15 @@ const LeftPanel_Exam: React.FC<Props> = ({ exercise }) => {
           </div>
         )}
 
-        {/* 
-          Affichage du texte de l'énoncé.
-          La classe "whitespace-pre-wrap" permet de respecter les sauts de ligne tapés dans la base de données.
-          (Pour interpréter le LaTeX à l'avenir, vous pourrez wrapper ceci avec un composant 'react-markdown' ou 'react-katex')
-        */}
-        <div className="whitespace-pre-wrap leading-relaxed text-justify text-gray-800 text-lg">
-          {exercise.enonceTexte}
+        {/* 👇 Le nouveau moteur de rendu pour l'énoncé */}
+        <div className="leading-relaxed text-justify text-gray-800 text-lg">
+          <ReactMarkdown 
+            remarkPlugins={[remarkMath]} 
+            rehypePlugins={[rehypeKatex]}
+            className="prose prose-blue max-w-none"
+          >
+            {exercise.enonceTexte}
+          </ReactMarkdown>
         </div>
       </div>
     </div>
