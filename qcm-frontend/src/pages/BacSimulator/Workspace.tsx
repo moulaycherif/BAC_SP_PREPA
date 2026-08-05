@@ -2,6 +2,10 @@ import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { fetchExercises, BacExercise } from '../../services/bacService';
 
+// 🚀 IMPORTS POUR LE RENDU LATEX
+import 'katex/dist/katex.min.css';
+import Latex from 'react-latex-next';
+
 export default function BacSimulatorWorkspace() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -10,7 +14,6 @@ export default function BacSimulatorWorkspace() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Récupération des critères depuis l'URL
   const annee = searchParams.get('annee');
   const session = searchParams.get('session');
   const theme = searchParams.get('theme');
@@ -25,7 +28,6 @@ export default function BacSimulatorWorkspace() {
 
       try {
         setLoading(true);
-        // On récupère TOUTES les questions correspondant à cet exercice
         const data = await fetchExercises(annee, session, theme);
         setQuestions(data);
       } catch (err) {
@@ -53,8 +55,6 @@ export default function BacSimulatorWorkspace() {
   }
 
   // 🧠 LOGIQUE D'EXTRACTION DU CONTEXTE
-  // On prend l'énoncé de la première question, on coupe au niveau de "**Question :**" 
-  // et on supprime le mot "**Contexte :**"
   const rawFirstStatement = questions[0].enonceTexte;
   const contextPart = rawFirstStatement.split('**Question :**')[0];
   const cleanContext = contextPart.replace(/\*\*Contexte :\*\*/gi, '').trim();
@@ -74,22 +74,22 @@ export default function BacSimulatorWorkspace() {
           <h1 className="text-2xl font-extrabold text-blue-800 uppercase tracking-wider">
             EXERCICE : {theme} ({annee} - {session})
           </h1>
-          <div className="w-24"></div> {/* Espaceur pour centrer le titre */}
+          <div className="w-24"></div>
         </div>
 
         {/* 📖 BLOC DU CONTEXTE GLOBAL */}
         {cleanContext && (
           <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 mb-8">
-            <p className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap">
-              {cleanContext}
-            </p>
+            <div className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap">
+              {/* On enveloppe le texte avec <Latex> pour transformer les $...$ */}
+              <Latex>{cleanContext}</Latex>
+            </div>
           </div>
         )}
 
         {/* 📝 LISTE DES QUESTIONS */}
         <div className="space-y-6">
           {questions.map((q, index) => {
-            // On isole uniquement le texte de la question pour retirer le contexte répété
             const parts = q.enonceTexte.split('**Question :**');
             const cleanQuestion = parts.length > 1 ? parts[1].trim() : q.enonceTexte.trim();
 
@@ -98,7 +98,6 @@ export default function BacSimulatorWorkspace() {
                 
                 {/* Section Question */}
                 <div className="flex-1">
-                  {/* Image éventuelle */}
                   {q.imageUrl && (
                     <img 
                       src={q.imageUrl} 
@@ -106,12 +105,13 @@ export default function BacSimulatorWorkspace() {
                       className="mb-4 max-h-64 object-contain rounded border border-gray-200" 
                     />
                   )}
-                  <p className="text-gray-900 font-semibold text-lg whitespace-pre-wrap">
-                    {cleanQuestion}
-                  </p>
+                  <div className="text-gray-900 font-semibold text-lg whitespace-pre-wrap">
+                    {/* On enveloppe la question avec <Latex> */}
+                    <Latex>{cleanQuestion}</Latex>
+                  </div>
                 </div>
 
-                {/* Section Actions (Indices / IA) */}
+                {/* Section Actions */}
                 <div className="flex flex-col gap-3 min-w-[200px] border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 justify-center">
                   <button className="w-full py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded transition">
                     💡 Demander un Indice
