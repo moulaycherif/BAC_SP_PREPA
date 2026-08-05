@@ -13,15 +13,19 @@ export default function AdminExamUpload() {
     formData.append('file', file);
 
     setLoading(true);
-    setStatusMessage("Importation en cours et génération des indices par l'IA...");
+    setStatusMessage("⏳ Importation en cours et génération des indices par l'IA (veillez à ne pas fermer la page)...");
 
     try {
       const res = await axios.post('/admin/upload-excel', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000 // ⏱️ On augmente le délai d'attente à 2 minutes côté client
       });
-      setStatusMessage(`✅ Success: ${res.data.message}`);
-    } catch (err) {
-      setStatusMessage("❌ Échec de l'importation. Vérifiez la structure du fichier.");
+      setStatusMessage(`✅ Succès : ${res.data.message}`);
+    } catch (err: any) {
+      // 🎯 On extrait le VRAI message envoyé par le serveur ou Axios
+      const serverError = err.response?.data?.message || err.message || "Erreur inconnue";
+      setStatusMessage(`❌ Échec de l'importation : ${serverError}`);
+      console.error("Détail de l'erreur d'importation :", err);
     } finally {
       setLoading(false);
     }
@@ -46,7 +50,11 @@ export default function AdminExamUpload() {
         {loading ? "Traitement par l'IA..." : "Importer et Générer l'Épreuve"}
       </button>
 
-      {statusMessage && <p className="mt-4 text-center font-semibold text-gray-700">{statusMessage}</p>}
+      {statusMessage && (
+        <p className={`mt-4 text-center font-semibold ${statusMessage.startsWith('✅') ? 'text-green-600' : statusMessage.startsWith('⏳') ? 'text-blue-600' : 'text-red-600'}`}>
+          {statusMessage}
+        </p>
+      )}
     </div>
   );
 }
