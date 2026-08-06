@@ -1,25 +1,23 @@
 import mongoose, { Schema, Document } from "mongoose";
 
-// 1️⃣ Typage TypeScript pour la Checklist de correction
 export interface ICritereCorrection {
   description: string;
   points: number;
 }
 
-// 2️⃣ Typage TypeScript pour le système d'aide (Scaffolding)
 export interface IScaffolding {
   niveau1_piste: string;
   niveau2_formule: string;
   niveau3_corrige: string;
 }
 
-// 3️⃣ Typage global du document
 export interface IBacExam extends Document {
-  matiere: string;         // 👈 NOUVEAU : On ajoute la matière !
+  matiere: string;
   annee: number;
   session: "Normale" | "Rattrapage";
   theme: string;
-  titreExercice: string;
+  numeroExercice: string; // 👈 Remplacement ici
+  labelQuestion: string;  // 👈 Remplacement ici
   enonceTexte: string;
   imageUrl?: string;
   indices: IScaffolding;
@@ -27,12 +25,11 @@ export interface IBacExam extends Document {
   createdAt: Date;
 }
 
-// ⚙️ Définition du Schéma Mongoose
 const BacExamSchema: Schema = new Schema({
-  matiere: {               // 👈 NOUVEAU : On l'ajoute au schéma Mongoose
+  matiere: { 
     type: String, 
     required: true,
-    index: true            // Indexé car on va beaucoup filtrer par matière
+    index: true 
   },
   annee: { 
     type: Number, 
@@ -48,7 +45,11 @@ const BacExamSchema: Schema = new Schema({
     required: true,
     index: true 
   },
-  titreExercice: { 
+  numeroExercice: {       // 👈 Nouveau champ
+    type: String, 
+    required: true 
+  },
+  labelQuestion: {        // 👈 Nouveau champ
     type: String, 
     required: true 
   },

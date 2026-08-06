@@ -72,17 +72,20 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
           const rawSession = row['Session'] || row['session'] || "Normale";
           const formattedSession = rawSession.toString().toLowerCase().includes("rattrap") ? "Rattrapage" : "Normale";
 
+          // Extraction des champs de structure
+          const rawMatiere = row['Matière'] || row['Matiere'] || row['matiere'] || "Non classée";
           const rawNumber = row["Numéro d'exercice"] || row["Numero d'exercice"] || row["Exercice"] || "Exercice";
           
-          // 👇 NOUVEAU : On extrait la matière depuis le fichier Excel
-          const rawMatiere = row['Matière'] || row['Matiere'] || row['matiere'] || "Non classée";
+          // Formatage propre du label de la question (ex: "1) a)" ou "1)")
+          const questionLabelClean = `${currentTitle ? currentTitle : ""}${subQuestionMarker}`.trim() || "Question globale";
 
           const questionData = {
-            matiere: rawMatiere, // 👈 NOUVEAU : On l'ajoute à l'objet pour Mongoose
+            matiere: rawMatiere,         // 👈 On envoie la matière à MongoDB
             annee: isNaN(parsedAnnee) ? 2024 : parsedAnnee,
             session: formattedSession,
             theme: row['Thème'] || row['Theme'] || "Non classé",
-            titreExercice: `${rawNumber}${currentTitle ? ` - ${currentTitle}` : ""}${subQuestionMarker}`,
+            numeroExercice: String(rawNumber).trim(), // 👈 Ex: "EXERCICE 1"
+            labelQuestion: questionLabelClean,        // 👈 Ex: "1) a)"
             enonceTexte: fullStatement, 
             imageUrl: row['Image'] || undefined,
             indices: {
