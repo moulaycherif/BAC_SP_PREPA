@@ -25,9 +25,19 @@ try {
  */
 export const getFilters = async (req: Request, res: Response): Promise<void> => {
   try {
-    const years = await BacExam.distinct("annee");
-    const sessions = await BacExam.distinct("session");
-    const themes = await BacExam.distinct("theme");
+    // 🔍 NOUVEAU : On récupère la matière depuis l'URL
+    const { matiere } = req.query;
+
+    // 🔍 NOUVEAU : On crée le filtre. Si une matière est demandée, on l'ajoute à la requête.
+    const filterQuery: any = {};
+    if (matiere) {
+      filterQuery.matiere = matiere;
+    }
+
+    // On passe le filterQuery pour ne récupérer QUE les données de la matière concernée
+    const years = await BacExam.distinct("annee", filterQuery);
+    const sessions = await BacExam.distinct("session", filterQuery);
+    const themes = await BacExam.distinct("theme", filterQuery);
 
     const sortedYears = years.sort((a, b) => b - a);
 
@@ -48,12 +58,21 @@ export const getFilters = async (req: Request, res: Response): Promise<void> => 
  */
 export const getExercisesByFilters = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { annee, session, theme } = req.query;
+    // 🔍 NOUVEAU : Ajout de la matière
+    const { matiere, annee, session, theme } = req.query;
 
     const query: any = {};
+    
+    // NOUVEAU : Filtrage par matière
+    if (matiere) query.matiere = matiere;
+    
     if (annee) query.annee = Number(annee);
     if (session) query.session = session;
-    if (theme) query.theme = theme;
+    
+    // NOUVEAU : On gère l'exception "Toute l'épreuve" générée par le frontend
+    if (theme && theme !== "Toute l'épreuve") {
+      query.theme = theme;
+    }
 
     const exercises = await BacExam.find(query);
 
