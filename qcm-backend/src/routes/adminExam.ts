@@ -73,8 +73,12 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
           const formattedSession = rawSession.toString().toLowerCase().includes("rattrap") ? "Rattrapage" : "Normale";
 
           const rawNumber = row["Numéro d'exercice"] || row["Numero d'exercice"] || row["Exercice"] || "Exercice";
+          
+          // 👇 NOUVEAU : On extrait la matière depuis le fichier Excel
+          const rawMatiere = row['Matière'] || row['Matiere'] || row['matiere'] || "Non classée";
 
           const questionData = {
+            matiere: rawMatiere, // 👈 NOUVEAU : On l'ajoute à l'objet pour Mongoose
             annee: isNaN(parsedAnnee) ? 2024 : parsedAnnee,
             session: formattedSession,
             theme: row['Thème'] || row['Theme'] || "Non classé",
