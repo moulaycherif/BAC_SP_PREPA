@@ -760,7 +760,7 @@ if (section === "home" && !selectedAction) {
     <button 
       onClick={() => {
         // On adapte le nom de la matière pour l'URL en fonction de la boucle actuelle
-        const matiereUrl = matiere === "Mathématique" ? "Mathématiques" : matiere;
+        const matiereUrl = matiere === "Mathématique" ? "Mathématique" : matiere;
         navigate(`/student/bac-simulator?matiere=${matiereUrl}`);
       }} 
       className="flex-1 px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition hover:-translate-y-1 flex items-center justify-center gap-3"
