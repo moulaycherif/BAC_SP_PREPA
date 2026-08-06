@@ -25,21 +25,25 @@ try {
  */
 export const getFilters = async (req: Request, res: Response): Promise<void> => {
   try {
-    // 🔍 NOUVEAU : On récupère la matière depuis l'URL
     const { matiere } = req.query;
 
-    // 🔍 NOUVEAU : On crée le filtre. Si une matière est demandée, on l'ajoute à la requête.
     const filterQuery: any = {};
     if (matiere) {
-      filterQuery.matiere = matiere;
+      // 🚨 Vérifie si ton modèle BacExam utilise 'matiere' ou 'subject'. 
+      // Je mets 'matiere' ici, mais remplace par 'subject' si besoin !
+      // Le $regex permet d'ignorer les majuscules/minuscules (insensible à la casse)
+      filterQuery.matiere = { $regex: new RegExp(`^${matiere}$`, "i") };
     }
 
-    // On passe le filterQuery pour ne récupérer QUE les données de la matière concernée
+    console.log("🔍 [DEBUG] Requête Filtres DB:", filterQuery); // 👈 Regarde ton terminal backend !
+
     const years = await BacExam.distinct("annee", filterQuery);
     const sessions = await BacExam.distinct("session", filterQuery);
     const themes = await BacExam.distinct("theme", filterQuery);
 
-    const sortedYears = years.sort((a, b) => b - a);
+    console.log("✅ [DEBUG] Résultats trouvés :", { years, sessions, themes });
+
+    const sortedYears = years.sort((a, b) => (b as number) - (a as number));
 
     res.status(200).json({
       years: sortedYears,
@@ -58,21 +62,22 @@ export const getFilters = async (req: Request, res: Response): Promise<void> => 
  */
 export const getExercisesByFilters = async (req: Request, res: Response): Promise<void> => {
   try {
-    // 🔍 NOUVEAU : Ajout de la matière
     const { matiere, annee, session, theme } = req.query;
 
     const query: any = {};
     
-    // NOUVEAU : Filtrage par matière
-    if (matiere) query.matiere = matiere;
+    if (matiere) {
+      // Même chose ici, utilise 'subject' à la place de 'matiere' si c'est le nom de ton champ DB
+      query.matiere = { $regex: new RegExp(`^${matiere}$`, "i") };
+    }
     
     if (annee) query.annee = Number(annee);
     if (session) query.session = session;
-    
-    // NOUVEAU : On gère l'exception "Toute l'épreuve" générée par le frontend
     if (theme && theme !== "Toute l'épreuve") {
       query.theme = theme;
     }
+
+    console.log("🔍 [DEBUG] Requête Exercices DB:", query);
 
     const exercises = await BacExam.find(query);
 
