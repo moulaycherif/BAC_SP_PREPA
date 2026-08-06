@@ -50,25 +50,23 @@ export default function BacSimulatorWorkspace() {
       const cleanText = parts.length > 1 ? parts[1].trim() : q.enonceTexte.trim();
 
       // 2. Regex pour séparer "3) La donnée..." de "a) La question..."
-      // Cherche le modèle : " a) ", " b) ", etc.
       const match = cleanText.match(/^(.*?)(?:\s+|^)([a-z]\)\s+.*)$/is);
       
       let preamble = "";
       let subQuestion = cleanText;
 
       if (match) {
-        // On normalise les espaces pour éviter les faux-positifs dus aux erreurs de frappe
         preamble = match[1].replace(/\s+/g, ' ').trim(); 
         subQuestion = match[2].trim();
       }
 
-      // 3. Vérifier si on doit afficher le préambule (seulement s'il est nouveau)
+      // 3. Vérifier si on doit afficher le préambule
       const isNewPreamble = preamble !== "" && preamble !== lastPreamble;
       
       if (preamble !== "") {
         lastPreamble = preamble;
       } else {
-        lastPreamble = ""; // Si question directe (sans a, b, c) on réinitialise
+        lastPreamble = "";
       }
 
       return {
@@ -110,9 +108,12 @@ export default function BacSimulatorWorkspace() {
           >
             🔙 Quitter
           </button>
+          
+          {/* 📌 MODIFICATION : Ajout de "EXERCICE 1" */}
           <h1 className="text-2xl font-extrabold text-blue-800 uppercase tracking-wider text-center flex-1">
-            EXERCICE : {theme} <br/> <span className="text-lg text-gray-600">({annee} - {session})</span>
+            EXERCICE 1 : {theme} <br/> <span className="text-lg text-gray-600">({annee} - {session})</span>
           </h1>
+          
           <div className="w-24"></div>
         </div>
 
@@ -137,11 +138,11 @@ export default function BacSimulatorWorkspace() {
                 </div>
               )}
 
-              {/* CARTE DE LA QUESTION (a, b, c...) */}
+              {/* CARTE DE LA QUESTION */}
               <div 
                 className={`bg-white p-6 rounded-lg shadow-sm border border-gray-100 flex flex-col md:flex-row gap-6 transition-all ${
                   q.isSubQuestion 
-                    ? 'ml-0 md:ml-8 border-l-4 border-l-blue-500' // 👈 Indentation et bordure bleue pour a, b, c
+                    ? 'ml-0 md:ml-8 border-l-4 border-l-blue-500' 
                     : ''
                 }`}
               >
@@ -160,19 +161,27 @@ export default function BacSimulatorWorkspace() {
                   </div>
                 </div>
 
-                {/* Section Actions (Boutons) */}
-                <div className="flex flex-col gap-3 min-w-[200px] border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 justify-center">
-                  <button className="w-full py-2 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded transition shadow-sm">
-                    💡 Indice
-                  </button>
-                  <button className="w-full py-2 bg-green-100 hover:bg-green-200 text-green-800 font-bold rounded transition shadow-sm">
-                    📸 Scanner réponse
+                {/* Section Actions : Uniquement l'Indice pour chaque question */}
+                <div className="flex flex-col gap-3 min-w-[150px] border-t md:border-t-0 md:border-l border-gray-100 pt-4 md:pt-0 md:pl-6 justify-center">
+                  <button className="w-full py-3 bg-yellow-100 hover:bg-yellow-200 text-yellow-800 font-bold rounded transition shadow-sm flex items-center justify-center gap-2">
+                    <span>💡</span> Indice
                   </button>
                 </div>
 
               </div>
             </div>
           ))}
+        </div>
+
+        {/* 📸 MODIFICATION : BOUTON SCANNER GLOBAL (À LA FIN DE L'EXERCICE) */}
+        <div className="mt-12 bg-white p-8 rounded-xl shadow-md border border-gray-200 text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">Tu as terminé cet exercice ?</h2>
+          <p className="text-gray-600 mb-6 max-w-2xl mx-auto">
+            Prends en photo ta copie avec toutes tes réponses pour cet exercice. Notre IA va l'analyser, te corriger étape par étape et t'attribuer une note estimée !
+          </p>
+          <button className="px-8 py-4 bg-green-500 hover:bg-green-600 text-white font-extrabold text-lg rounded-full shadow-lg transition transform hover:scale-105 flex items-center justify-center gap-3 mx-auto">
+            <span className="text-2xl">📸</span> Scanner ma copie (Exercice complet)
+          </button>
         </div>
 
       </div>
