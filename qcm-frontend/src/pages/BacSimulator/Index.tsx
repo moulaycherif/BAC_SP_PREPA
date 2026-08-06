@@ -1,9 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchBacFilters, BacFilters } from '../../services/bacService';
 
 export default function BacSimulatorIndex() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  
+  // 📥 Récupération de la matière depuis l'URL (ex: ?matiere=Physique-Chimie)
+  const matiere = searchParams.get('matiere');
 
   // États pour les filtres dynamiques (provenant du backend)
   const [filters, setFilters] = useState<BacFilters>({ years: [], sessions: [], themes: [] });
@@ -18,9 +22,16 @@ export default function BacSimulatorIndex() {
   // 1️⃣ Charger les filtres dynamiques au montage de la page
   useEffect(() => {
     const loadFilters = async () => {
+      if (!matiere) {
+        setError("Aucune matière n'a été spécifiée dans l'URL.");
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
-        const data = await fetchBacFilters();
+        // On envoie la matière au backend pour filtrer les bonnes années/thèmes
+        const data = await fetchBacFilters(matiere);
         setFilters(data);
         
         // Sélection par défaut des premiers éléments s'ils existent
@@ -36,7 +47,7 @@ export default function BacSimulatorIndex() {
     };
 
     loadFilters();
-  }, []);
+  }, [matiere]);
 
   // 2️⃣ Valider et lancer l'examen
   const handleStart = () => {
@@ -45,9 +56,8 @@ export default function BacSimulatorIndex() {
       return;
     }
     
-    // 🚀 Navigation vers l'espace de travail en envoyant les critères dans l'URL
-    // Ex: /student/bac-simulator/workspace?annee=2024&session=Normale&theme=Mécanique
-    navigate(`/student/bac-simulator/workspace?annee=${selectedYear}&session=${selectedSession}&theme=${selectedTheme}`);
+    // 🚀 Navigation vers l'espace de travail en envoyant TOUS les critères dans l'URL
+    navigate(`/student/bac-simulator/workspace?matiere=${matiere}&annee=${selectedYear}&session=${selectedSession}&theme=${selectedTheme}`);
   };
 
   return (
@@ -63,7 +73,9 @@ export default function BacSimulatorIndex() {
         </button>
 
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-extrabold text-blue-700 mb-2">BAC SIMULATOR</h1>
+          <h1 className="text-4xl font-extrabold text-blue-700 mb-2">
+            BAC SIMULATOR {matiere ? `- ${matiere}` : ''}
+          </h1>
           <p className="text-lg text-gray-500">
             Configure ton épreuve sur-mesure et entraîne-toi en conditions réelles.
           </p>
@@ -125,7 +137,6 @@ export default function BacSimulatorIndex() {
                   {filters.themes.map((t) => (
                     <option key={t} value={t}>{t}</option>
                   ))}
-                  {/* Option Globale Maintenue */}
                   <option value="Toute l'épreuve" className="font-bold text-blue-700">🏆 Toute l'épreuve</option>
                 </select>
               </div>

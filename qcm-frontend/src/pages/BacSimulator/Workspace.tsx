@@ -13,13 +13,15 @@ export default function BacSimulatorWorkspace() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
+  // 📥 Récupération des paramètres
+  const matiere = searchParams.get('matiere');
   const annee = searchParams.get('annee');
   const session = searchParams.get('session');
   const theme = searchParams.get('theme');
 
   useEffect(() => {
     const loadExercise = async () => {
-      if (!annee || !session || !theme) {
+      if (!matiere || !annee || !session || !theme) {
         setError("Critères de sélection manquants.");
         setLoading(false);
         return;
@@ -27,7 +29,7 @@ export default function BacSimulatorWorkspace() {
 
       try {
         setLoading(true);
-        const data = await fetchExercises(annee, session, theme);
+        const data = await fetchExercises(matiere, annee, session, theme);
         setQuestions(data);
       } catch (err) {
         console.error(err);
@@ -38,7 +40,7 @@ export default function BacSimulatorWorkspace() {
     };
 
     loadExercise();
-  }, [annee, session, theme]);
+  }, [matiere, annee, session, theme]);
 
   // 🧠 LOGIQUE DE REGROUPEMENT DES SOUS-QUESTIONS (a, b, c...)
   const groupedQuestions = useMemo(() => {
@@ -111,7 +113,8 @@ export default function BacSimulatorWorkspace() {
           
           {/* 📌 MODIFICATION : Ajout de "EXERCICE 1" */}
           <h1 className="text-2xl font-extrabold text-blue-800 uppercase tracking-wider text-center flex-1">
-            EXERCICE 1 : {theme} <br/> <span className="text-lg text-gray-600">({annee} - {session})</span>
+            EXERCICE 1 : {theme} <br/> 
+            <span className="text-lg text-gray-600">({matiere} - {annee} - {session})</span>
           </h1>
           
           <div className="w-24"></div>

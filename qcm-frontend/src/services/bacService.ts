@@ -27,19 +27,21 @@ export interface BacExercise {
 }
 
 /**
- * Récupère les listes dynamiques pour les menus déroulants (Années, Sessions, Thèmes)
+ * Récupère les listes dynamiques pour les menus déroulants (Années, Sessions, Thèmes) en fonction de la matière
  */
-export const fetchBacFilters = async (): Promise<BacFilters> => {
-  const response = await api.get<BacFilters>("/api/bac/filters");
+export const fetchBacFilters = async (matiere: string): Promise<BacFilters> => {
+  const response = await api.get<BacFilters>("/api/bac/filters", {
+    params: { matiere }
+  });
   return response.data;
 };
 
 /**
  * Récupère l'exercice correspondant aux critères choisis par l'étudiant
  */
-export const fetchExercises = async (annee: string, session: string, theme: string): Promise<BacExercise[]> => {
+export const fetchExercises = async (matiere: string, annee: string, session: string, theme: string): Promise<BacExercise[]> => {
   const response = await api.get<BacExercise[]>("/api/bac/exercises", {
-    params: { annee, session, theme },
+    params: { matiere, annee, session, theme },
   });
   return response.data;
 };

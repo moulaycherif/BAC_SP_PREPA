@@ -756,12 +756,21 @@ if (section === "home" && !selectedAction) {
                     <span className="text-2xl">📚</span>
                     <span className="text-lg">Contrôles & Examens blancs</span>
                   </button>
-                  <button onClick={() => navigate('/examens-nationaux')} className="flex-1 px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition hover:-translate-y-1 flex items-center justify-center gap-3">
-                    <span className="text-2xl">🎓</span>
-                    <span className="text-lg text-center">Examens nationaux (Bac Simulator)</span>
-                  </button>
-                </div>
-              </div>
+                  {/* NOUVEAU BOUTON DYNAMIQUE POUR LE BAC SIMULATOR */}
+    <button 
+      onClick={() => {
+        // On adapte le nom de la matière pour l'URL en fonction de la boucle actuelle
+        const matiereUrl = matiere === "Mathématique" ? "Mathématiques" : matiere;
+        navigate(`/student/bac-simulator?matiere=${matiereUrl}`);
+      }} 
+      className="flex-1 px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition hover:-translate-y-1 flex items-center justify-center gap-3"
+    >
+      <span className="text-2xl">🎓</span>
+      <span className="text-lg text-center">Examens nationaux (Bac Simulator)</span>
+    </button>
+
+  </div>
+</div>
 
             </div>
           ))}
