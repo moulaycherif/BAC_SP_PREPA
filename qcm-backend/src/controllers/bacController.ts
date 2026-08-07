@@ -224,3 +224,56 @@ Tu dois IMPÉRATIVEMENT répondre avec un objet JSON strict correspondant à cet
     });
   }
 };
+/**
+ * 5️⃣ NOUVEAU : Récupérer une épreuve complète groupée par exercice
+ * Idéal pour l'affichage complet de l'examen structuré (Titre de l'exercice > Questions)
+ */
+export const getCompleteExam = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { matiere, annee, session } = req.query;
+
+    const query: any = {};
+    if (matiere) {
+      query.matiere = { $regex: new RegExp(`^${matiere}$`, "i") };
+    }
+    if (annee) query.annee = Number(annee);
+    if (session) query.session = session;
+
+    // On récupère les questions triées par date de création (ordre du fichier Excel)
+    const questions = await BacExam.find(query).sort({ createdAt: 1 });
+
+    if (questions.length === 0) {
+      res.status(404).json({ message: "Aucune épreuve trouvée pour ces critères." });
+      return;
+    }
+
+    // 🎯 REGROUPEMENT (Grouping)
+    const epreuveGroupee = questions.reduce((acc: any[], question) => {
+      let exerciceBlock = acc.find(ex => ex.titre === question.numeroExercice);
+
+      if (!exerciceBlock) {
+        exerciceBlock = {
+          titre: question.numeroExercice,
+          questions: []
+        };
+        acc.push(exerciceBlock);
+      }
+
+      exerciceBlock.questions.push({
+        id: question._id,
+        label: question.labelQuestion,
+        enonce: question.enonceTexte,
+        image: question.imageUrl,
+        indices: question.indices,
+        checklist: question.checklist
+      });
+
+      return acc;
+    }, []);
+
+    res.status(200).json(epreuveGroupee);
+  } catch (error) {
+    console.error("Erreur lors de la récupération de l'épreuve complète :", error);
+    res.status(500).json({ message: "Erreur lors de la récupération de l'épreuve." });
+  }
+};

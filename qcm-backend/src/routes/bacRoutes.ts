@@ -5,7 +5,8 @@ import {
   getFilters, 
   getExercisesByFilters, 
   createBacExercise,
-  correctStudentCopy 
+  correctStudentCopy,
+  getCompleteExam 
 } from "../controllers/bacController";
 
 const router = Router();
@@ -17,6 +18,9 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.get("/filters", getFilters);
 router.get("/exercises", getExercisesByFilters);
 router.post("/exercises", createBacExercise);
+// 🚀 NOUVELLE ROUTE : Récupérer toute l'épreuve formatée et groupée
+// 👈 2. NOUVEAU : On crée l'URL correspondante
+router.get("/epreuve-complete", getCompleteExam);
 
 // 🚀 NOUVELLE ROUTE : Phase 4 - L'examinateur IA
 // On attend un fichier nommé "image" et un champ "exerciseId" dans le corps de la requête (FormData)
