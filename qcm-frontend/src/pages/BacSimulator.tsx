@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from '../api/axios';
 import { API_BASE_URL } from '../config';
-import RightPanel_Dashboard from '../components/RightPanel_Dashboard';
+import RightPanel_Dashboard from '../components/BacSimulator/RightPanel_Dashboard';
 
 // 1️⃣ L'interface est alignée sur ta nouvelle base de données
 interface Question {
@@ -28,9 +28,18 @@ const BacSimulator: React.FC = () => {
     const fetchExamData = async () => {
       setLoading(true);
       try {
-        const response = await axios.get(`${API_BASE_URL}/api/exams`, {
-          params: { subject, year, session, theme } // Le backend gère tout le filtrage
-        });
+       const response = await axios.get(`${API_BASE_URL}/api/exams`, {
+  // On traduit les variables Frontend pour le Backend
+  params: { 
+    matiere: subject, 
+    annee: year, 
+    session: session, 
+    theme: theme 
+  } 
+});
+
+// 💡 AJOUTE CETTE LIGNE POUR VÉRIFIER CE QUI ARRIVE
+console.log("Données reçues du backend :", response.data);
 
         // 2️⃣ NOUVEAU : On donne directement les données au state sans les re-filtrer !
         setQuestions(response.data);
