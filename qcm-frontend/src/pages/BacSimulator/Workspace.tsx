@@ -5,7 +5,6 @@ import { fetchExercises, BacExercise } from '../../services/bacService';
 import 'katex/dist/katex.min.css';
 import Latex from 'react-latex-next';
 
-// 1. Extension de l'interface pour inclure les nouveaux champs (dont Type/type)
 interface ExtendedBacExercise extends BacExercise {
   numeroExercice?: string;
   labelQuestion?: string;
@@ -90,14 +89,24 @@ export default function BacSimulatorWorkspace() {
     });
   };
 
-  // 📸 2. FONCTION POUR RÉPARER LE CHEMIN DE L'IMAGE
   const resolveImagePath = (url?: string) => {
     if (!url) return '';
     if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('/')) {
       return url;
     }
-    // Si c'est juste un nom de fichier (ex: "SP-N2024-M1.png"), on pointe vers le dossier public/images/
     return `/images/${url}`;
+  };
+
+  // 🧠 FONCTION ROBUSTE POUR DÉTECTER UNE "PARTIE" (Même si le backend masque le champ Type)
+  const isGroupRow = (q: ExtendedBacExercise) => {
+    const rowType = String(q.type || q.Type || '').toUpperCase().trim();
+    if (rowType === 'GROUP') return true;
+    
+    // Fallback : Si le labelQuestion contient "Partie I", "Partie A", etc.
+    if (q.labelQuestion && /partie/i.test(q.labelQuestion.trim())) {
+      return true;
+    }
+    return false;
   };
 
   if (loading) {
@@ -123,7 +132,6 @@ export default function BacSimulatorWorkspace() {
     <div className="min-h-screen bg-gray-50 py-10 px-4">
       <div className="max-w-5xl mx-auto space-y-10">
         
-        {/* En-tête Global */}
         <div className="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm border border-gray-200">
           <button onClick={() => navigate(-1)} className="px-4 py-2 bg-gray-700 text-white font-bold rounded-lg hover:bg-gray-800 transition flex items-center gap-2">
             <span>🔙</span> Quitter
@@ -142,11 +150,11 @@ export default function BacSimulatorWorkspace() {
         {Object.entries(groupedByExercise).map(([exTitle, exQuestions]) => {
           const processedQuestions = processExerciseQuestions(exQuestions);
           
-          // On s'assure que la 1ère ligne n'est pas un GROUP avant d'en faire le contexte global
           const firstQ = exQuestions[0];
-          const isFirstGroup = firstQ?.type?.toUpperCase() === 'GROUP' || firstQ?.Type?.toUpperCase() === 'GROUP';
+          const isFirstGroup = firstQ ? isGroupRow(firstQ) : false;
           
           let cleanContext = "";
+          // Si la première ligne n'est PAS une "Partie", on la considère comme le contexte global
           if (!isFirstGroup && firstQ?.enonceTexte) {
             const rawFirstStatement = firstQ.enonceTexte;
             const contextPart = rawFirstStatement.split('**Question :**')[0];
@@ -167,7 +175,6 @@ export default function BacSimulatorWorkspace() {
                 </h2>
               </div>
 
-              {/* Contexte Global (s'il existe et que la 1ère ligne n'est pas un GROUP) */}
               {cleanContext && (
                 <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100">
                   <div className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
@@ -177,22 +184,26 @@ export default function BacSimulatorWorkspace() {
               )}
 
               <div className="space-y-6 pt-2">
-                {processedQuestions.map((q) => {
+                {processedQuestions.map((q, index) => {
                   
-                  // 🧠 3. DÉTECTION DU TYPE "GROUP" (Partie I, Partie II...)
-                  const rowType = q.type?.toUpperCase() || q.Type?.toUpperCase() || '';
-                  const isGroup = rowType === 'GROUP';
+                  // Si c'est la 1ère ligne et qu'elle a été utilisée comme contexte global, on l'ignore ici
+                  if (index === 0 && !isFirstGroup && cleanContext !== "") {
+                     return null;
+                  }
 
+                  const isGroup = isGroupRow(q);
+
+                  // AFFICHAGE TYPE "PARTIE I", "PARTIE II"
                   if (isGroup) {
                     return (
-                      <div key={q._id} className="mt-8 mb-2 bg-blue-50/40 p-5 rounded-xl border border-blue-200">
+                      <div key={q._id} className="mt-10 mb-4 bg-blue-50/60 p-5 rounded-xl border-l-4 border-l-blue-600 shadow-sm">
                         {q.labelQuestion && (
-                          <h3 className="text-xl font-extrabold text-blue-900">
+                          <h3 className="text-xl font-extrabold text-blue-900 mb-2">
                             <Latex>{q.labelQuestion}</Latex>
                           </h3>
                         )}
                         {q.enonceTexte && (
-                          <div className="text-lg text-gray-800 font-medium mt-2 whitespace-pre-wrap">
+                          <div className="text-lg text-gray-800 font-medium whitespace-pre-wrap">
                             <Latex>{q.enonceTexte}</Latex>
                           </div>
                         )}
@@ -214,16 +225,23 @@ export default function BacSimulatorWorkspace() {
                       }`}>
                         <div className="flex-1">
                           
-                          {/* 🖼️ AFFICHAGE DE L'IMAGE AVEC LE BON CHEMIN */}
+                          {/* Image */}
                           {q.imageUrl && (
                             <img 
                               src={resolveImagePath(q.imageUrl)} 
                               alt="Illustration de la question" 
-                              className="mb-4 max-h-64 object-contain rounded border border-gray-200 shadow-sm" 
+                              className="mb-4 max-h-64 object-contain rounded border border-gray-200 shadow-sm bg-white p-2" 
                             />
                           )}
                           
-                          <div className="text-gray-800 font-medium text-lg whitespace-pre-wrap">
+                          {/* S'il y a un label (ex: "Question 1") on l'affiche */}
+                          {q.labelQuestion && !q.displayPreamble && (
+                            <span className="font-bold text-blue-700 mr-2">
+                              <Latex>{q.labelQuestion}</Latex> :
+                            </span>
+                          )}
+
+                          <div className="inline text-gray-800 font-medium text-lg whitespace-pre-wrap">
                             <Latex>{q.displayQuestion}</Latex>
                           </div>
                         </div>
