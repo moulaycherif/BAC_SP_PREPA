@@ -60,15 +60,18 @@ export default function BacSimulatorWorkspace() {
     return groups;
   }, [questions]);
 
+  // 🧠 FONCTION ROBUSTE ET PROPRE POUR TRAITER LES QUESTIONS
   const processExerciseQuestions = (exerciseQuestions: ExtendedBacExercise[]) => {
-    let lastPreamble = "";
-
-    return exerciseQuestions.map((q) => {
+    const mapped = exerciseQuestions.map((q) => {
+      // 1. Détection STRICTE des groupes (Partie I, Partie II) basées sur ton Excel
+      const isGroup = q.type?.toUpperCase() === 'GROUP' || q.Type?.toUpperCase() === 'GROUP';
+      
+      // 2. Séparation du contexte et de la question pour les lignes normales
       const parts = q.enonceTexte ? q.enonceTexte.split('**Question :**') : [];
       const cleanText = parts.length > 1 ? parts[1].trim() : (q.enonceTexte || '').trim();
 
+      // 3. Détection des sous-questions (a, b, c...)
       const match = cleanText.match(/^(.*?)(?:\s+|^)([a-z]\)\s+.*)$/is);
-      
       let preamble = "";
       let subQuestion = cleanText;
 
@@ -77,36 +80,48 @@ export default function BacSimulatorWorkspace() {
         subQuestion = match[2].trim();
       }
 
-      const isNewPreamble = preamble !== "" && preamble !== lastPreamble;
-      if (preamble !== "") lastPreamble = preamble;
+      // 4. Nettoyage du texte si c'est un groupe (Pour éviter l'affichage de "**Contexte :**")
+      const groupText = (q.enonceTexte || '')
+        .replace(/\*\*Contexte :\*\*/gi, '')
+        .replace(/\*\*Question :\*\*/gi, '')
+        .trim();
 
       return {
         ...q,
-        displayPreamble: isNewPreamble ? preamble : null,
+        isGroup,
+        groupText,
+        displayPreamble: match && !isGroup ? preamble : null,
         displayQuestion: subQuestion,
-        isSubQuestion: match !== null
+        isSubQuestion: match !== null && !isGroup
       };
     });
+
+    // 5. Nettoyage des préambules en double
+    let lastPreamble = "";
+    mapped.forEach(q => {
+      if (!q.isGroup) {
+        if (q.displayPreamble) {
+          if (q.displayPreamble !== lastPreamble) {
+             lastPreamble = q.displayPreamble;
+          } else {
+             q.displayPreamble = null;
+          }
+        } else {
+          lastPreamble = "";
+        }
+      }
+    });
+
+    return mapped;
   };
 
+  // 📸 RÉPARATION DU CHEMIN DE L'IMAGE
   const resolveImagePath = (url?: string) => {
     if (!url) return '';
     if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('/')) {
       return url;
     }
     return `/images/${url}`;
-  };
-
-  // 🧠 FONCTION ROBUSTE POUR DÉTECTER UNE "PARTIE" (Même si le backend masque le champ Type)
-  const isGroupRow = (q: ExtendedBacExercise) => {
-    const rowType = String(q.type || q.Type || '').toUpperCase().trim();
-    if (rowType === 'GROUP') return true;
-    
-    // Fallback : Si le labelQuestion contient "Partie I", "Partie A", etc.
-    if (q.labelQuestion && /partie/i.test(q.labelQuestion.trim())) {
-      return true;
-    }
-    return false;
   };
 
   if (loading) {
@@ -150,15 +165,13 @@ export default function BacSimulatorWorkspace() {
         {Object.entries(groupedByExercise).map(([exTitle, exQuestions]) => {
           const processedQuestions = processExerciseQuestions(exQuestions);
           
-          const firstQ = exQuestions[0];
-          const isFirstGroup = firstQ ? isGroupRow(firstQ) : false;
-          
+          // 📖 Extraction du contexte global de l'exercice (Uniquement si la ligne 1 n'est PAS un Groupe)
           let cleanContext = "";
-          // Si la première ligne n'est PAS une "Partie", on la considère comme le contexte global
-          if (!isFirstGroup && firstQ?.enonceTexte) {
-            const rawFirstStatement = firstQ.enonceTexte;
-            const contextPart = rawFirstStatement.split('**Question :**')[0];
-            cleanContext = contextPart.replace(/\*\*Contexte :\*\*/gi, '').trim();
+          if (processedQuestions.length > 0 && !processedQuestions[0].isGroup) {
+            const rawFirst = processedQuestions[0].enonceTexte || '';
+            if (rawFirst.includes('**Question :**')) {
+              cleanContext = rawFirst.split('**Question :**')[0].replace(/\*\*Contexte :\*\*/gi, '').trim();
+            }
           }
 
           return (
@@ -175,8 +188,9 @@ export default function BacSimulatorWorkspace() {
                 </h2>
               </div>
 
+              {/* Affichage du contexte global */}
               {cleanContext && (
-                <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100">
+                <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100 mb-6">
                   <div className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
                     <Latex>{cleanContext}</Latex>
                   </div>
@@ -184,34 +198,27 @@ export default function BacSimulatorWorkspace() {
               )}
 
               <div className="space-y-6 pt-2">
-                {processedQuestions.map((q, index) => {
+                {processedQuestions.map((q) => {
                   
-                  // Si c'est la 1ère ligne et qu'elle a été utilisée comme contexte global, on l'ignore ici
-                  if (index === 0 && !isFirstGroup && cleanContext !== "") {
-                     return null;
-                  }
-
-                  const isGroup = isGroupRow(q);
-
-                  // AFFICHAGE TYPE "PARTIE I", "PARTIE II"
-                  if (isGroup) {
+                  // 🎨 DESIGN POUR LES PARTIES I, PARTIES II, etc. (Type = GROUP)
+                  if (q.isGroup) {
                     return (
-                      <div key={q._id} className="mt-10 mb-4 bg-blue-50/60 p-5 rounded-xl border-l-4 border-l-blue-600 shadow-sm">
+                      <div key={q._id} className="mt-10 mb-4 bg-blue-50/70 p-5 rounded-xl border-l-4 border-l-blue-600 shadow-sm">
                         {q.labelQuestion && (
                           <h3 className="text-xl font-extrabold text-blue-900 mb-2">
                             <Latex>{q.labelQuestion}</Latex>
                           </h3>
                         )}
-                        {q.enonceTexte && (
+                        {q.groupText && (
                           <div className="text-lg text-gray-800 font-medium whitespace-pre-wrap">
-                            <Latex>{q.enonceTexte}</Latex>
+                            <Latex>{q.groupText}</Latex>
                           </div>
                         )}
                       </div>
                     );
                   }
 
-                  // AFFICHAGE CLASSIQUE D'UNE QUESTION
+                  // 📝 DESIGN POUR LES QUESTIONS CLASSIQUES
                   return (
                     <div key={q._id} className="flex flex-col">
                       {q.displayPreamble && (
@@ -225,7 +232,7 @@ export default function BacSimulatorWorkspace() {
                       }`}>
                         <div className="flex-1">
                           
-                          {/* Image */}
+                          {/* Affichage de l'image corrigé */}
                           {q.imageUrl && (
                             <img 
                               src={resolveImagePath(q.imageUrl)} 
@@ -234,13 +241,6 @@ export default function BacSimulatorWorkspace() {
                             />
                           )}
                           
-                          {/* S'il y a un label (ex: "Question 1") on l'affiche */}
-                          {q.labelQuestion && !q.displayPreamble && (
-                            <span className="font-bold text-blue-700 mr-2">
-                              <Latex>{q.labelQuestion}</Latex> :
-                            </span>
-                          )}
-
                           <div className="inline text-gray-800 font-medium text-lg whitespace-pre-wrap">
                             <Latex>{q.displayQuestion}</Latex>
                           </div>
