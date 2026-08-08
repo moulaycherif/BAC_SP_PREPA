@@ -2,19 +2,19 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import axios from '../api/axios';
 import { API_BASE_URL } from '../config';
-import RightPanel_Dashboard from '../components/BacSimulator/RightPanel_Dashboard';
+import RightPanel_Dashboard from '../components/RightPanel_Dashboard';
 
-// 🔄 1. Interface mise à jour pour correspondre EXACTEMENT au modèle Backend
+// 1️⃣ L'interface est alignée sur ta nouvelle base de données
 interface Question {
   _id: string;
   matiere?: string;
   theme?: string;
-  numeroExercice: string; // 👈 Le nouveau champ de ton backend
-  labelQuestion: string;  // 👈 Le nouveau champ de ton backend
-  enonceTexte: string;    // 👈 Le nouveau champ de ton backend
+  numeroExercice: string; 
+  labelQuestion: string;  
+  enonceTexte: string;    
   imageUrl?: string;
   indices?: any;
-  checklist: any[];
+  checklist: any[]; 
 }
 
 const BacSimulator: React.FC = () => {
@@ -28,17 +28,12 @@ const BacSimulator: React.FC = () => {
     const fetchExamData = async () => {
       setLoading(true);
       try {
-        // Assure-toi que cette URL correspond bien à ta route (ex: /api/bac/exercises ou /api/exams)
         const response = await axios.get(`${API_BASE_URL}/api/exams`, {
-          params: { subject, year, session, theme }
+          params: { subject, year, session, theme } // Le backend gère tout le filtrage
         });
 
-        let data: Question[] = response.data;
-        if (theme && theme !== "toute-lepreuve") {
-          data = data.filter(q => q.theme?.toLowerCase() === theme.toLowerCase());
-        }
-
-        setQuestions(data);
+        // 2️⃣ NOUVEAU : On donne directement les données au state sans les re-filtrer !
+        setQuestions(response.data);
       } catch (error) {
         console.error("Erreur lors du chargement de l'examen :", error);
       } finally {
@@ -49,9 +44,9 @@ const BacSimulator: React.FC = () => {
     fetchExamData();
   }, [subject, year, session, theme]);
 
-  // 🔄 2. Regroupement basé sur le nouveau champ "numeroExercice"
+  // 3️⃣ Regroupement par exercice (utilise bien "numeroExercice")
   const groupedExercises = questions.reduce((acc, q) => {
-    const key = q.numeroExercice || "Exercice Général";
+    const key = q.numeroExercice || "Exercice Général"; 
     if (!acc[key]) acc[key] = [];
     acc[key].push(q);
     return acc;
@@ -87,21 +82,21 @@ const BacSimulator: React.FC = () => {
         Object.entries(groupedExercises).map(([title, items]) => (
           <section key={title} className="bg-white rounded-2xl p-6 shadow-md border border-gray-200 space-y-6">
             <h2 className="text-2xl font-bold text-indigo-900 border-b-2 border-indigo-100 pb-3">
-              {title} {/* Affichera "EXERCICE 1" */}
+              {title} {/* 🎯 Affichera "EXERCICE 1" */}
             </h2>
 
             {items.map((q) => (
               <div key={q._id} className="bg-gray-50 p-5 rounded-xl border border-gray-200 space-y-4">
                 <div className="flex items-start gap-3">
                   
-                  {/* 🔄 3. Affichage du label de la question (ex: "1) a)") */}
+                  {/* 🎯 Affichera "1) a)" */}
                   {q.labelQuestion && q.labelQuestion !== "Question globale" && (
                     <span className="bg-indigo-600 text-white px-3 py-1 rounded-lg font-bold text-sm shrink-0 mt-1">
                       {q.labelQuestion}
                     </span>
                   )}
                   
-                  {/* 🔄 4. Affichage de l'énoncé */}
+                  {/* 🎯 Affichera l'énoncé */}
                   <div className="text-gray-800 text-lg leading-relaxed whitespace-pre-wrap">
                     {q.enonceTexte}
                   </div>
@@ -111,6 +106,7 @@ const BacSimulator: React.FC = () => {
                   <img src={q.imageUrl} alt="Schéma de l'exercice" className="max-w-md rounded-lg shadow border my-3" />
                 )}
 
+                {/* 🎯 On passe l'objet complet "q" au panneau RightPanel_Dashboard */}
                 <RightPanel_Dashboard exercise={q as any} />
               </div>
             ))}
