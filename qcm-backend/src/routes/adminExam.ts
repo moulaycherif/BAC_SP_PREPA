@@ -72,43 +72,36 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
         continue; // Passe à la ligne suivante sans appeler l'IA
       }
 
-      // ----------------------------------------------------
+     // ----------------------------------------------------
       // 2. CAS OÙ LA LIGNE EST UNE QUESTION CLASSIQUE
       // ----------------------------------------------------
       if (!mainText && !subText) continue;
 
       if (mainText) {
-        currentTitle = mainText; // Mémorise le paragraphe/titre courant
+        currentTitle = mainText;
       }
 
-      // --- A. GESTION DES LABELS COURTS (Ex: "1) a)") ---
-      let parentMarker = "";
-      const parentMatch = currentTitle.match(/^([a-zA-Z0-9]+[)\.-])/);
-      if (parentMatch) parentMarker = parentMatch[1]; // Récupère le "1)"
-
-      let currentMarker = "";
-      let dbLabelQuestion = "Question";
+      let questionLabel = "";
+      let subQuestionMarker = "";
 
       if (subText) {
-        const childMatch = subText.match(/^([a-zA-Z0-9]+[)\.-])/);
-        if (childMatch) currentMarker = childMatch[1]; // Récupère le "a)"
-        // Combine pour faire "1) a)"
-        dbLabelQuestion = (parentMarker && currentMarker) ? `${parentMarker} ${currentMarker}` : (currentMarker || parentMarker || "Question");
+        const match = subText.match(/^([a-zA-Z0-9]+[)\.-])/);
+        if (match) {
+          subQuestionMarker = ` ${match[1]}`;
+        }
+        questionLabel = `${currentTitle} ${subText}`;
       } else {
-        dbLabelQuestion = parentMarker || "Question";
+        questionLabel = currentTitle;
       }
 
-      // --- B. TEXTE POUR MONGODB (Sans les doublons) ---
-      // On prend juste la ligne actuelle (sous-question si elle existe, sinon le texte principal)
-      const dbEnonceTexte = subText ? subText : mainText;
-
-      // --- C. TEXTE COMPLET POUR L'IA (Avec contexte) ---
-      const textForAI = subText ? `${currentTitle}\n${subText}` : currentTitle;
-      const fullStatement = `**Contexte :**\n${currentContext}\n\n**Question :**\n${textForAI}`;
+      // --- TEXTE POUR L'IA (Garde le contexte pour qu'elle puisse corriger) ---
+      const fullStatement = `**Contexte :**\n${currentContext}\n\n**Question :**\n${questionLabel}`;
 
       try {
-        // Appel à l'IA avec le texte complet
         const aiResult = await generateSolutionAndHints(fullStatement);
+
+        // --- LABEL ORIGINAL (Restaure vos 1) 2) 3) ) ---
+        const questionLabelClean = `${currentTitle ? currentTitle : ""}${subQuestionMarker}`.trim() || "Question globale";
 
         const questionData = {
           matiere: rawMatiere,
@@ -117,11 +110,13 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
           theme: row['Thème'] || row['Theme'] || "Non classé",
           numeroExercice: String(rawNumber).trim(),
           
-          // 👈 Les nouveaux champs propres, sans concaténation abusive !
-          labelQuestion: dbLabelQuestion, 
-          enonceTexte: dbEnonceTexte, 
+          labelQuestion: questionLabelClean, // 👈 Vos labels reviennent à la normale !
           
-          Type: "QUESTION",
+          // 👈 LA SEULE VRAIE CORRECTION POUR LE DOUBLON EST ICI :
+          // On sauvegarde 'questionLabel' (juste la question) au lieu de 'fullStatement' (qui contenait le contexte)
+          enonceTexte: questionLabel, 
+          
+          Type: "QUESTION", 
           type: "QUESTION",
           imageUrl: row['Image'] || undefined,
           indices: {
@@ -135,7 +130,7 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
         const savedQuestion = await BacExam.create(questionData);
         importedQuestions.push(savedQuestion);
       } catch (aiError: any) {
-        console.error(`❌ Erreur sur la question : "${dbLabelQuestion}"`, aiError?.message || aiError);
+        console.error(`❌ Erreur sur la question : "${questionLabel}"`, aiError?.message || aiError);
       }
     }
 
