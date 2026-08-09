@@ -48,8 +48,10 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
       if (isGroupType) {
         currentContext = mainText; // Mémorise le contexte pour les questions suivantes
 
-        // 🎯 FIX DU DOUBLON : On force un label SHORT pour ne pas dupliquer le texte à l'écran
-        let groupLabel = "Contexte";
+        // 🎯 FIX : On utilise dynamiquement le nom de l'exercice ("EXERCICE 1", "EXERCICE 2"...)
+        let groupLabel = String(rawNumber).trim() || "Exercice";
+        
+        // S'il y a un nom de partie explicite court (ex: "Partie I"), on l'utilise à la place
         if (subText) {
           groupLabel = subText;
         } else if (mainText.includes(':') && mainText.indexOf(':') < 30) {
@@ -63,10 +65,10 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
           theme: row['Thème'] || row['Theme'] || "Non classé",
           numeroExercice: String(rawNumber).trim(),
           
-          labelQuestion: groupLabel, // 👈 Uniquement "Contexte" ou "Partie I"
+          labelQuestion: groupLabel, // 👈 Affichera "EXERCICE 1" au lieu de "Contexte"
           Type: "GROUP",
           type: "GROUP",
-          enonceTexte: mainText,      // 👈 Le grand paragraphe unique
+          enonceTexte: mainText,
           
           imageUrl: row['Image'] || undefined,
           indices: {
