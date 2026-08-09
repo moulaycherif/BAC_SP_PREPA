@@ -111,7 +111,7 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
           labelQuestion: questionLabelClean,
           Type: "QUESTION", // 👈 Type explicite
           type: "QUESTION",
-          enonceTexte: fullStatement, 
+          enonceTexte: questionLabel, 
           imageUrl: row['Image'] || undefined,
           indices: {
             niveau1_piste: aiResult.indices.niveau1_piste,
