@@ -265,7 +265,9 @@ export const getCompleteExam = async (req: Request, res: Response): Promise<void
         enonce: question.enonceTexte,
         image: question.imageUrl,
         indices: question.indices,
-        checklist: question.checklist
+        checklist: question.checklist,
+        Type: question.Type, // 👈 AJOUT ICI
+        type: question.type  // 👈 AJOUT ICI (par sécurité)
       });
 
       return acc;

@@ -16,10 +16,12 @@ export interface IBacExam extends Document {
   annee: number;
   session: "Normale" | "Rattrapage";
   theme: string;
-  numeroExercice: string; // 👈 Remplacement ici
-  labelQuestion: string;  // 👈 Remplacement ici
+  numeroExercice: string; 
+  labelQuestion: string;  
   enonceTexte: string;
   imageUrl?: string;
+  Type?: string;          
+  type?: string;          
   indices: IScaffolding;
   checklist: ICritereCorrection[];
   createdAt: Date;
@@ -45,13 +47,21 @@ const BacExamSchema: Schema = new Schema({
     required: true,
     index: true 
   },
-  numeroExercice: {       // 👈 Nouveau champ
+  numeroExercice: {       
     type: String, 
     required: true 
   },
-  labelQuestion: {        // 👈 Nouveau champ
+  labelQuestion: {        
     type: String, 
     required: true 
+  },  
+  Type: {                 
+    type: String, 
+    required: false 
+  },
+  type: {                 
+    type: String, 
+    required: false 
   },
   enonceTexte: { 
     type: String, 
