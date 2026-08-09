@@ -78,29 +78,37 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
       if (!mainText && !subText) continue;
 
       if (mainText) {
-        currentTitle = mainText;
+        currentTitle = mainText; // Mémorise le paragraphe/titre courant
       }
 
-      let questionLabel = "";
-      let subQuestionMarker = "";
+      // --- A. GESTION DES LABELS COURTS (Ex: "1) a)") ---
+      let parentMarker = "";
+      const parentMatch = currentTitle.match(/^([a-zA-Z0-9]+[)\.-])/);
+      if (parentMatch) parentMarker = parentMatch[1]; // Récupère le "1)"
+
+      let currentMarker = "";
+      let dbLabelQuestion = "Question";
 
       if (subText) {
-        const match = subText.match(/^([a-zA-Z0-9]+[)\.-])/);
-        if (match) {
-          subQuestionMarker = ` ${match[1]}`;
-        }
-        questionLabel = `${currentTitle} ${subText}`;
+        const childMatch = subText.match(/^([a-zA-Z0-9]+[)\.-])/);
+        if (childMatch) currentMarker = childMatch[1]; // Récupère le "a)"
+        // Combine pour faire "1) a)"
+        dbLabelQuestion = (parentMarker && currentMarker) ? `${parentMarker} ${currentMarker}` : (currentMarker || parentMarker || "Question");
       } else {
-        questionLabel = currentTitle;
+        dbLabelQuestion = parentMarker || "Question";
       }
 
-      const fullStatement = `**Contexte :**\n${currentContext}\n\n**Question :**\n${questionLabel}`;
+      // --- B. TEXTE POUR MONGODB (Sans les doublons) ---
+      // On prend juste la ligne actuelle (sous-question si elle existe, sinon le texte principal)
+      const dbEnonceTexte = subText ? subText : mainText;
+
+      // --- C. TEXTE COMPLET POUR L'IA (Avec contexte) ---
+      const textForAI = subText ? `${currentTitle}\n${subText}` : currentTitle;
+      const fullStatement = `**Contexte :**\n${currentContext}\n\n**Question :**\n${textForAI}`;
 
       try {
-        // Appel à l'IA uniquement pour les vraies questions
+        // Appel à l'IA avec le texte complet
         const aiResult = await generateSolutionAndHints(fullStatement);
-
-        const questionLabelClean = `${currentTitle ? currentTitle : ""}${subQuestionMarker}`.trim() || "Question globale";
 
         const questionData = {
           matiere: rawMatiere,
@@ -108,10 +116,13 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
           session: formattedSession,
           theme: row['Thème'] || row['Theme'] || "Non classé",
           numeroExercice: String(rawNumber).trim(),
-          labelQuestion: questionLabelClean,
-          Type: "QUESTION", // 👈 Type explicite
+          
+          // 👈 Les nouveaux champs propres, sans concaténation abusive !
+          labelQuestion: dbLabelQuestion, 
+          enonceTexte: dbEnonceTexte, 
+          
+          Type: "QUESTION",
           type: "QUESTION",
-          enonceTexte: questionLabel, 
           imageUrl: row['Image'] || undefined,
           indices: {
             niveau1_piste: aiResult.indices.niveau1_piste,
@@ -124,7 +135,7 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
         const savedQuestion = await BacExam.create(questionData);
         importedQuestions.push(savedQuestion);
       } catch (aiError: any) {
-        console.error(`❌ Erreur sur la question : "${questionLabel}"`, aiError?.message || aiError);
+        console.error(`❌ Erreur sur la question : "${dbLabelQuestion}"`, aiError?.message || aiError);
       }
     }
 
