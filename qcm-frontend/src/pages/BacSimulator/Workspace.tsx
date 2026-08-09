@@ -63,8 +63,9 @@ export default function BacSimulatorWorkspace() {
   // 🧠 FONCTION ROBUSTE ET PROPRE POUR TRAITER LES QUESTIONS
   const processExerciseQuestions = (exerciseQuestions: ExtendedBacExercise[]) => {
     const mapped = exerciseQuestions.map((q) => {
-      // 1. Détection STRICTE des groupes (Partie I, Partie II) basées sur ton Excel
-      const isGroup = q.type?.toUpperCase() === 'GROUP' || q.Type?.toUpperCase() === 'GROUP';
+      // 1. Détection STRICTE des groupes (Partie I, Partie II) basée UNIQUEMENT sur ton Excel
+      // L'ajout de .trim() permet d'éviter les bugs si Excel contient "GROUP " au lieu de "GROUP"
+      const isGroup = String(q.type || q.Type || '').toUpperCase().trim() === 'GROUP';
       
       // 2. Séparation du contexte et de la question pour les lignes normales
       const parts = q.enonceTexte ? q.enonceTexte.split('**Question :**') : [];
