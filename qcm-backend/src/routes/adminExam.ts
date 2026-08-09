@@ -28,79 +28,103 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
     let currentTitle = ""; 
 
     for (const row of rows) {
-      const type = row['TYPE'] || row['Type'] || row['type'];
+      const rawType = String(row['TYPE'] || row['Type'] || row['type'] || '').trim();
+      const isGroupType = rawType.toUpperCase() === 'GROUPE' || rawType.toUpperCase() === 'GROUP';
+      
       const mainText = row['Texte de la question'] ? String(row['Texte de la question']).trim() : "";
       const subText = row['Sub_Question'] ? String(row['Sub_Question']).trim() : "";
       
-      // 1. Gestion du contexte
-      if (type === 'Groupe') {
-        currentContext = mainText; 
-        continue; 
+      // Extraction des métadonnées
+      const rawAnnee = row['Année'] || row['Annee'] || row['ANNEE'];
+      const parsedAnnee = Number(rawAnnee);
+      const rawSession = row['Session'] || row['session'] || "Normale";
+      const formattedSession = rawSession.toString().toLowerCase().includes("rattrap") ? "Rattrapage" : "Normale";
+      const rawMatiere = row['Matière'] || row['Matiere'] || row['matiere'] || "Non classée";
+      const rawNumber = row["Numéro d'exercice"] || row["Numero d'exercice"] || row["Exercice"] || "Exercice";
+
+      // ----------------------------------------------------
+      // 1. CAS OÙ LA LIGNE EST UN GROUPE (Ex: Partie I, Partie II)
+      // ----------------------------------------------------
+      if (isGroupType) {
+        currentContext = mainText; // Mémorise le contexte pour les questions suivantes
+
+        const groupData = {
+          matiere: rawMatiere,
+          annee: isNaN(parsedAnnee) ? 2024 : parsedAnnee,
+          session: formattedSession,
+          theme: row['Thème'] || row['Theme'] || "Non classé",
+          numeroExercice: String(rawNumber).trim(),
+          labelQuestion: subText || mainText.split(':')[0] || "Partie",
+          Type: "GROUP", // 👈 Transmis explicitement à MongoDB !
+          type: "GROUP",
+          enonceTexte: mainText,
+          imageUrl: row['Image'] || undefined,
+          indices: {
+            niveau1_piste: "",
+            niveau2_formule: "",
+            niveau3_corrige: ""
+          },
+          checklist: []
+        };
+
+        const savedGroup = await BacExam.create(groupData);
+        importedQuestions.push(savedGroup);
+        continue; // Passe à la ligne suivante sans appeler l'IA
       }
 
-      // 2. Gestion des questions
-      if (type === 'Question') {
-        if (!mainText && !subText) continue;
+      // ----------------------------------------------------
+      // 2. CAS OÙ LA LIGNE EST UNE QUESTION CLASSIQUE
+      // ----------------------------------------------------
+      if (!mainText && !subText) continue;
 
-        if (mainText) {
-          currentTitle = mainText;
+      if (mainText) {
+        currentTitle = mainText;
+      }
+
+      let questionLabel = "";
+      let subQuestionMarker = "";
+
+      if (subText) {
+        const match = subText.match(/^([a-zA-Z0-9]+[)\.-])/);
+        if (match) {
+          subQuestionMarker = ` ${match[1]}`;
         }
+        questionLabel = `${currentTitle} ${subText}`;
+      } else {
+        questionLabel = currentTitle;
+      }
 
-        let questionLabel = "";
-        let subQuestionMarker = "";
+      const fullStatement = `**Contexte :**\n${currentContext}\n\n**Question :**\n${questionLabel}`;
 
-        if (subText) {
-          const match = subText.match(/^([a-zA-Z0-9]+[)\.-])/);
-          if (match) {
-            subQuestionMarker = ` ${match[1]}`;
-          }
-          questionLabel = `${currentTitle} ${subText}`;
-        } else {
-          questionLabel = currentTitle;
-        }
+      try {
+        // Appel à l'IA uniquement pour les vraies questions
+        const aiResult = await generateSolutionAndHints(fullStatement);
 
-        const fullStatement = `**Contexte :**\n${currentContext}\n\n**Question :**\n${questionLabel}`;
+        const questionLabelClean = `${currentTitle ? currentTitle : ""}${subQuestionMarker}`.trim() || "Question globale";
 
-        try {
-          // Appel à l'IA
-          const aiResult = await generateSolutionAndHints(fullStatement);
+        const questionData = {
+          matiere: rawMatiere,
+          annee: isNaN(parsedAnnee) ? 2024 : parsedAnnee,
+          session: formattedSession,
+          theme: row['Thème'] || row['Theme'] || "Non classé",
+          numeroExercice: String(rawNumber).trim(),
+          labelQuestion: questionLabelClean,
+          Type: "QUESTION", // 👈 Type explicite
+          type: "QUESTION",
+          enonceTexte: fullStatement, 
+          imageUrl: row['Image'] || undefined,
+          indices: {
+            niveau1_piste: aiResult.indices.niveau1_piste,
+            niveau2_formule: aiResult.indices.niveau2_formule,
+            niveau3_corrige: aiResult.indices.niveau3_corrige
+          },
+          checklist: aiResult.checklist
+        };
 
-          // 🛡️ Extraction sécurisée des colonnes (supporte avec ou sans accent)
-          const rawAnnee = row['Année'] || row['Annee'] || row['ANNEE'];
-          const parsedAnnee = Number(rawAnnee);
-
-          const rawSession = row['Session'] || row['session'] || "Normale";
-          const formattedSession = rawSession.toString().toLowerCase().includes("rattrap") ? "Rattrapage" : "Normale";
-
-          // Extraction des champs de structure
-          const rawMatiere = row['Matière'] || row['Matiere'] || row['matiere'] || "Non classée";
-          const rawNumber = row["Numéro d'exercice"] || row["Numero d'exercice"] || row["Exercice"] || "Exercice";
-          
-          // Formatage propre du label de la question (ex: "1) a)" ou "1)")
-          const questionLabelClean = `${currentTitle ? currentTitle : ""}${subQuestionMarker}`.trim() || "Question globale";
-
-          const questionData = {
-            matiere: rawMatiere,         // 👈 On envoie la matière à MongoDB
-            annee: isNaN(parsedAnnee) ? 2024 : parsedAnnee,
-            session: formattedSession,
-            theme: row['Thème'] || row['Theme'] || "Non classé",
-            numeroExercice: String(rawNumber).trim(), // 👈 Ex: "EXERCICE 1"
-            labelQuestion: questionLabelClean,        // 👈 Ex: "1) a)"
-            enonceTexte: fullStatement, 
-            imageUrl: row['Image'] || undefined,
-            indices: {
-              niveau1_piste: aiResult.indices.niveau1_piste,
-              niveau2_formule: aiResult.indices.niveau2_formule,
-              niveau3_corrige: aiResult.indices.niveau3_corrige
-            },
-            checklist: aiResult.checklist
-          };
-
-          const savedQuestion = await BacExam.create(questionData);
-          importedQuestions.push(savedQuestion);
-        } catch (aiError: any) {
-          console.error(`❌ Erreur sur la question : "${questionLabel}"`, aiError?.message || aiError);
-        }
+        const savedQuestion = await BacExam.create(questionData);
+        importedQuestions.push(savedQuestion);
+      } catch (aiError: any) {
+        console.error(`❌ Erreur sur la question : "${questionLabel}"`, aiError?.message || aiError);
       }
     }
 
@@ -112,7 +136,7 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
     res.status(200).json({ 
       success: true, 
       count: importedQuestions.length,
-      message: `${importedQuestions.length} question(s) importée(s) et générée(s) avec succès !`
+      message: `${importedQuestions.length} élément(s) importé(s) avec succès !`
     });
 
   } catch (error: any) {
