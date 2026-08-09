@@ -72,9 +72,9 @@ const BacExamSchema: Schema = new Schema({
     required: false 
   },
   indices: {
-    niveau1_piste: { type: String, required: true },
-    niveau2_formule: { type: String, required: true },
-    niveau3_corrige: { type: String, required: true }
+    niveau1_piste: { type: String, required: false },
+    niveau2_formule: { type: String, required: false },
+    niveau3_corrige: { type: String, required: false }
   },
   checklist: [
     {
