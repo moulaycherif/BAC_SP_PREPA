@@ -43,10 +43,18 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
       const rawNumber = row["Numéro d'exercice"] || row["Numero d'exercice"] || row["Exercice"] || "Exercice";
 
       // ----------------------------------------------------
-      // 1. CAS OÙ LA LIGNE EST UN GROUPE (Ex: Partie I, Partie II)
+      // 1. CAS OÙ LA LIGNE EST UN GROUPE (Ex: Contexte / Partie)
       // ----------------------------------------------------
       if (isGroupType) {
         currentContext = mainText; // Mémorise le contexte pour les questions suivantes
+
+        // 🎯 FIX DU DOUBLON : On force un label SHORT pour ne pas dupliquer le texte à l'écran
+        let groupLabel = "Contexte";
+        if (subText) {
+          groupLabel = subText;
+        } else if (mainText.includes(':') && mainText.indexOf(':') < 30) {
+          groupLabel = mainText.split(':')[0].trim();
+        }
 
         const groupData = {
           matiere: rawMatiere,
@@ -54,10 +62,12 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
           session: formattedSession,
           theme: row['Thème'] || row['Theme'] || "Non classé",
           numeroExercice: String(rawNumber).trim(),
-          labelQuestion: subText || mainText.split(':')[0] || "Partie",
-          Type: "GROUP", // 👈 Transmis explicitement à MongoDB !
+          
+          labelQuestion: groupLabel, // 👈 Uniquement "Contexte" ou "Partie I"
+          Type: "GROUP",
           type: "GROUP",
-          enonceTexte: mainText,
+          enonceTexte: mainText,      // 👈 Le grand paragraphe unique
+          
           imageUrl: row['Image'] || undefined,
           indices: {
             niveau1_piste: "",
@@ -69,10 +79,10 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
 
         const savedGroup = await BacExam.create(groupData);
         importedQuestions.push(savedGroup);
-        continue; // Passe à la ligne suivante sans appeler l'IA
+        continue;
       }
 
-     // ----------------------------------------------------
+      // ----------------------------------------------------
       // 2. CAS OÙ LA LIGNE EST UNE QUESTION CLASSIQUE
       // ----------------------------------------------------
       if (!mainText && !subText) continue;
@@ -94,13 +104,11 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
         questionLabel = currentTitle;
       }
 
-      // --- TEXTE POUR L'IA (Garde le contexte pour qu'elle puisse corriger) ---
       const fullStatement = `**Contexte :**\n${currentContext}\n\n**Question :**\n${questionLabel}`;
 
       try {
         const aiResult = await generateSolutionAndHints(fullStatement);
 
-        // --- LABEL ORIGINAL (Restaure vos 1) 2) 3) ) ---
         const questionLabelClean = `${currentTitle ? currentTitle : ""}${subQuestionMarker}`.trim() || "Question globale";
 
         const questionData = {
@@ -109,14 +117,9 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
           session: formattedSession,
           theme: row['Thème'] || row['Theme'] || "Non classé",
           numeroExercice: String(rawNumber).trim(),
-          
-          labelQuestion: questionLabelClean, // 👈 Vos labels reviennent à la normale !
-          
-          // 👈 LA SEULE VRAIE CORRECTION POUR LE DOUBLON EST ICI :
-          // On sauvegarde 'questionLabel' (juste la question) au lieu de 'fullStatement' (qui contenait le contexte)
-          enonceTexte: questionLabel, 
-          
-          Type: "QUESTION", 
+          labelQuestion: questionLabelClean,
+          enonceTexte: questionLabel,
+          Type: "QUESTION",
           type: "QUESTION",
           imageUrl: row['Image'] || undefined,
           indices: {
@@ -135,7 +138,7 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
     }
 
     if (importedQuestions.length === 0) {
-      res.status(400).json({ message: "Aucune question n'a pu être générée. Vérifiez vos clés d'API IA et les entêtes Excel." });
+      res.status(400).json({ message: "Aucune question n'a pu être générée." });
       return;
     }
 
