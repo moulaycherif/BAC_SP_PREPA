@@ -49,7 +49,7 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
         currentContext = mainText; // Mémorise le contexte pour les questions suivantes
 
         // 🎯 FIX : On utilise dynamiquement le nom de l'exercice ("EXERCICE 1", "EXERCICE 2"...)
-        let groupLabel = String(rawNumber).trim() || "Exercice";
+        let groupLabel = " ";
         
         // S'il y a un nom de partie explicite court (ex: "Partie I"), on l'utilise à la place
         if (subText) {
