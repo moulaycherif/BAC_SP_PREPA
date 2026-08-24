@@ -488,37 +488,57 @@ const AdminDashboard: React.FC = () => {
 
       {/* Navigation entre les onglets (BOUTONS CORRIGÉS) */}
       <div className="flex flex-wrap justify-center gap-4 mb-8">
-        <button 
-          onClick={() => setActiveTab("students")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "students" ? "bg-blue-600 text-white" : "bg-gray-500 text-gray-900 hover:bg-gray-600"}`}
-        >
-          🧑‍🎓 Gestion étudiants
-        </button>
-        <button 
-          onClick={() => setActiveTab("import")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "import" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
-        >
-          📂 Import Excel
-        </button>
-        <button 
-          onClick={() => setActiveTab("ai")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "ai" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-900 hover:bg-gray-300"}`}
-        >
-          🧠 Génération IA
-        </button>
-        <button 
-          onClick={() => setActiveTab("summary")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "summary" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
-        >
-          📝 Gestion résumés
-        </button>
-        <button 
-  onClick={() => navigate('/admin/upload')}
-  className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700"
->
-  📥 Importation Examen (Excel)
-</button>
-      </div>
+  <button 
+    onClick={() => setActiveTab("students")} 
+    className={`px-4 py-2 rounded transition-colors ${
+      activeTab === "students" 
+        ? "bg-blue-600 text-white font-semibold shadow" 
+        : "bg-blue-900 text-white hover:bg-blue-800"
+    }`}
+  >
+    🧑‍🎓 Gestion étudiants
+  </button>
+
+  <button 
+    onClick={() => setActiveTab("import")} 
+    className={`px-4 py-2 rounded transition-colors ${
+      activeTab === "import" 
+        ? "bg-indigo-600 text-white font-semibold shadow" 
+        : "bg-indigo-900 text-white hover:bg-indigo-800"
+    }`}
+  >
+    📂 Import Excel
+  </button>
+
+  <button 
+    onClick={() => setActiveTab("ai")} 
+    className={`px-4 py-2 rounded transition-colors ${
+      activeTab === "ai" 
+        ? "bg-blue-600 text-white font-semibold shadow" 
+        : "bg-blue-900 text-white hover:bg-blue-800"
+    }`}
+  >
+    🧠 Génération IA
+  </button>
+
+  <button 
+    onClick={() => setActiveTab("summary")} 
+    className={`px-4 py-2 rounded transition-colors ${
+      activeTab === "summary" 
+        ? "bg-indigo-600 text-white font-semibold shadow" 
+        : "bg-indigo-900 text-white hover:bg-indigo-800"
+    }`}
+  >
+    📝 Gestion résumés
+  </button>
+
+  <button 
+    onClick={() => navigate('/admin/upload')}
+    className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition-colors"
+  >
+    📥 Importation Examen (Excel)
+  </button>
+</div>
 
       {/* ----------- Onglet Étudiants ----------- */}
       {activeTab === "students" && (
