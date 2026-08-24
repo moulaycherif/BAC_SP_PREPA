@@ -490,13 +490,13 @@ const AdminDashboard: React.FC = () => {
       <div className="flex flex-wrap justify-center gap-4 mb-8">
         <button 
           onClick={() => setActiveTab("students")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "students" ? "bg-indigo-600 text-blue" : "bg-gray-200 hover:bg-gray-300"}`}
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "students" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
         >
           🧑‍🎓 Gestion étudiants
         </button>
         <button 
           onClick={() => setActiveTab("import")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "import" ? "bg-blue-600 text-blue" : "bg-gray-200 hover:bg-gray-300"}`}
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "import" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
         >
           📂 Import Excel
         </button>
@@ -508,7 +508,7 @@ const AdminDashboard: React.FC = () => {
         </button>
         <button 
           onClick={() => setActiveTab("summary")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "summary" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "summary" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
         >
           📝 Gestion résumés
         </button>
