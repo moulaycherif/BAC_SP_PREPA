@@ -490,7 +490,7 @@ const AdminDashboard: React.FC = () => {
       <div className="flex flex-wrap justify-center gap-4 mb-8">
         <button 
           onClick={() => setActiveTab("students")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "students" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "students" ? "bg-blue-600 text-white" : "bg-gray-500 text-gray-900 hover:bg-gray-600"}`}
         >
           🧑‍🎓 Gestion étudiants
         </button>
@@ -502,7 +502,7 @@ const AdminDashboard: React.FC = () => {
         </button>
         <button 
           onClick={() => setActiveTab("ai")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "ai" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "ai" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-900 hover:bg-gray-300"}`}
         >
           🧠 Génération IA
         </button>
