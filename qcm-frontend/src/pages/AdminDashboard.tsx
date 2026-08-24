@@ -487,13 +487,13 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Navigation entre les onglets (BOUTONS CORRIGÉS) */}
-      <div className="flex flex-wrap justify-center gap-4 mb-8">
+     <div className="flex flex-wrap justify-center gap-4 mb-8">
   <button 
     onClick={() => setActiveTab("students")} 
     className={`px-4 py-2 rounded transition-colors ${
       activeTab === "students" 
-        ? "bg-blue-600 text-white font-semibold shadow" 
-        : "bg-blue-900 text-white hover:bg-blue-800"
+        ? "!bg-blue-600 !text-white font-semibold shadow" 
+        : "!bg-blue-900 !text-white hover:!bg-blue-800"
     }`}
   >
     🧑‍🎓 Gestion étudiants
@@ -503,8 +503,8 @@ const AdminDashboard: React.FC = () => {
     onClick={() => setActiveTab("import")} 
     className={`px-4 py-2 rounded transition-colors ${
       activeTab === "import" 
-        ? "bg-indigo-600 text-white font-semibold shadow" 
-        : "bg-indigo-900 text-white hover:bg-indigo-800"
+        ? "!bg-indigo-600 !text-white font-semibold shadow" 
+        : "!bg-indigo-900 !text-white hover:!bg-indigo-800"
     }`}
   >
     📂 Import Excel
@@ -514,8 +514,8 @@ const AdminDashboard: React.FC = () => {
     onClick={() => setActiveTab("ai")} 
     className={`px-4 py-2 rounded transition-colors ${
       activeTab === "ai" 
-        ? "bg-blue-600 text-white font-semibold shadow" 
-        : "bg-blue-900 text-white hover:bg-blue-800"
+        ? "!bg-blue-600 !text-white font-semibold shadow" 
+        : "!bg-blue-900 !text-white hover:!bg-blue-800"
     }`}
   >
     🧠 Génération IA
@@ -525,8 +525,8 @@ const AdminDashboard: React.FC = () => {
     onClick={() => setActiveTab("summary")} 
     className={`px-4 py-2 rounded transition-colors ${
       activeTab === "summary" 
-        ? "bg-indigo-600 text-white font-semibold shadow" 
-        : "bg-indigo-900 text-white hover:bg-indigo-800"
+        ? "!bg-indigo-600 !text-white font-semibold shadow" 
+        : "!bg-indigo-900 !text-white hover:!bg-indigo-800"
     }`}
   >
     📝 Gestion résumés
@@ -534,7 +534,7 @@ const AdminDashboard: React.FC = () => {
 
   <button 
     onClick={() => navigate('/admin/upload')}
-    className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition-colors"
+    className="!bg-blue-600 !text-white px-4 py-2 rounded shadow hover:!bg-blue-700 transition-colors"
   >
     📥 Importation Examen (Excel)
   </button>
