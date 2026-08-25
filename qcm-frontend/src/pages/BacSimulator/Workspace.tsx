@@ -150,7 +150,7 @@ export default function BacSimulatorWorkspace() {
               {matiere} — {annee} ({session})
             </h1>
             <p className="text-sm font-semibold text-gray-500 mt-1">
-              Filtre : <span className="text-blue-700">{themeParam}</span>
+              Filtre : <span className="font-extrabold text-blue-700">{themeParam}</span>
             </p>
           </div>
           <div className="w-24"></div>
@@ -159,7 +159,6 @@ export default function BacSimulatorWorkspace() {
         {Object.entries(groupedByExercise).map(([exTitle, exQuestions]) => {
           const processedQuestions = processExerciseQuestions(exQuestions);
           
-          // 🔹 Récupération du thème spécifique issu de la 2ème colonne du fichier Excel (BDD)
           const exerciseTheme = exQuestions.find(q => q.theme || q.Theme)?.theme 
             || exQuestions.find(q => q.theme || q.Theme)?.Theme;
 
@@ -180,7 +179,7 @@ export default function BacSimulatorWorkspace() {
                     {exTitle}
                   </span>
                   {exerciseTheme && (
-                    <span className="text-lg font-semibold text-gray-700">
+                    <span className="text-xl font-extrabold text-gray-900">
                       — <Latex>{exerciseTheme}</Latex>
                     </span>
                   )}
