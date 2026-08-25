@@ -234,7 +234,7 @@ export const getCompleteExam = async (req: Request, res: Response): Promise<void
         checklist: question.checklist,
         Type: question.Type,
         type: question.type,
-        theme: question.theme || question.Theme // 👈 Ajout du thème de l'exercice
+        theme: question.theme // 👈 Ajout du thème de l'exercice
       });
 
       return acc;
