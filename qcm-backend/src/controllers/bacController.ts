@@ -59,7 +59,9 @@ export const getExercisesByFilters = async (req: Request, res: Response): Promis
     if (matiere) query.matiere = { $regex: new RegExp(`^${matiere}$`, "i") };
     if (annee) query.annee = Number(annee);
     if (session) query.session = session;
-    if (theme && theme !== "Toute l'épreuve") query.theme = theme;
+    if (theme && theme !== "Toute l'épreuve" && theme !== "toute-lepreuve") {
+      query.theme = theme;
+    }
 
     const exercises = await BacExam.find(query);
 
@@ -193,7 +195,7 @@ Tu dois IMPÉRATIVEMENT répondre avec un objet JSON strict correspondant à cet
 };
 
 /**
- * 5️⃣ NOUVEAU : Récupérer une épreuve complète groupée par exercice
+ * 5️⃣ Récupérer une épreuve complète groupée par exercice
  */
 export const getCompleteExam = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -224,13 +226,15 @@ export const getCompleteExam = async (req: Request, res: Response): Promise<void
 
       exerciceBlock.questions.push({
         id: question._id,
+        numeroExercice: question.numeroExercice,
         label: question.labelQuestion,
         enonce: question.enonceTexte,
         image: question.imageUrl,
         indices: question.indices,
         checklist: question.checklist,
         Type: question.Type,
-        type: question.type
+        type: question.type,
+        theme: question.theme || question.Theme // 👈 Ajout du thème de l'exercice
       });
 
       return acc;

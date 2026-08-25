@@ -10,6 +10,8 @@ interface ExtendedBacExercise extends BacExercise {
   labelQuestion?: string;
   type?: string; 
   Type?: string; 
+  theme?: string;
+  Theme?: string;
 }
 
 export default function BacSimulatorWorkspace() {
@@ -23,11 +25,11 @@ export default function BacSimulatorWorkspace() {
   const matiere = searchParams.get('matiere');
   const annee = searchParams.get('annee');
   const session = searchParams.get('session');
-  const theme = searchParams.get('theme');
+  const themeParam = searchParams.get('theme');
 
   useEffect(() => {
     const loadExercise = async () => {
-      if (!matiere || !annee || !session || !theme) {
+      if (!matiere || !annee || !session || !themeParam) {
         setError("Critères de sélection manquants.");
         setLoading(false);
         return;
@@ -35,7 +37,7 @@ export default function BacSimulatorWorkspace() {
 
       try {
         setLoading(true);
-        const data = await fetchExercises(matiere, annee, session, theme);
+        const data = await fetchExercises(matiere, annee, session, themeParam);
         setQuestions(data as ExtendedBacExercise[]);
       } catch (err) {
         console.error(err);
@@ -46,7 +48,7 @@ export default function BacSimulatorWorkspace() {
     };
 
     loadExercise();
-  }, [matiere, annee, session, theme]);
+  }, [matiere, annee, session, themeParam]);
 
   const groupedByExercise = useMemo(() => {
     const groups: Record<string, ExtendedBacExercise[]> = {};
@@ -64,7 +66,8 @@ export default function BacSimulatorWorkspace() {
     let lastPreamble = "";
 
     return exerciseQuestions.map((q) => {
-      const isGroup = String(q.type || q.Type || '').toUpperCase().trim() === 'GROUP';
+      const isGroup = String(q.type || q.Type || '').toUpperCase().trim() === 'GROUP' || 
+                      String(q.type || q.Type || '').toUpperCase().trim() === 'GROUPE';
       const parts = q.enonceTexte ? q.enonceTexte.split('**Question :**') : [];
       const cleanText = parts.length > 1 ? parts[1].trim() : (q.enonceTexte || '').trim();
 
@@ -84,7 +87,6 @@ export default function BacSimulatorWorkspace() {
 
       let displayPreamble: string | null = match && !isGroup ? preamble : null;
 
-      // Nettoyage des préambules en double à la volée
       if (!isGroup) {
         if (displayPreamble) {
           if (displayPreamble !== lastPreamble) {
@@ -148,7 +150,7 @@ export default function BacSimulatorWorkspace() {
               {matiere} — {annee} ({session})
             </h1>
             <p className="text-sm font-semibold text-gray-500 mt-1">
-              Thème : <span className="text-blue-700">{theme}</span>
+              Filtre : <span className="text-blue-700">{themeParam}</span>
             </p>
           </div>
           <div className="w-24"></div>
@@ -157,6 +159,10 @@ export default function BacSimulatorWorkspace() {
         {Object.entries(groupedByExercise).map(([exTitle, exQuestions]) => {
           const processedQuestions = processExerciseQuestions(exQuestions);
           
+          // 🔹 Récupération du thème spécifique issu de la 2ème colonne du fichier Excel (BDD)
+          const exerciseTheme = exQuestions.find(q => q.theme || q.Theme)?.theme 
+            || exQuestions.find(q => q.theme || q.Theme)?.Theme;
+
           let cleanContext = "";
           if (processedQuestions.length > 0 && !processedQuestions[0].isGroup) {
             const rawFirst = processedQuestions[0].enonceTexte || '';
@@ -169,12 +175,14 @@ export default function BacSimulatorWorkspace() {
             <section key={exTitle} className="bg-white rounded-2xl shadow-md border border-gray-200 p-6 md:p-8 space-y-6">
               
               <div className="border-b-2 border-blue-100 pb-4">
-                <h2 className="text-2xl font-black text-blue-800 uppercase tracking-wide flex items-center gap-3">
+                <h2 className="text-2xl font-black text-blue-800 uppercase tracking-wide flex items-center gap-3 flex-wrap">
                   <span className="bg-blue-800 text-white px-4 py-1.5 rounded-lg text-lg shadow-sm">
                     {exTitle}
                   </span>
-                  {theme !== "Toute l'épreuve" && theme !== "toute-lepreuve" && (
-                    <span className="text-lg font-medium text-gray-600">— {theme}</span>
+                  {exerciseTheme && (
+                    <span className="text-lg font-semibold text-gray-700">
+                      — <Latex>{exerciseTheme}</Latex>
+                    </span>
                   )}
                 </h2>
               </div>
