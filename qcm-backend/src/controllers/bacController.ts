@@ -9,8 +9,8 @@ let openai: OpenAI | null = null;
 try {
   if (process.env.OPENROUTER_API_KEY) {
     openai = new OpenAI({ 
-      baseURL: "https://openrouter.ai/api/v1", // 👈 On redirige vers OpenRouter
-      apiKey: process.env.OPENROUTER_API_KEY,  // 👈 On utilise la clé existante
+      baseURL: "https://openrouter.ai/api/v1",
+      apiKey: process.env.OPENROUTER_API_KEY,
     });
   } else {
     console.warn("⚠️ AVERTISSEMENT : OPENROUTER_API_KEY est manquante.");
@@ -21,27 +21,19 @@ try {
 
 /**
  * 1️⃣ Obtenir les filtres disponibles (Années, Sessions, Thèmes)
- * Utile pour peupler dynamiquement la page d'accueil du BAC SIMULATOR.
  */
 export const getFilters = async (req: Request, res: Response): Promise<void> => {
   try {
     const { matiere } = req.query;
-
-    const filterQuery: any = {};
+    const filterQuery: Record<string, any> = {};
+    
     if (matiere) {
-      // 🚨 Vérifie si ton modèle BacExam utilise 'matiere' ou 'subject'. 
-      // Je mets 'matiere' ici, mais remplace par 'subject' si besoin !
-      // Le $regex permet d'ignorer les majuscules/minuscules (insensible à la casse)
       filterQuery.matiere = { $regex: new RegExp(`^${matiere}$`, "i") };
     }
-
-    console.log("🔍 [DEBUG] Requête Filtres DB:", filterQuery); // 👈 Regarde ton terminal backend !
 
     const years = await BacExam.distinct("annee", filterQuery);
     const sessions = await BacExam.distinct("session", filterQuery);
     const themes = await BacExam.distinct("theme", filterQuery);
-
-    console.log("✅ [DEBUG] Résultats trouvés :", { years, sessions, themes });
 
     const sortedYears = years.sort((a, b) => (b as number) - (a as number));
 
@@ -58,26 +50,16 @@ export const getFilters = async (req: Request, res: Response): Promise<void> => 
 
 /**
  * 2️⃣ Récupérer un (ou plusieurs) exercice(s) selon les critères choisis
- * Appelé quand l'étudiant clique sur "Commencer l'épreuve".
  */
 export const getExercisesByFilters = async (req: Request, res: Response): Promise<void> => {
   try {
     const { matiere, annee, session, theme } = req.query;
-
-    const query: any = {};
+    const query: Record<string, any> = {};
     
-    if (matiere) {
-      // Même chose ici, utilise 'subject' à la place de 'matiere' si c'est le nom de ton champ DB
-      query.matiere = { $regex: new RegExp(`^${matiere}$`, "i") };
-    }
-    
+    if (matiere) query.matiere = { $regex: new RegExp(`^${matiere}$`, "i") };
     if (annee) query.annee = Number(annee);
     if (session) query.session = session;
-    if (theme && theme !== "Toute l'épreuve") {
-      query.theme = theme;
-    }
-
-    console.log("🔍 [DEBUG] Requête Exercices DB:", query);
+    if (theme && theme !== "Toute l'épreuve") query.theme = theme;
 
     const exercises = await BacExam.find(query);
 
@@ -112,40 +94,31 @@ export const createBacExercise = async (req: Request, res: Response): Promise<vo
  */
 export const correctStudentCopy = async (req: Request, res: Response): Promise<void> => {
   try {
-    // 🛑 On bloque si l'IA n'a pas pu s'initialiser
     if (!openai) {
-      res.status(503).json({ message: "Le service de correction IA est temporairement indisponible (Clé API manquante)." });
+      res.status(503).json({ message: "Le service de correction IA est temporairement indisponible." });
       return;
     }
     
     const imageFile = req.file;
     const { exerciseId } = req.body;
 
-    if (!imageFile) {
-      res.status(400).json({ message: "Aucune image de copie fournie." });
+    if (!imageFile || !exerciseId) {
+      res.status(400).json({ message: "Image ou ID de l'exercice manquant." });
       return;
     }
 
-    if (!exerciseId) {
-      res.status(400).json({ message: "L'ID de l'exercice est manquant." });
-      return;
-    }
-
-    // 1. Récupération du contexte de l'exercice
     const exercise = await BacExam.findById(exerciseId);
     if (!exercise) {
       res.status(404).json({ message: "Exercice introuvable dans la base de données." });
       return;
     }
 
-    // 2. Conversion de l'image Buffer en Base64
     const base64Image = imageFile.buffer.toString("base64");
     const mimeType = imageFile.mimetype || "image/jpeg";
     const dataURI = `data:${mimeType};base64,${base64Image}`;
 
-    // 3. Préparation du Prompt
     const corrigeOfficiel = exercise.indices?.niveau3_corrige || "Corrigé non disponible";
-    const grilleBareme = JSON.stringify(exercise.checklist?.map(c => ({ critere: c.description, points: c.points })) || []);
+    const grilleBareme = JSON.stringify(exercise.checklist?.map((c: any) => ({ critere: c.description, points: c.points })) || []);
 
     const systemPrompt = `Tu es un professeur de Sciences Physiques ultra-compétent, correcteur officiel du Baccalauréat. 
 Ta mission est d'analyser la photo de la copie manuscrite d'un étudiant et de la corriger de manière stricte.
@@ -178,16 +151,12 @@ Tu dois IMPÉRATIVEMENT répondre avec un objet JSON strict correspondant à cet
   "feedbackGlobal": "Bilan"
 }`;
 
-    // 4. Appel à l'IA via OpenRouter (Modèle gpt-4o)
     const response = await openai.chat.completions.create({
-      model: "openai/gpt-4o", // Le bon format pour OpenRouter
+      model: "openai/gpt-4o",
       response_format: { type: "json_object" },
       temperature: 0.2,
       messages: [
-        { 
-          role: "system", 
-          content: systemPrompt 
-        },
+        { role: "system", content: systemPrompt },
         {
           role: "user",
           content: [
@@ -201,7 +170,6 @@ Tu dois IMPÉRATIVEMENT répondre avec un objet JSON strict correspondant à cet
     const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
-    // 5. Nettoyage et Parse du JSON
     const firstBrace = responseContent.indexOf('{');
     const lastBrace = responseContent.lastIndexOf('}');
     if (firstBrace === -1 || lastBrace === -1) throw new Error("L'IA n'a pas renvoyé de JSON valide.");
@@ -210,7 +178,6 @@ Tu dois IMPÉRATIVEMENT répondre avec un objet JSON strict correspondant à cet
     const repairedJson = jsonrepair(rawJsonStr);
     const correctionReport = JSON.parse(repairedJson);
 
-    // 6. Renvoi du rapport
     res.status(200).json({
       message: "Correction effectuée avec succès.",
       report: correctionReport
@@ -224,22 +191,19 @@ Tu dois IMPÉRATIVEMENT répondre avec un objet JSON strict correspondant à cet
     });
   }
 };
+
 /**
  * 5️⃣ NOUVEAU : Récupérer une épreuve complète groupée par exercice
- * Idéal pour l'affichage complet de l'examen structuré (Titre de l'exercice > Questions)
  */
 export const getCompleteExam = async (req: Request, res: Response): Promise<void> => {
   try {
     const { matiere, annee, session } = req.query;
-
-    const query: any = {};
-    if (matiere) {
-      query.matiere = { $regex: new RegExp(`^${matiere}$`, "i") };
-    }
+    const query: Record<string, any> = {};
+    
+    if (matiere) query.matiere = { $regex: new RegExp(`^${matiere}$`, "i") };
     if (annee) query.annee = Number(annee);
     if (session) query.session = session;
 
-    // On récupère les questions triées par date de création (ordre du fichier Excel)
     const questions = await BacExam.find(query).sort({ createdAt: 1 });
 
     if (questions.length === 0) {
@@ -247,7 +211,6 @@ export const getCompleteExam = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    // 🎯 REGROUPEMENT (Grouping)
     const epreuveGroupee = questions.reduce((acc: any[], question) => {
       let exerciceBlock = acc.find(ex => ex.titre === question.numeroExercice);
 
@@ -266,8 +229,8 @@ export const getCompleteExam = async (req: Request, res: Response): Promise<void
         image: question.imageUrl,
         indices: question.indices,
         checklist: question.checklist,
-        Type: question.Type, // 👈 AJOUT ICI
-        type: question.type  // 👈 AJOUT ICI (par sécurité)
+        Type: question.Type,
+        type: question.type
       });
 
       return acc;

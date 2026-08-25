@@ -60,18 +60,14 @@ export default function BacSimulatorWorkspace() {
     return groups;
   }, [questions]);
 
-  // 🧠 FONCTION ROBUSTE ET PROPRE POUR TRAITER LES QUESTIONS
   const processExerciseQuestions = (exerciseQuestions: ExtendedBacExercise[]) => {
-    const mapped = exerciseQuestions.map((q) => {
-      // 1. Détection STRICTE des groupes (Partie I, Partie II) basée UNIQUEMENT sur ton Excel
-      // L'ajout de .trim() permet d'éviter les bugs si Excel contient "GROUP " au lieu de "GROUP"
+    let lastPreamble = "";
+
+    return exerciseQuestions.map((q) => {
       const isGroup = String(q.type || q.Type || '').toUpperCase().trim() === 'GROUP';
-      
-      // 2. Séparation du contexte et de la question pour les lignes normales
       const parts = q.enonceTexte ? q.enonceTexte.split('**Question :**') : [];
       const cleanText = parts.length > 1 ? parts[1].trim() : (q.enonceTexte || '').trim();
 
-      // 3. Détection des sous-questions (a, b, c...)
       const match = cleanText.match(/^(.*?)(?:\s+|^)([a-z]\)\s+.*)$/is);
       let preamble = "";
       let subQuestion = cleanText;
@@ -81,42 +77,37 @@ export default function BacSimulatorWorkspace() {
         subQuestion = match[2].trim();
       }
 
-      // 4. Nettoyage du texte si c'est un groupe (Pour éviter l'affichage de "**Contexte :**")
       const groupText = (q.enonceTexte || '')
         .replace(/\*\*Contexte :\*\*/gi, '')
         .replace(/\*\*Question :\*\*/gi, '')
         .trim();
 
-      return {
-        ...q,
-        isGroup,
-        groupText,
-        displayPreamble: match && !isGroup ? preamble : null,
-        displayQuestion: subQuestion,
-        isSubQuestion: match !== null && !isGroup
-      };
-    });
+      let displayPreamble: string | null = match && !isGroup ? preamble : null;
 
-    // 5. Nettoyage des préambules en double
-    let lastPreamble = "";
-    mapped.forEach(q => {
-      if (!q.isGroup) {
-        if (q.displayPreamble) {
-          if (q.displayPreamble !== lastPreamble) {
-             lastPreamble = q.displayPreamble;
+      // Nettoyage des préambules en double à la volée
+      if (!isGroup) {
+        if (displayPreamble) {
+          if (displayPreamble !== lastPreamble) {
+            lastPreamble = displayPreamble;
           } else {
-             q.displayPreamble = null;
+            displayPreamble = null;
           }
         } else {
           lastPreamble = "";
         }
       }
-    });
 
-    return mapped;
+      return {
+        ...q,
+        isGroup,
+        groupText,
+        displayPreamble,
+        displayQuestion: subQuestion,
+        isSubQuestion: match !== null && !isGroup
+      };
+    });
   };
 
-  // 📸 RÉPARATION DU CHEMIN DE L'IMAGE
   const resolveImagePath = (url?: string) => {
     if (!url) return '';
     if (url.startsWith('http') || url.startsWith('data:') || url.startsWith('/')) {
@@ -166,7 +157,6 @@ export default function BacSimulatorWorkspace() {
         {Object.entries(groupedByExercise).map(([exTitle, exQuestions]) => {
           const processedQuestions = processExerciseQuestions(exQuestions);
           
-          // 📖 Extraction du contexte global de l'exercice (Uniquement si la ligne 1 n'est PAS un Groupe)
           let cleanContext = "";
           if (processedQuestions.length > 0 && !processedQuestions[0].isGroup) {
             const rawFirst = processedQuestions[0].enonceTexte || '';
@@ -189,7 +179,6 @@ export default function BacSimulatorWorkspace() {
                 </h2>
               </div>
 
-              {/* Affichage du contexte global */}
               {cleanContext && (
                 <div className="bg-blue-50/50 p-6 rounded-xl border border-blue-100 mb-6">
                   <div className="text-lg text-gray-800 leading-relaxed whitespace-pre-wrap font-medium">
@@ -201,7 +190,6 @@ export default function BacSimulatorWorkspace() {
               <div className="space-y-6 pt-2">
                 {processedQuestions.map((q) => {
                   
-                  // 🎨 DESIGN POUR LES PARTIES I, PARTIES II, etc. (Type = GROUP)
                   if (q.isGroup) {
                     return (
                       <div key={q._id} className="mt-10 mb-4 bg-blue-50/70 p-5 rounded-xl border-l-4 border-l-blue-600 shadow-sm">
@@ -219,7 +207,6 @@ export default function BacSimulatorWorkspace() {
                     );
                   }
 
-                  // 📝 DESIGN POUR LES QUESTIONS CLASSIQUES
                   return (
                     <div key={q._id} className="flex flex-col">
                       {q.displayPreamble && (
@@ -233,7 +220,6 @@ export default function BacSimulatorWorkspace() {
                       }`}>
                         <div className="flex-1">
                           
-                          {/* Affichage de l'image corrigé */}
                           {q.imageUrl && (
                             <img 
                               src={resolveImagePath(q.imageUrl)} 
