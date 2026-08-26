@@ -736,7 +736,7 @@ if (section === "home" && !selectedAction) {
                 /* --- DISPOSITION SPÉCIFIQUE PHYSIQUE-CHIMIE (2 COLONNES) --- */
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
                 
-                    <span className="text-2xl font-bold">📚</span> Programme de l'année
+                    <span className="text-center text-2xl font-bold">📚 Programme de l'année </span>
                    
                   {/* Colonne Gauche : CHIMIE */}
                   <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
