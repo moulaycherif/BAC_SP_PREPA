@@ -760,7 +760,7 @@ if (section === "home" && !selectedAction) {
                       </div>
                     </div>
                   </div>
-                </> {/* <-- Fermeture du Fragment React ici */}
+                </>
               ) : (
                 /* --- DISPOSITION STANDARD (1 COLONNE) --- */
                 <div className="bg-gray-50 rounded-2xl shadow-inner p-6 mb-10 border border-gray-200 w-full max-w-4xl mx-auto">
