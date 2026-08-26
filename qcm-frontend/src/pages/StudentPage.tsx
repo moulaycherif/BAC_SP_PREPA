@@ -735,14 +735,13 @@ if (section === "home" && !selectedAction) {
               {matiere === "Physique-Chimie" ? (
                 /* --- DISPOSITION SPÉCIFIQUE PHYSIQUE-CHIMIE (2 COLONNES) --- */
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-                 <h3 className="text-2xl font-bold text-gray-800">
-                    <span>📚</span> Programme de l'année
-                  </h3>
+                
+                    <span className="text-2xl font-bold">📚</span> Programme de l'année
                    
                   {/* Colonne Gauche : CHIMIE */}
                   <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
                     <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                      <span>🧪</span> Chimie
+                      <span >🧪</span> Chimie
                     </h3>
                     <div className="flex flex-col">
                       {chaptersBySubject["Chimie"]?.map((chapter) => renderChapterAccordion(chapter, "Chimie", matiere))}
