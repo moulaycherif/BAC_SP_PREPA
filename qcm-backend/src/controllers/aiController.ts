@@ -100,7 +100,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 
     const openai = getAIClient();
     let modelName = "gpt-4o-mini"; 
-    if (process.env.AI_PROVIDER === 'GROQ') modelName = "llama-3.1-8b-instant";
+    if (process.env.AI_PROVIDER === 'GROQ') modelName = "llama3-8b-8192";
     if (process.env.AI_PROVIDER === 'OPENROUTER') modelName = "meta-llama/llama-3.3-70b-instruct:free";
 
     const response = await openai.chat.completions.create({
