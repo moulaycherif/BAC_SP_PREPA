@@ -731,37 +731,40 @@ if (section === "home" && !selectedAction) {
                 </button>
               </div>
 
-              {/* Contenu principal de la matière */}
+             {/* Contenu principal de la matière */}
               {matiere === "Physique-Chimie" ? (
                 /* --- DISPOSITION SPÉCIFIQUE PHYSIQUE-CHIMIE (2 COLONNES) --- */
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-                
-                    <span className="text-center text-2xl font-bold">📚 Programme de l'année </span>
-                   
-                  {/* Colonne Gauche : CHIMIE */}
-                  <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
-                    <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                      <span >🧪</span> Chimie
-                    </h3>
-                    <div className="flex flex-col">
-                      {chaptersBySubject["Chimie"]?.map((chapter) => renderChapterAccordion(chapter, "Chimie", matiere))}
-                    </div>
-                  </div>
+                <> {/* <-- Ajout du Fragment React ici */}
+                  <h2 className="text-center text-2xl font-bold mb-6 text-gray-800">
+                    📚 Programme de l'année
+                  </h2>
                   
-                  {/* Colonne Droite : PHYSIQUE */}
-                  <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
-                    <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                      <span>⚡</span> Physique
-                    </h3>
-                    <div className="flex flex-col">
-                      {chaptersBySubject["Physique"]?.map((chapter) => renderChapterAccordion(chapter, "Physique", matiere))}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+                    {/* Colonne Gauche : CHIMIE */}
+                    <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
+                      <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <span>🧪</span> Chimie
+                      </h3>
+                      <div className="flex flex-col">
+                        {chaptersBySubject["Chimie"]?.map((chapter) => renderChapterAccordion(chapter, "Chimie", matiere))}
+                      </div>
+                    </div>
+                    
+                    {/* Colonne Droite : PHYSIQUE */}
+                    <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
+                      <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <span>⚡</span> Physique
+                      </h3>
+                      <div className="flex flex-col">
+                        {chaptersBySubject["Physique"]?.map((chapter) => renderChapterAccordion(chapter, "Physique", matiere))}
+                      </div>
                     </div>
                   </div>
-                </div>
+                </> {/* <-- Fermeture du Fragment React ici */}
               ) : (
                 /* --- DISPOSITION STANDARD (1 COLONNE) --- */
                 <div className="bg-gray-50 rounded-2xl shadow-inner p-6 mb-10 border border-gray-200 w-full max-w-4xl mx-auto">
-                  <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2 justify-center">
                     <span>📚</span> Programme de l'année
                   </h3>
                   <div className="flex flex-col">
