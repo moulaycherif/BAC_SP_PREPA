@@ -71,18 +71,37 @@ interface Question {
           "Chapitre XII : Dénombrement et probabilités"
         ],
         Physique: [
-          "Chapitre I : Les ondes",
-          "Chapitre II : Nucléaire",
-          "Chapitre III : Electricité",
-          "Chapitre IV : Lois de Newton & Théorème d'énergie cinétique",
-          "Chapitre V : Système oscillant & Pendule élastique"
+          "CHAPITRE 1 : Ondes mécaniques progressives",
+          "CHAPITRE 2 : Ondes mécaniques progressives périodiques",
+          "CHAPITRE 3 : Propagation d’une onde lumineuse",
+          "CHAPITRE 4 : Décroissance radioactive",
+          "CHAPITRE 5 : Noyaux, masse et énergie",
+          "CHAPITRE 6 : Dipôle RC",
+          "CHAPITRE 7 : Dipôle RL",
+          "CHAPITRE 8 : Oscillations libres d'un circuit RLC série",
+          "CHAPITRE 9 : Ondes électromagnétiques",
+          "CHAPITRE 10 : Modulation d'amplitude",
+          "CHAPITRE 11 : Lois de Newton",
+          "CHAPITRE 12 : Chute verticale d'un corps solide",
+          "CHAPITRE 13 : Mouvements plans",
+          "CHAPITRE 14 : Mouvement des satellites et des planètes",
+          "CHAPITRE 15 : Mouvement de rotation d’un solide autour d’un axe fixe",
+          "CHAPITRE 16 : Système mécanique oscillant",
+          "CHAPITRE 17 : Aspects énergétiques",
+          "CHAPITRE 18 : Atome et mécanique de Newton"
         ],
         Chimie: [
-          "Chapitre I : Chimie des solutions",
-          "Chapitre II : Cinétique chimique",
-          "Chapitre III : Les piles",
-          "Chapitre IV : Chimie organique"
-        ],
+          "Chapitre 1 : Transformations lentes et transformations rapides",
+          "Chapitre 2 : Suivi temporel d'une transformation chimique - Vitesse de réaction",
+          "Chapitre 3 : Transformations chimiques s'effectuant dans les 2 sens",
+          "Chapitre 4 : État d'équilibre d'un système chimique",
+          "Chapitre 5 : Transformations associées à des réactions acido-basiques en solution aqueuse",
+          "Chapitre 6 : Évolution spontanée d'un système chimique",
+          "Chapitre 7 : Transformations spontanées dans les piles et production d'énergie",
+          "Chapitre 8 : Transformations forcées (Électrolyse)",
+          "Chapitre 9 : Réactions d'estérification et d'hydrolyse",
+          "Chapitre 10 : Contrôle de l'évolution d'un système chimique"
+          ],
         SVT: [
           "Chapitre 1 : Les réactions responsables de la libération de l'énergie emmagasinée dans la matière organique",
           "Chapitre 2 : Rôle du muscle strié squelettique dans la conversion de l'énergie",
@@ -716,6 +735,9 @@ if (section === "home" && !selectedAction) {
               {matiere === "Physique-Chimie" ? (
                 /* --- DISPOSITION SPÉCIFIQUE PHYSIQUE-CHIMIE (2 COLONNES) --- */
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                    <span>📚</span> Programme de l'année
+                  </h3>
                   {/* Colonne Gauche : CHIMIE */}
                   <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
                     <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
