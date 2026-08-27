@@ -18,27 +18,41 @@ interface IAGeneratedData {
   items: IAItemResponse[];
 }
 
-const getAIClient = (): OpenAI => {
-  const provider = process.env.AI_PROVIDER;
+// Fonction unifiée pour éviter toute désynchronisation entre Client et Modèle
+const getAIConfig = (): { client: OpenAI; model: string } => {
+  const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
+
   switch (provider) {
     case 'CEREBRAS':
-      return new OpenAI({
-        apiKey: process.env.CEREBRAS_API_KEY,
-        baseURL: "https://api.cerebras.ai/v1"
-      });
+      return {
+        client: new OpenAI({
+          apiKey: process.env.CEREBRAS_API_KEY,
+          baseURL: "https://api.cerebras.ai/v1"
+        }),
+        model: "llama3.1-8b"
+      };
     case 'GROQ':
-      return new OpenAI({ 
-        apiKey: process.env.GROQ_API_KEY, 
-        baseURL: "https://api.groq.com/openai/v1" 
-      });
+      return {
+        client: new OpenAI({ 
+          apiKey: process.env.GROQ_API_KEY, 
+          baseURL: "https://api.groq.com/openai/v1" 
+        }),
+        model: "llama-3.1-8b-instant"
+      };
     case 'OPENROUTER':
-      return new OpenAI({ 
-        apiKey: process.env.OPENROUTER_API_KEY, 
-        baseURL: "https://openrouter.ai/api/v1" 
-      });
+      return {
+        client: new OpenAI({ 
+          apiKey: process.env.OPENROUTER_API_KEY, 
+          baseURL: "https://openrouter.ai/api/v1" 
+        }),
+        model: "meta-llama/llama-3.1-8b-instruct:free"
+      };
     case 'OPENAI':
     default:
-      return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      return {
+        client: new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
+        model: "gpt-4o-mini"
+      };
   }
 };
 
@@ -101,13 +115,8 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
     }
 
-    const aiClient = getAIClient();
-    const provider = process.env.AI_PROVIDER;
-    
-    let modelName = "gpt-4o-mini"; 
-    if (provider === 'CEREBRAS') modelName = "llama3.1-8b";
-    if (provider === 'GROQ') modelName = "llama-3.1-8b-instant";
-    if (provider === 'OPENROUTER') modelName = "meta-llama/llama-3.1-8b-instruct:free";
+    // Récupération simultanée du client et du modèle approprié
+    const { client: aiClient, model: modelName } = getAIConfig();
 
     const response = await aiClient.chat.completions.create({
       model: modelName,
