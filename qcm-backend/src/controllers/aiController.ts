@@ -175,16 +175,19 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       let finalModelName = modelName;
 
       // 🌟 NOUVEAU : Auto-détection du modèle pour Groq
+     // 🌟 NOUVEAU : Auto-détection du modèle pour Groq avec filtre de sécurité
       if (provider === 'GROQ') {
         try {
           const response = await aiClient.models.list();
           const availableModels = response.data.map((m: any) => m.id);
           
-          // Liste de vos modèles préférés par ordre de priorité
+          // Liste élargie de modèles performants
           const preferredModels = [
             'llama-3.3-70b-versatile',
             'llama-3.1-8b-instant',
+            'llama-3.1-70b-versatile',
             'llama3-8b-8192',
+            'llama3-70b-8192',
             'mixtral-8x7b-32768',
             'gemma2-9b-it'
           ];
@@ -198,12 +201,23 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
             }
           }
 
+          // Fallback intelligent : on ne prend plus le 1er venu, on cherche un modèle standard et ouvert
           if (!found && availableModels.length > 0) {
-            finalModelName = availableModels[0]; // Fallback ultime
+            const safeFallback = availableModels.find((m: string) => 
+              m.toLowerCase().includes('llama') || 
+              m.toLowerCase().includes('mixtral') || 
+              m.toLowerCase().includes('gemma')
+            );
+            
+            if (safeFallback) {
+              finalModelName = safeFallback;
+            } else {
+              throw new Error("Aucun modèle standard (Llama, Mixtral, Gemma) n'est disponible. Vérifiez votre compte Groq.");
+            }
           }
           console.log(`Modèle Groq dynamique sélectionné : ${finalModelName}`);
-        } catch (e) {
-          console.warn("Impossible de lister les modèles Groq, utilisation de la valeur par défaut.");
+        } catch (e: any) {
+          console.warn("Impossible de lister les modèles Groq ou erreur de sécurité :", e.message);
         }
       }
 
