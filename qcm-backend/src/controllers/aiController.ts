@@ -121,7 +121,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     let responseContent: string | undefined = "";
 
     if (provider === 'CEREBRAS') {
-      // 🌟 NOUVEAU : Auto-détection du modèle autorisé pour ta clé API
       let targetModel = modelName;
       try {
         const modelsResponse = await fetch("https://api.cerebras.ai/v1/models", {
@@ -132,13 +131,17 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
           const modelsData = await modelsResponse.json();
           const availableModels = modelsData.data?.map((m: any) => m.id) || [];
           
-          // On cherche le premier modèle Llama disponible pour TA clé (ex: llama-3.3-70b, llama-3.1-8b...)
-          const llamaModel = availableModels.find((m: string) => m.toLowerCase().includes('llama'));
-          if (llamaModel) {
-            targetModel = llamaModel;
-            console.log(`Modèle Cerebras autorisé détecté et utilisé : ${targetModel}`);
-          } else {
-            console.warn("Aucun modèle Llama trouvé dans la liste autorisée. Modèles dispos :", availableModels);
+          if (availableModels.length > 0) {
+            // 1. On cherche un modèle Llama en priorité
+            const llamaModel = availableModels.find((m: string) => m.toLowerCase().includes('llama'));
+            
+            if (llamaModel) {
+              targetModel = llamaModel;
+            } else {
+              // 2. S'il n'y a pas de Llama, on prend le premier modèle autorisé (ex: gemma-4-31b)
+              targetModel = availableModels[0]; 
+            }
+            console.log(`Modèle Cerebras dynamique sélectionné : ${targetModel}`);
           }
         }
       } catch (e) {
@@ -153,7 +156,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
           "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}`
         },
         body: JSON.stringify({
-          model: targetModel, // 👈 Utilisation du modèle détecté
+          model: targetModel, // 👈 Utilisation du modèle valide
           messages: [
             { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
             { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
