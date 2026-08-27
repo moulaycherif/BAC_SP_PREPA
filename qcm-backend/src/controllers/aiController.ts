@@ -174,8 +174,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       
       let finalModelName = modelName;
 
-      // 🌟 NOUVEAU : Auto-détection du modèle pour Groq
-     // 🌟 NOUVEAU : Auto-détection du modèle pour Groq avec filtre de sécurité
+      // 🌟 NOUVEAU : Auto-détection du modèle pour Groq avec filtre anti-utilitaires
       if (provider === 'GROQ') {
         try {
           const response = await aiClient.models.list();
@@ -201,18 +200,19 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
             }
           }
 
-          // Fallback intelligent : on ne prend plus le 1er venu, on cherche un modèle standard et ouvert
+          // Fallback intelligent : on exclut les modèles de sécurité (guard) ou audio (whisper)
           if (!found && availableModels.length > 0) {
-            const safeFallback = availableModels.find((m: string) => 
-              m.toLowerCase().includes('llama') || 
-              m.toLowerCase().includes('mixtral') || 
-              m.toLowerCase().includes('gemma')
-            );
+            const safeFallback = availableModels.find((m: string) => {
+              const name = m.toLowerCase();
+              const isGenerativeAI = name.includes('llama') || name.includes('mixtral') || name.includes('gemma');
+              const isNotUtility = !name.includes('guard') && !name.includes('whisper') && !name.includes('vision');
+              return isGenerativeAI && isNotUtility;
+            });
             
             if (safeFallback) {
               finalModelName = safeFallback;
             } else {
-              throw new Error("Aucun modèle standard (Llama, Mixtral, Gemma) n'est disponible. Vérifiez votre compte Groq.");
+              throw new Error("Aucun modèle de génération de texte standard (Llama, Mixtral, Gemma) n'est disponible sur votre compte Groq.");
             }
           }
           console.log(`Modèle Groq dynamique sélectionné : ${finalModelName}`);
