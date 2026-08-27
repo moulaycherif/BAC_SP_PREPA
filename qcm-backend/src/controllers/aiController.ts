@@ -35,7 +35,7 @@ const getAIConfig = (): { client: OpenAI | null; model: string; provider: string
           apiKey: process.env.GROQ_API_KEY, 
           baseURL: "https://api.groq.com/openai/v1" 
         }),
-        model: "llama-3.1-8b-instant",
+        model: "llama-3.1-8b-instant", // Valeur par défaut, mais elle sera écrasée dynamiquement
         provider: 'GROQ'
       };
     case 'OPENROUTER':
@@ -132,13 +132,10 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
           const availableModels = modelsData.data?.map((m: any) => m.id) || [];
           
           if (availableModels.length > 0) {
-            // 1. On cherche un modèle Llama en priorité
             const llamaModel = availableModels.find((m: string) => m.toLowerCase().includes('llama'));
-            
             if (llamaModel) {
               targetModel = llamaModel;
             } else {
-              // 2. S'il n'y a pas de Llama, on prend le premier modèle autorisé (ex: gemma-4-31b)
               targetModel = availableModels[0]; 
             }
             console.log(`Modèle Cerebras dynamique sélectionné : ${targetModel}`);
@@ -148,7 +145,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
         console.warn("Impossible de lister les modèles Cerebras, utilisation de la valeur par défaut.");
       }
 
-      // Requête de complétion avec le modèle dynamiquement garanti
       const cerebrasResponse = await fetch("https://api.cerebras.ai/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -156,7 +152,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
           "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}`
         },
         body: JSON.stringify({
-          model: targetModel, // 👈 Utilisation du modèle valide
+          model: targetModel,
           messages: [
             { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
             { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
@@ -175,9 +171,45 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       responseContent = responseData.choices?.[0]?.message?.content;
 
     } else if (aiClient) {
-      // Logique normale pour OpenAI, Groq, OpenRouter
+      
+      let finalModelName = modelName;
+
+      // 🌟 NOUVEAU : Auto-détection du modèle pour Groq
+      if (provider === 'GROQ') {
+        try {
+          const response = await aiClient.models.list();
+          const availableModels = response.data.map((m: any) => m.id);
+          
+          // Liste de vos modèles préférés par ordre de priorité
+          const preferredModels = [
+            'llama-3.3-70b-versatile',
+            'llama-3.1-8b-instant',
+            'llama3-8b-8192',
+            'mixtral-8x7b-32768',
+            'gemma2-9b-it'
+          ];
+
+          let found = false;
+          for (const pref of preferredModels) {
+            if (availableModels.includes(pref)) {
+              finalModelName = pref;
+              found = true;
+              break;
+            }
+          }
+
+          if (!found && availableModels.length > 0) {
+            finalModelName = availableModels[0]; // Fallback ultime
+          }
+          console.log(`Modèle Groq dynamique sélectionné : ${finalModelName}`);
+        } catch (e) {
+          console.warn("Impossible de lister les modèles Groq, utilisation de la valeur par défaut.");
+        }
+      }
+
+      // Logique de requête pour OpenAI, Groq (avec modèle dynamique), OpenRouter
       const response = await aiClient.chat.completions.create({
-        model: modelName,
+        model: finalModelName, // 👈 Utilisation du modèle sélectionné dynamiquement
         messages: [
           { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
           { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
