@@ -120,8 +120,32 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     const { client: aiClient, model: modelName, provider } = getAIConfig();
     let responseContent: string | undefined = "";
 
-    // 👈 Bypasser le SDK OpenAI pour Cerebras et utiliser une requête fetch native
     if (provider === 'CEREBRAS') {
+      // 🌟 NOUVEAU : Auto-détection du modèle autorisé pour ta clé API
+      let targetModel = modelName;
+      try {
+        const modelsResponse = await fetch("https://api.cerebras.ai/v1/models", {
+          headers: { "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}` }
+        });
+        
+        if (modelsResponse.ok) {
+          const modelsData = await modelsResponse.json();
+          const availableModels = modelsData.data?.map((m: any) => m.id) || [];
+          
+          // On cherche le premier modèle Llama disponible pour TA clé (ex: llama-3.3-70b, llama-3.1-8b...)
+          const llamaModel = availableModels.find((m: string) => m.toLowerCase().includes('llama'));
+          if (llamaModel) {
+            targetModel = llamaModel;
+            console.log(`Modèle Cerebras autorisé détecté et utilisé : ${targetModel}`);
+          } else {
+            console.warn("Aucun modèle Llama trouvé dans la liste autorisée. Modèles dispos :", availableModels);
+          }
+        }
+      } catch (e) {
+        console.warn("Impossible de lister les modèles Cerebras, utilisation de la valeur par défaut.");
+      }
+
+      // Requête de complétion avec le modèle dynamiquement garanti
       const cerebrasResponse = await fetch("https://api.cerebras.ai/v1/chat/completions", {
         method: "POST",
         headers: {
@@ -129,7 +153,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
           "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}`
         },
         body: JSON.stringify({
-          model: modelName,
+          model: targetModel, // 👈 Utilisation du modèle détecté
           messages: [
             { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
             { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
