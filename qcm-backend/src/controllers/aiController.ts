@@ -169,14 +169,37 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     } else if (aiClient) {
 
       if (provider === 'GROQ') {
-        // Liste de secours ordonnée de modèles de génération de texte actifs chez Groq
-        const groqCandidateModels = [
-          "llama-3.3-70b-versatile",
-          "llama3-70b-8192",
-          "llama3-8b-8192",
-          "mixtral-8x7b-32768",
-          "gemma2-9b-it"
-        ];
+        let groqCandidateModels: string[] = [];
+
+        // Option B : Récupération dynamique des modèles actifs depuis l'API Groq
+        try {
+          console.log("[GROQ] Récupération dynamique de la liste des modèles actifs...");
+          const modelsList = await aiClient.models.list();
+          const availableIds: string[] = modelsList.data.map((m: any) => m.id);
+
+          // Filtrer les modèles pour ne garder que ceux destinés à la génération de texte/chat (exclure whisper, guard, etc.)
+          groqCandidateModels = availableIds.filter((id: string) => {
+            const lower = id.toLowerCase();
+            return !lower.includes('whisper') && 
+                   !lower.includes('guard') && 
+                   !lower.includes('embed') && 
+                   !lower.includes('vision');
+          });
+
+          console.log(`[GROQ] Modèles de génération détectés (${groqCandidateModels.length}) :`, groqCandidateModels);
+        } catch (e: any) {
+          console.warn(`[GROQ] Impossible de récupérer la liste dynamique (${e.message}). Utilisation de la liste de secours.`);
+        }
+
+        // Si la liste dynamique est vide ou indisponible, on applique une liste de secours à jour
+        if (groqCandidateModels.length === 0) {
+          groqCandidateModels = [
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "openai/gpt-oss-120b",
+            "openai/gpt-oss-20b"
+          ];
+        }
 
         let lastError: any = null;
 
