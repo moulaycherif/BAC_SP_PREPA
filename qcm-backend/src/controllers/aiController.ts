@@ -18,8 +18,8 @@ interface IAGeneratedData {
   items: IAItemResponse[];
 }
 
-// Fonction unifiée pour éviter toute désynchronisation entre Client et Modèle
-const getAIConfig = (): { client: OpenAI; model: string } => {
+// Configuration unifiée et sécurisée
+const getAIConfig = (): { client: OpenAI; model: string; provider: string } => {
   const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
 
   switch (provider) {
@@ -27,31 +27,35 @@ const getAIConfig = (): { client: OpenAI; model: string } => {
       return {
         client: new OpenAI({
           apiKey: process.env.CEREBRAS_API_KEY,
-          baseURL: "https://api.cerebras.ai/v1"
+          baseURL: "https://api.cerebras.ai/v1/" // 👈 Ajout du slash final de sécurité
         }),
-        model: "llama3.1-8b"
+        model: "llama3.1-8b",
+        provider: 'CEREBRAS'
       };
     case 'GROQ':
       return {
         client: new OpenAI({ 
           apiKey: process.env.GROQ_API_KEY, 
-          baseURL: "https://api.groq.com/openai/v1" 
+          baseURL: "https://api.groq.com/openai/v1/" 
         }),
-        model: "llama-3.1-8b-instant"
+        model: "llama-3.1-8b-instant",
+        provider: 'GROQ'
       };
     case 'OPENROUTER':
       return {
         client: new OpenAI({ 
           apiKey: process.env.OPENROUTER_API_KEY, 
-          baseURL: "https://openrouter.ai/api/v1" 
+          baseURL: "https://openrouter.ai/api/v1/" 
         }),
-        model: "meta-llama/llama-3.1-8b-instruct:free"
+        model: "meta-llama/llama-3.1-8b-instruct:free",
+        provider: 'OPENROUTER'
       };
     case 'OPENAI':
     default:
       return {
         client: new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
-        model: "gpt-4o-mini"
+        model: "gpt-4o-mini",
+        provider: 'OPENAI'
       };
   }
 };
@@ -86,6 +90,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
        return;
     }
 
+    // 👈 Ajout d'une consigne stricte supplémentaire pour compenser le retrait potentiel de response_format
     const baseMathInstruction = `
     NIVEAU CIBLE : Baccalauréat Sciences Physiques (Terminale Scientifique).
     Le contenu, le vocabulaire, la rigueur scientifique et les calculs doivent correspondre EXACTEMENT aux attentes d'une épreuve de Physique-Chimie du Bac.
@@ -95,6 +100,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     2. SYMBOLES EXACTS : Utilise les vraies commandes LaTeX (\\mathbb{R}, \\varepsilon, \\delta, \\Omega).
     3. DOUBLE ANTISLASH OBLIGATOIRE : Tu DOIS écrire 2 antislashs pour CHAQUE commande (\\frac, \\lim).
     RÈGLE DE STRUCTURE : Le champ "options" doit être un tableau de simples chaînes de caractères.
+    IMPORTANT : Ta réponse entière DOIT être un seul objet JSON valide. N'ajoute AUCUN texte avant ou après.
     `;
 
     let systemPrompt = "";
@@ -115,19 +121,24 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
     }
 
-    // Récupération simultanée du client et du modèle approprié
-    const { client: aiClient, model: modelName } = getAIConfig();
+    const { client: aiClient, model: modelName, provider } = getAIConfig();
 
-    const response = await aiClient.chat.completions.create({
+    // 👈 Construction conditionnelle du payload (on retire response_format pour Cerebras)
+    const aiPayload: any = {
       model: modelName,
       messages: [
         { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
         { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
       ],
-      response_format: { type: "json_object" },
       temperature: 0.2,
       max_tokens: 2500
-    });
+    };
+
+    if (provider !== 'CEREBRAS') {
+      aiPayload.response_format = { type: "json_object" };
+    }
+
+    const response = await aiClient.chat.completions.create(aiPayload);
 
     const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
@@ -197,6 +208,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 };
 
 export const importCorrectedExcel = async (req: Request, res: Response): Promise<void> => {
+  // Le code reste identique ici
   try {
     const file = req.file;
     if (!file) {
