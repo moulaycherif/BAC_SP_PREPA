@@ -18,17 +18,14 @@ interface IAGeneratedData {
   items: IAItemResponse[];
 }
 
-// Configuration unifiée et sécurisée
-const getAIConfig = (): { client: OpenAI; model: string; provider: string } => {
+// Configuration : OpenAI, Groq et OpenRouter utilisent le SDK. Cerebras est traité séparément.
+const getAIConfig = (): { client: OpenAI | null; model: string; provider: string } => {
   const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
 
   switch (provider) {
     case 'CEREBRAS':
       return {
-        client: new OpenAI({
-          apiKey: process.env.CEREBRAS_API_KEY,
-          baseURL: "https://api.cerebras.ai/v1/" // 👈 Ajout du slash final de sécurité
-        }),
+        client: null, // On n'utilise pas le SDK OpenAI pour Cerebras
         model: "llama3.1-8b",
         provider: 'CEREBRAS'
       };
@@ -36,7 +33,7 @@ const getAIConfig = (): { client: OpenAI; model: string; provider: string } => {
       return {
         client: new OpenAI({ 
           apiKey: process.env.GROQ_API_KEY, 
-          baseURL: "https://api.groq.com/openai/v1/" 
+          baseURL: "https://api.groq.com/openai/v1" 
         }),
         model: "llama-3.1-8b-instant",
         provider: 'GROQ'
@@ -45,7 +42,7 @@ const getAIConfig = (): { client: OpenAI; model: string; provider: string } => {
       return {
         client: new OpenAI({ 
           apiKey: process.env.OPENROUTER_API_KEY, 
-          baseURL: "https://openrouter.ai/api/v1/" 
+          baseURL: "https://openrouter.ai/api/v1" 
         }),
         model: "meta-llama/llama-3.1-8b-instruct:free",
         provider: 'OPENROUTER'
@@ -90,7 +87,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
        return;
     }
 
-    // 👈 Ajout d'une consigne stricte supplémentaire pour compenser le retrait potentiel de response_format
     const baseMathInstruction = `
     NIVEAU CIBLE : Baccalauréat Sciences Physiques (Terminale Scientifique).
     Le contenu, le vocabulaire, la rigueur scientifique et les calculs doivent correspondre EXACTEMENT aux attentes d'une épreuve de Physique-Chimie du Bac.
@@ -100,7 +96,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     2. SYMBOLES EXACTS : Utilise les vraies commandes LaTeX (\\mathbb{R}, \\varepsilon, \\delta, \\Omega).
     3. DOUBLE ANTISLASH OBLIGATOIRE : Tu DOIS écrire 2 antislashs pour CHAQUE commande (\\frac, \\lim).
     RÈGLE DE STRUCTURE : Le champ "options" doit être un tableau de simples chaînes de caractères.
-    IMPORTANT : Ta réponse entière DOIT être un seul objet JSON valide. N'ajoute AUCUN texte avant ou après.
+    IMPORTANT : Ta réponse DOIT être uniquement un objet JSON valide, sans texte additionnel.
     `;
 
     let systemPrompt = "";
@@ -122,25 +118,50 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     }
 
     const { client: aiClient, model: modelName, provider } = getAIConfig();
+    let responseContent: string | undefined = "";
 
-    // 👈 Construction conditionnelle du payload (on retire response_format pour Cerebras)
-    const aiPayload: any = {
-      model: modelName,
-      messages: [
-        { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
-        { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
-      ],
-      temperature: 0.2,
-      max_tokens: 2500
-    };
+    // 👈 Bypasser le SDK OpenAI pour Cerebras et utiliser une requête fetch native
+    if (provider === 'CEREBRAS') {
+      const cerebrasResponse = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: modelName,
+          messages: [
+            { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
+            { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
+          ],
+          temperature: 0.2,
+          max_tokens: 2500
+        })
+      });
 
-    if (provider !== 'CEREBRAS') {
-      aiPayload.response_format = { type: "json_object" };
+      if (!cerebrasResponse.ok) {
+        const errorText = await cerebrasResponse.text();
+        throw new Error(`Erreur API Cerebras HTTP ${cerebrasResponse.status}: ${errorText}`);
+      }
+
+      const responseData = await cerebrasResponse.json();
+      responseContent = responseData.choices?.[0]?.message?.content;
+
+    } else if (aiClient) {
+      // Logique normale pour OpenAI, Groq, OpenRouter
+      const response = await aiClient.chat.completions.create({
+        model: modelName,
+        messages: [
+          { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
+          { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.2,
+        max_tokens: 2500
+      });
+      responseContent = response.choices[0]?.message?.content || undefined;
     }
 
-    const response = await aiClient.chat.completions.create(aiPayload);
-
-    const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
     const firstBrace = responseContent.indexOf('{');
@@ -208,61 +229,61 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 };
 
 export const importCorrectedExcel = async (req: Request, res: Response): Promise<void> => {
-  // Le code reste identique ici
-  try {
-    const file = req.file;
-    if (!file) {
-      res.status(400).json({ message: "Aucun fichier Excel fourni." });
-      return;
+    // Le code de l'import reste identique
+    try {
+      const file = req.file;
+      if (!file) {
+        res.status(400).json({ message: "Aucun fichier Excel fourni." });
+        return;
+      }
+  
+      let buffer: Buffer;
+      if (file.buffer) {
+        buffer = file.buffer;
+      } else if (file.path) {
+        buffer = fs.readFileSync(file.path);
+      } else {
+        res.status(400).json({ message: "Fichier illisible." });
+        return;
+      }
+  
+      const workbook = xlsx.read(buffer, { type: 'buffer' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rawData: any[] = xlsx.utils.sheet_to_json(worksheet);
+  
+      if (rawData.length === 0) {
+        res.status(400).json({ message: "Le fichier Excel est vide." });
+        return;
+      }
+  
+      const itemsToInsert = rawData.map(row => {
+        const optionsArray = row.Options 
+          ? String(row.Options).split(" || ").map(opt => opt.trim()).filter(opt => opt !== "") 
+          : [];
+  
+        return {
+          texte: row.Question,
+          options: optionsArray,
+          reponseCorrecte: row.ReponseCorrecte ? String(row.ReponseCorrecte) : null,
+          explication: row.Explication || "",
+          type: row.Type || "qcm",
+          subject: row.Sujet || null,
+          chapter: row.Chapitre || null,
+          exam: row.Examen || "Support de cours IA",
+          typeEpreuve: row.TypeEpreuve || "ia",
+          numeroConcoursBlanc: row.NumConcoursBlanc || null,
+          note: 1
+        };
+      });
+  
+      await Question.insertMany(itemsToInsert);
+  
+      if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+  
+      res.status(200).json({ message: "Excel corrigé importé avec succès !", count: itemsToInsert.length });
+    } catch (error) {
+      console.error("Erreur Import Excel IA :", error);
+      if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      res.status(500).json({ message: "Erreur lors de l'importation de l'Excel corrigé." });
     }
-
-    let buffer: Buffer;
-    if (file.buffer) {
-      buffer = file.buffer;
-    } else if (file.path) {
-      buffer = fs.readFileSync(file.path);
-    } else {
-      res.status(400).json({ message: "Fichier illisible." });
-      return;
-    }
-
-    const workbook = xlsx.read(buffer, { type: 'buffer' });
-    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-    const rawData: any[] = xlsx.utils.sheet_to_json(worksheet);
-
-    if (rawData.length === 0) {
-      res.status(400).json({ message: "Le fichier Excel est vide." });
-      return;
-    }
-
-    const itemsToInsert = rawData.map(row => {
-      const optionsArray = row.Options 
-        ? String(row.Options).split(" || ").map(opt => opt.trim()).filter(opt => opt !== "") 
-        : [];
-
-      return {
-        texte: row.Question,
-        options: optionsArray,
-        reponseCorrecte: row.ReponseCorrecte ? String(row.ReponseCorrecte) : null,
-        explication: row.Explication || "",
-        type: row.Type || "qcm",
-        subject: row.Sujet || null,
-        chapter: row.Chapitre || null,
-        exam: row.Examen || "Support de cours IA",
-        typeEpreuve: row.TypeEpreuve || "ia",
-        numeroConcoursBlanc: row.NumConcoursBlanc || null,
-        note: 1
-      };
-    });
-
-    await Question.insertMany(itemsToInsert);
-
-    if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
-
-    res.status(200).json({ message: "Excel corrigé importé avec succès !", count: itemsToInsert.length });
-  } catch (error) {
-    console.error("Erreur Import Excel IA :", error);
-    if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-    res.status(500).json({ message: "Erreur lors de l'importation de l'Excel corrigé." });
-  }
 };
