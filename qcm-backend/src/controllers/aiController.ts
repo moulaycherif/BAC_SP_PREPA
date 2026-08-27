@@ -18,7 +18,6 @@ interface IAGeneratedData {
   items: IAItemResponse[];
 }
 
-// 2. 👈 Typage "any" ajouté ici car Cerebras et OpenAI ont des types stricts légèrement différents
 const getAIClient = (): OpenAI => {
   const provider = process.env.AI_PROVIDER;
   switch (provider) {
@@ -28,9 +27,15 @@ const getAIClient = (): OpenAI => {
         baseURL: "https://api.cerebras.ai/v1"
       });
     case 'GROQ':
-      return new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: "https://api.groq.com/openai/v1" });
+      return new OpenAI({ 
+        apiKey: process.env.GROQ_API_KEY, 
+        baseURL: "https://api.groq.com/openai/v1" 
+      });
     case 'OPENROUTER':
-      return new OpenAI({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: "https://openrouter.ai/api/v1" });
+      return new OpenAI({ 
+        apiKey: process.env.OPENROUTER_API_KEY, 
+        baseURL: "https://openrouter.ai/api/v1" 
+      });
     case 'OPENAI':
     default:
       return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -96,13 +101,13 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
     }
 
-    const aiClient = getAIClient(); // L'instance Cerebras ou OpenAI
-    let modelName = "gpt-4o-mini"; 
+    const aiClient = getAIClient();
+    const provider = process.env.AI_PROVIDER;
     
-    // 3. 👈 Configuration des modèles selon le provider choisi
-    if (process.env.AI_PROVIDER === 'CEREBRAS') modelName = "llama3.1-8b"; // ou 'gemma-4-31b' si c'est celui que tu cibles
-    if (process.env.AI_PROVIDER === 'GROQ') modelName = "llama3-8b-8192"; // Corrigé pour éviter l'erreur 404
-    if (process.env.AI_PROVIDER === 'OPENROUTER') modelName = "meta-llama/llama-3.1-8b-instruct:free";
+    let modelName = "gpt-4o-mini"; 
+    if (provider === 'CEREBRAS') modelName = "llama3.1-8b";
+    if (provider === 'GROQ') modelName = "llama-3.1-8b-instant";
+    if (provider === 'OPENROUTER') modelName = "meta-llama/llama-3.1-8b-instruct:free";
 
     const response = await aiClient.chat.completions.create({
       model: modelName,
@@ -111,10 +116,8 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
         { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
       ],
       response_format: { type: "json_object" },
-      temperature: 0.2, // Baissé à 0.2 comme dans ton snippet Cerebras pour plus de précision mathématique
-      frequency_penalty: 0.8, 
-      presence_penalty: 0.3,
-      max_tokens: 2500, 
+      temperature: 0.2,
+      max_tokens: 2500
     });
 
     const responseContent = response.choices[0]?.message?.content;
@@ -185,61 +188,60 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 };
 
 export const importCorrectedExcel = async (req: Request, res: Response): Promise<void> => {
-    // ... Ton code d'importation reste exactement le même, aucune modification requise ici.
-    try {
-      const file = req.file;
-      if (!file) {
-        res.status(400).json({ message: "Aucun fichier Excel fourni." });
-        return;
-      }
-  
-      let buffer: Buffer;
-      if (file.buffer) {
-        buffer = file.buffer;
-      } else if (file.path) {
-        buffer = fs.readFileSync(file.path);
-      } else {
-        res.status(400).json({ message: "Fichier illisible." });
-        return;
-      }
-  
-      const workbook = xlsx.read(buffer, { type: 'buffer' });
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rawData: any[] = xlsx.utils.sheet_to_json(worksheet);
-  
-      if (rawData.length === 0) {
-        res.status(400).json({ message: "Le fichier Excel est vide." });
-        return;
-      }
-  
-      const itemsToInsert = rawData.map(row => {
-        const optionsArray = row.Options 
-          ? String(row.Options).split(" || ").map(opt => opt.trim()).filter(opt => opt !== "") 
-          : [];
-  
-        return {
-          texte: row.Question,
-          options: optionsArray,
-          reponseCorrecte: row.ReponseCorrecte ? String(row.ReponseCorrecte) : null,
-          explication: row.Explication || "",
-          type: row.Type || "qcm",
-          subject: row.Sujet || null,
-          chapter: row.Chapitre || null,
-          exam: row.Examen || "Support de cours IA",
-          typeEpreuve: row.TypeEpreuve || "ia",
-          numeroConcoursBlanc: row.NumConcoursBlanc || null,
-          note: 1
-        };
-      });
-  
-      await Question.insertMany(itemsToInsert);
-  
-      if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
-  
-      res.status(200).json({ message: "Excel corrigé importé avec succès !", count: itemsToInsert.length });
-    } catch (error) {
-      console.error("Erreur Import Excel IA :", error);
-      if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
-      res.status(500).json({ message: "Erreur lors de l'importation de l'Excel corrigé." });
+  try {
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ message: "Aucun fichier Excel fourni." });
+      return;
     }
-  };
+
+    let buffer: Buffer;
+    if (file.buffer) {
+      buffer = file.buffer;
+    } else if (file.path) {
+      buffer = fs.readFileSync(file.path);
+    } else {
+      res.status(400).json({ message: "Fichier illisible." });
+      return;
+    }
+
+    const workbook = xlsx.read(buffer, { type: 'buffer' });
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const rawData: any[] = xlsx.utils.sheet_to_json(worksheet);
+
+    if (rawData.length === 0) {
+      res.status(400).json({ message: "Le fichier Excel est vide." });
+      return;
+    }
+
+    const itemsToInsert = rawData.map(row => {
+      const optionsArray = row.Options 
+        ? String(row.Options).split(" || ").map(opt => opt.trim()).filter(opt => opt !== "") 
+        : [];
+
+      return {
+        texte: row.Question,
+        options: optionsArray,
+        reponseCorrecte: row.ReponseCorrecte ? String(row.ReponseCorrecte) : null,
+        explication: row.Explication || "",
+        type: row.Type || "qcm",
+        subject: row.Sujet || null,
+        chapter: row.Chapitre || null,
+        exam: row.Examen || "Support de cours IA",
+        typeEpreuve: row.TypeEpreuve || "ia",
+        numeroConcoursBlanc: row.NumConcoursBlanc || null,
+        note: 1
+      };
+    });
+
+    await Question.insertMany(itemsToInsert);
+
+    if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+
+    res.status(200).json({ message: "Excel corrigé importé avec succès !", count: itemsToInsert.length });
+  } catch (error) {
+    console.error("Erreur Import Excel IA :", error);
+    if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+    res.status(500).json({ message: "Erreur lors de l'importation de l'Excel corrigé." });
+  }
+};
