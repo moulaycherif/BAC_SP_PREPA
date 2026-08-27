@@ -18,14 +18,14 @@ interface IAGeneratedData {
   items: IAItemResponse[];
 }
 
-// Configuration : OpenAI, Groq et OpenRouter utilisent le SDK. Cerebras est traité séparément.
+// Configuration des clients IA
 const getAIConfig = (): { client: OpenAI | null; model: string; provider: string } => {
   const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
 
   switch (provider) {
     case 'CEREBRAS':
       return {
-        client: null, // On n'utilise pas le SDK OpenAI pour Cerebras
+        client: null,
         model: "llama3.1-8b",
         provider: 'CEREBRAS'
       };
@@ -35,7 +35,7 @@ const getAIConfig = (): { client: OpenAI | null; model: string; provider: string
           apiKey: process.env.GROQ_API_KEY, 
           baseURL: "https://api.groq.com/openai/v1" 
         }),
-        model: "llama-3.1-8b-instant", // Valeur par défaut, mais elle sera écrasée dynamiquement
+        model: "llama-3.3-70b-versatile",
         provider: 'GROQ'
       };
     case 'OPENROUTER':
@@ -117,11 +117,12 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
     }
 
-    const { client: aiClient, model: modelName, provider } = getAIConfig();
-    let responseContent: string | undefined = "";
+    const { client: aiClient, model: defaultModel, provider } = getAIConfig();
+    let responseContent: string | undefined = undefined;
 
+    // --- BRANCHE CEREBRAS ---
     if (provider === 'CEREBRAS') {
-      let targetModel = modelName;
+      let targetModel = defaultModel;
       try {
         const modelsResponse = await fetch("https://api.cerebras.ai/v1/models", {
           headers: { "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}` }
@@ -130,19 +131,13 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
         if (modelsResponse.ok) {
           const modelsData = await modelsResponse.json();
           const availableModels = modelsData.data?.map((m: any) => m.id) || [];
-          
           if (availableModels.length > 0) {
             const llamaModel = availableModels.find((m: string) => m.toLowerCase().includes('llama'));
-            if (llamaModel) {
-              targetModel = llamaModel;
-            } else {
-              targetModel = availableModels[0]; 
-            }
-            console.log(`Modèle Cerebras dynamique sélectionné : ${targetModel}`);
+            targetModel = llamaModel || availableModels[0];
           }
         }
       } catch (e) {
-        console.warn("Impossible de lister les modèles Cerebras, utilisation de la valeur par défaut.");
+        console.warn("Cerebras models check fallback.");
       }
 
       const cerebrasResponse = await fetch("https://api.cerebras.ai/v1/chat/completions", {
@@ -170,69 +165,64 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       const responseData = await cerebrasResponse.json();
       responseContent = responseData.choices?.[0]?.message?.content;
 
+    // --- BRANCHE GROQ, OPENROUTER OU OPENAI ---
     } else if (aiClient) {
-      
-      let finalModelName = modelName;
 
-      // 🌟 NOUVEAU : Auto-détection du modèle pour Groq avec filtre anti-utilitaires
       if (provider === 'GROQ') {
-        try {
-          const response = await aiClient.models.list();
-          const availableModels = response.data.map((m: any) => m.id);
-          
-          // Liste élargie de modèles performants
-          const preferredModels = [
-            'llama-3.3-70b-versatile',
-            'llama-3.1-8b-instant',
-            'llama-3.1-70b-versatile',
-            'llama3-8b-8192',
-            'llama3-70b-8192',
-            'mixtral-8x7b-32768',
-            'gemma2-9b-it'
-          ];
+        // Liste de secours ordonnée de modèles de génération de texte actifs chez Groq
+        const groqCandidateModels = [
+          "llama-3.3-70b-versatile",
+          "llama3-70b-8192",
+          "llama3-8b-8192",
+          "mixtral-8x7b-32768",
+          "gemma2-9b-it"
+        ];
 
-          let found = false;
-          for (const pref of preferredModels) {
-            if (availableModels.includes(pref)) {
-              finalModelName = pref;
-              found = true;
-              break;
-            }
-          }
+        let lastError: any = null;
 
-          // Fallback intelligent : on exclut les modèles de sécurité (guard) ou audio (whisper)
-          if (!found && availableModels.length > 0) {
-            const safeFallback = availableModels.find((m: string) => {
-              const name = m.toLowerCase();
-              const isGenerativeAI = name.includes('llama') || name.includes('mixtral') || name.includes('gemma');
-              const isNotUtility = !name.includes('guard') && !name.includes('whisper') && !name.includes('vision');
-              return isGenerativeAI && isNotUtility;
+        for (const candidateModel of groqCandidateModels) {
+          try {
+            console.log(`[GROQ] Tentative de génération avec le modèle : ${candidateModel}...`);
+            const response = await aiClient.chat.completions.create({
+              model: candidateModel,
+              messages: [
+                { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
+                { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
+              ],
+              response_format: { type: "json_object" },
+              temperature: 0.2,
+              max_tokens: 2500
             });
-            
-            if (safeFallback) {
-              finalModelName = safeFallback;
-            } else {
-              throw new Error("Aucun modèle de génération de texte standard (Llama, Mixtral, Gemma) n'est disponible sur votre compte Groq.");
-            }
-          }
-          console.log(`Modèle Groq dynamique sélectionné : ${finalModelName}`);
-        } catch (e: any) {
-          console.warn("Impossible de lister les modèles Groq ou erreur de sécurité :", e.message);
-        }
-      }
 
-      // Logique de requête pour OpenAI, Groq (avec modèle dynamique), OpenRouter
-      const response = await aiClient.chat.completions.create({
-        model: finalModelName, // 👈 Utilisation du modèle sélectionné dynamiquement
-        messages: [
-          { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
-          { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.2,
-        max_tokens: 2500
-      });
-      responseContent = response.choices[0]?.message?.content || undefined;
+            responseContent = response.choices[0]?.message?.content || undefined;
+            if (responseContent) {
+              console.log(`[GROQ] Succès avec le modèle : ${candidateModel}`);
+              break; // Succès ! On sort de la boucle immédiatement.
+            }
+          } catch (err: any) {
+            console.warn(`[GROQ] Le modèle ${candidateModel} a échoué (${err.message}). Essai du suivant...`);
+            lastError = err;
+          }
+        }
+
+        if (!responseContent) {
+          throw new Error(`Tous les modèles Groq ont échoué. Dernière erreur : ${lastError?.message || "Erreur inconnue"}`);
+        }
+
+      } else {
+        // Mode OpenAI / OpenRouter standard
+        const response = await aiClient.chat.completions.create({
+          model: defaultModel,
+          messages: [
+            { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
+            { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+          max_tokens: 2500
+        });
+        responseContent = response.choices[0]?.message?.content || undefined;
+      }
     }
 
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
@@ -302,7 +292,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 };
 
 export const importCorrectedExcel = async (req: Request, res: Response): Promise<void> => {
-    // Le code de l'import reste identique
     try {
       const file = req.file;
       if (!file) {
