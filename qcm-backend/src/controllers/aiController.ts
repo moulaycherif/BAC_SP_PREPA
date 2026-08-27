@@ -2,7 +2,6 @@ import { Request, Response } from "express";
 import fs from "fs";
 import pdfParse from "pdf-parse";
 import OpenAI from "openai";
-import Cerebras from '@cerebras/cerebras_cloud_sdk'; // 👈 1. Ajout de l'import Cerebras
 import Question from "../models/Question";
 import { jsonrepair } from 'jsonrepair';
 import * as xlsx from 'xlsx';
@@ -20,11 +19,14 @@ interface IAGeneratedData {
 }
 
 // 2. 👈 Typage "any" ajouté ici car Cerebras et OpenAI ont des types stricts légèrement différents
-const getAIClient = (): any => {
+const getAIClient = (): OpenAI => {
   const provider = process.env.AI_PROVIDER;
   switch (provider) {
     case 'CEREBRAS':
-      return new Cerebras({ apiKey: process.env.CEREBRAS_API_KEY }); // 👈 Ajout du cas Cerebras
+      return new OpenAI({
+        apiKey: process.env.CEREBRAS_API_KEY,
+        baseURL: "https://api.cerebras.ai/v1"
+      });
     case 'GROQ':
       return new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: "https://api.groq.com/openai/v1" });
     case 'OPENROUTER':

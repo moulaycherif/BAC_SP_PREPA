@@ -8,6 +8,7 @@
     "start": "npm run build && node dist/server.js"
   },
   "dependencies": {
+    "@cerebras/cerebras_cloud_sdk": "^1.91.0",
     "@google/generative-ai": "^0.24.1",
     "@supabase/supabase-js": "^2.84.0",
     "axios": "^1.14.0",
