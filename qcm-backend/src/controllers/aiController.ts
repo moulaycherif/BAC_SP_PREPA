@@ -171,33 +171,52 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       if (provider === 'GROQ') {
         let groqCandidateModels: string[] = [];
 
-        // Option B : Récupération dynamique des modèles actifs depuis l'API Groq
+        // Récupération dynamique et priorisation intelligente des modèles actifs
         try {
           console.log("[GROQ] Récupération dynamique de la liste des modèles actifs...");
           const modelsList = await aiClient.models.list();
           const availableIds: string[] = modelsList.data.map((m: any) => m.id);
 
-          // Filtrer les modèles pour ne garder que ceux destinés à la génération de texte/chat (exclure whisper, guard, etc.)
-          groqCandidateModels = availableIds.filter((id: string) => {
+          // 1. Filtrer les modèles non adaptés (audio, TTS, guard, vision, embeddings)
+          const filtered = availableIds.filter((id: string) => {
             const lower = id.toLowerCase();
             return !lower.includes('whisper') && 
                    !lower.includes('guard') && 
                    !lower.includes('embed') && 
-                   !lower.includes('vision');
+                   !lower.includes('vision') &&
+                   !lower.includes('orpheus') &&
+                   !lower.includes('audio');
           });
 
-          console.log(`[GROQ] Modèles de génération détectés (${groqCandidateModels.length}) :`, groqCandidateModels);
+          // 2. Prioriser les modèles LLM texte les plus performants et stables
+          const priorityKeywords = [
+            'gpt-oss-120b',
+            'llama-3.3-70b',
+            'llama-3.1-8b',
+            'gpt-oss-20b',
+            'qwen3',
+            'compound-mini'
+          ];
+
+          groqCandidateModels = filtered.sort((a, b) => {
+            const indexA = priorityKeywords.findIndex(kw => a.toLowerCase().includes(kw));
+            const indexB = priorityKeywords.findIndex(kw => b.toLowerCase().includes(kw));
+            return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+          });
+
+          console.log(`[GROQ] Modèles prioritaires détectés (${groqCandidateModels.length}) :`, groqCandidateModels);
         } catch (e: any) {
           console.warn(`[GROQ] Impossible de récupérer la liste dynamique (${e.message}). Utilisation de la liste de secours.`);
         }
 
-        // Si la liste dynamique est vide ou indisponible, on applique une liste de secours à jour
+        // Liste de secours à jour au cas où l'API de liste échoue
         if (groqCandidateModels.length === 0) {
           groqCandidateModels = [
+            "openai/gpt-oss-120b",
             "llama-3.3-70b-versatile",
             "llama-3.1-8b-instant",
-            "openai/gpt-oss-120b",
-            "openai/gpt-oss-20b"
+            "openai/gpt-oss-20b",
+            "groq/compound-mini"
           ];
         }
 
