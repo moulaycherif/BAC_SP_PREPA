@@ -42,10 +42,7 @@ function AdminAIGenerator() {
   
   // 👈 NOUVEAU : Ajout du niveau académique par défaut
   const [level, setLevel] = useState('Baccalauréat Sciences Physiques'); 
-<<<<<<< HEAD
   
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -71,32 +68,20 @@ function AdminAIGenerator() {
         },
         responseType: 'blob',
       });
-<<<<<<< HEAD
-
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       const blob = new Blob([response.data], { 
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       });
       const downloadUrl = window.URL.createObjectURL(blob);
-<<<<<<< HEAD
       
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.setAttribute('download', `Generations_IA_${contentType}_${Date.now()}.xlsx`);
       document.body.appendChild(link);
       link.click();
-<<<<<<< HEAD
       
       link.remove();
       window.URL.revokeObjectURL(downloadUrl);
 
-=======
-      link.remove();
-      window.URL.revokeObjectURL(downloadUrl);
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       alert("Fichier Excel généré avec succès ! Il a été téléchargé sur votre ordinateur. Vous pouvez maintenant le vérifier.");
     } catch (error) {
       console.error("Erreur de génération :", error);
@@ -110,29 +95,17 @@ function AdminAIGenerator() {
   const handleImportCorrectedExcel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!excelFile) return alert("Veuillez sélectionner le fichier Excel corrigé.");
-<<<<<<< HEAD
-
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
     setIsImporting(true);
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("file", excelFile);
-<<<<<<< HEAD
-
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       const response = await axios.post(`${API_BASE_URL}/api/questions/import-ai-excel`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         },
       });
-<<<<<<< HEAD
-
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       alert(`Succès ! ${response.data.count} éléments corrigés ont été enregistrés dans la base de données.`);
       setExcelFile(null);
     } catch (error) {
@@ -144,12 +117,8 @@ function AdminAIGenerator() {
   };
 
   return (
-<<<<<<< HEAD
     <div className="p-8 max-w-4xl mx-auto space-y-12">
       
-=======
-    <div className="p-8 max-w-4xl mx-auto space-y-12">      
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       {/* SECTION 1 : GÉNÉRATION IA (PDF -> EXCEL) */}
       <div className="bg-white p-6 rounded-2xl shadow-md border-t-4 border-indigo-600">
         <h2 className="text-2xl font-bold mb-4 text-indigo-900">
@@ -158,13 +127,9 @@ function AdminAIGenerator() {
         <p className="text-gray-600 text-sm mb-6">
           Sélectionnez un document PDF. L'IA analysera le contenu et vous téléchargera un fichier Excel à relire.
         </p>
-<<<<<<< HEAD
 
         <form onSubmit={handleGenerateExcel} className="space-y-4">
           
-=======
-        <form onSubmit={handleGenerateExcel} className="space-y-4">          
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
           {/* NOUVEAU : Sélecteur de Niveau */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Niveau académique cible :</label>
@@ -179,10 +144,6 @@ function AdminAIGenerator() {
               <option value="1ère Année Baccalauréat">1ère Année Baccalauréat</option>
             </select>
           </div>
-<<<<<<< HEAD
-
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               type="text"
@@ -201,19 +162,11 @@ function AdminAIGenerator() {
               required
             />
           </div>
-<<<<<<< HEAD
-
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <select
               value={contentType}
               onChange={(e) => setContentType(e.target.value)}
-<<<<<<< HEAD
               className="p-3 border rounded-xl w-full bg-white"
-=======
-              className="p-3 border rounded-xl w-full bg-indigo"
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
             >
               <option value="qcm">QCM</option>
               <option value="exercise">Exercice Complexe</option>
@@ -221,10 +174,6 @@ function AdminAIGenerator() {
               <option value="resume">Résumé de cours</option>
               <option value="controle">Contrôle</option>
             </select>
-<<<<<<< HEAD
-
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
             <input
               type="file"
               accept=".pdf"
@@ -233,10 +182,6 @@ function AdminAIGenerator() {
               required
             />
           </div>
-<<<<<<< HEAD
-
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
           <button
             type="submit"
             disabled={isGenerating}
@@ -246,10 +191,6 @@ function AdminAIGenerator() {
           </button>
         </form>
       </div>
-<<<<<<< HEAD
-
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       {/* SECTION 2 : IMPORTATION (EXCEL CORRIGÉ -> BDD) */}
       <div className="bg-white p-6 rounded-2xl shadow-md border-t-4 border-green-600">
         <h2 className="text-2xl font-bold mb-4 text-green-900">
@@ -258,10 +199,6 @@ function AdminAIGenerator() {
         <p className="text-gray-600 text-sm mb-6">
           Une fois vos modifications et corrections terminées dans Excel, importez le fichier ici pour la sauvegarde finale.
         </p>
-<<<<<<< HEAD
-
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
         <form onSubmit={handleImportCorrectedExcel} className="space-y-4">
           <input
             type="file"
@@ -270,10 +207,6 @@ function AdminAIGenerator() {
             className="p-3 border rounded-xl w-full"
             required
           />
-<<<<<<< HEAD
-
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
           <button
             type="submit"
             disabled={isImporting}
@@ -283,10 +216,6 @@ function AdminAIGenerator() {
           </button>
         </form>
       </div>
-<<<<<<< HEAD
-
-=======
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
     </div>
   );
 }
@@ -546,7 +475,6 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Navigation entre les onglets (BOUTONS CORRIGÉS) */}
-<<<<<<< HEAD
       <div className="flex flex-wrap justify-center gap-4 mb-8">
         <button 
           onClick={() => setActiveTab("students")} 
@@ -573,60 +501,6 @@ const AdminDashboard: React.FC = () => {
           📝 Gestion résumés
         </button>
       </div>
-=======
-     <div className="flex flex-wrap justify-center gap-4 mb-8">
-  <button 
-    onClick={() => setActiveTab("students")} 
-    className={`px-4 py-2 rounded transition-colors ${
-      activeTab === "students" 
-        ? "!bg-blue-600 !text-white font-semibold shadow" 
-        : "!bg-blue-900 !text-white hover:!bg-blue-800"
-    }`}
-  >
-    🧑‍🎓 Gestion étudiants
-  </button>
-
-  <button 
-    onClick={() => setActiveTab("import")} 
-    className={`px-4 py-2 rounded transition-colors ${
-      activeTab === "import" 
-        ? "!bg-indigo-600 !text-white font-semibold shadow" 
-        : "!bg-indigo-900 !text-white hover:!bg-indigo-800"
-    }`}
-  >
-    📂 Import Excel
-  </button>
-
-  <button 
-    onClick={() => setActiveTab("ai")} 
-    className={`px-4 py-2 rounded transition-colors ${
-      activeTab === "ai" 
-        ? "!bg-blue-600 !text-white font-semibold shadow" 
-        : "!bg-blue-900 !text-white hover:!bg-blue-800"
-    }`}
-  >
-    🧠 Génération IA
-  </button>
-
-  <button 
-    onClick={() => setActiveTab("summary")} 
-    className={`px-4 py-2 rounded transition-colors ${
-      activeTab === "summary" 
-        ? "!bg-indigo-600 !text-white font-semibold shadow" 
-        : "!bg-indigo-900 !text-white hover:!bg-indigo-800"
-    }`}
-  >
-    📝 Gestion résumés
-  </button>
-
-  <button 
-    onClick={() => navigate('/admin/upload')}
-    className="!bg-blue-600 !text-white px-4 py-2 rounded shadow hover:!bg-blue-700 transition-colors"
-  >
-    📥 Importation Examen (Excel)
-  </button>
-</div>
->>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
 
       {/* ----------- Onglet Étudiants ----------- */}
       {activeTab === "students" && (
