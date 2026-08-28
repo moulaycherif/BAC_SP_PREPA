@@ -33,13 +33,212 @@ interface Exam {
   title: string;
 }
 
+function AdminAIGenerator() {
+  const [pdfFile, setPdfFile] = useState<File | null>(null);
+  const [excelFile, setExcelFile] = useState<File | null>(null);
+  const [subject, setSubject] = useState('');
+  const [chapter, setChapter] = useState('');
+  const [contentType, setContentType] = useState('qcm');
+  
+  // 👈 NOUVEAU : Ajout du niveau académique par défaut
+  const [level, setLevel] = useState('Baccalauréat Sciences Physiques'); 
+  
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  // 📥 1. GÉNÉRATION : Envoie le PDF et télécharge l'Excel
+  const handleGenerateExcel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pdfFile) return alert("Veuillez sélectionner un fichier PDF.");
+
+    setIsGenerating(true);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", pdfFile);
+      formData.append("subject", subject);
+      formData.append("chapter", chapter);
+      formData.append("type", contentType);
+      formData.append("level", level); // 👈 NOUVEAU : On envoie le niveau au backend
+
+      const response = await axios.post(`${API_BASE_URL}/api/questions/generate-from-pdf`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', `Generations_IA_${contentType}_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      alert("Fichier Excel généré avec succès ! Il a été téléchargé sur votre ordinateur. Vous pouvez maintenant le vérifier.");
+    } catch (error) {
+      console.error("Erreur de génération :", error);
+      alert("Une erreur est survenue lors de la génération par l'IA.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  // 📤 2. IMPORTATION : Envoie l'Excel corrigé pour sauvegarde MongoDB
+  const handleImportCorrectedExcel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!excelFile) return alert("Veuillez sélectionner le fichier Excel corrigé.");
+
+    setIsImporting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", excelFile);
+
+      const response = await axios.post(`${API_BASE_URL}/api/questions/import-ai-excel`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      alert(`Succès ! ${response.data.count} éléments corrigés ont été enregistrés dans la base de données.`);
+      setExcelFile(null);
+    } catch (error) {
+      console.error("Erreur d'importation :", error);
+      alert("Erreur lors de l'importation du fichier Excel corrigé.");
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
+  return (
+    <div className="p-8 max-w-4xl mx-auto space-y-12">
+      
+      {/* SECTION 1 : GÉNÉRATION IA (PDF -> EXCEL) */}
+      <div className="bg-white p-6 rounded-2xl shadow-md border-t-4 border-indigo-600">
+        <h2 className="text-2xl font-bold mb-4 text-indigo-900">
+          1️⃣ Étape 1 : Générer les données avec l'IA (.xlsx)
+        </h2>
+        <p className="text-gray-600 text-sm mb-6">
+          Sélectionnez un document PDF. L'IA analysera le contenu et vous téléchargera un fichier Excel à relire.
+        </p>
+
+        <form onSubmit={handleGenerateExcel} className="space-y-4">
+          
+          {/* NOUVEAU : Sélecteur de Niveau */}
+          <div>
+            <label className="block text-sm font-bold text-gray-700 mb-1">Niveau académique cible :</label>
+            <select
+              value={level}
+              onChange={(e) => setLevel(e.target.value)}
+              className="p-3 border rounded-xl w-full bg-indigo-50 font-semibold text-indigo-900"
+            >
+              <option value="Baccalauréat Sciences Physiques">Baccalauréat Sciences Physiques (PC)</option>
+              <option value="Baccalauréat Sciences Mathématiques">Baccalauréat Sciences Mathématiques (SM)</option>
+              <option value="Baccalauréat Sciences de la Vie et de la Terre">Baccalauréat SVT</option>
+              <option value="1ère Année Baccalauréat">1ère Année Baccalauréat</option>
+            </select>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <input
+              type="text"
+              placeholder="Matière (ex: Mathématique)"
+              value={subject}
+              onChange={(e) => setSubject(e.target.value)}
+              className="p-3 border rounded-xl w-full"
+              required
+            />
+            <input
+              type="text"
+              placeholder="Chapitre"
+              value={chapter}
+              onChange={(e) => setChapter(e.target.value)}
+              className="p-3 border rounded-xl w-full"
+              required
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <select
+              value={contentType}
+              onChange={(e) => setContentType(e.target.value)}
+              className="p-3 border rounded-xl w-full bg-white"
+            >
+              <option value="qcm">QCM</option>
+              <option value="exercise">Exercice Complexe</option>
+              <option value="astuce">Astuce / Flashcard</option>
+              <option value="resume">Résumé de cours</option>
+              <option value="controle">Contrôle</option>
+            </select>
+
+            <input
+              type="file"
+              accept=".pdf"
+              onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+              className="p-2 border rounded-xl w-full"
+              required
+            />
+          </div>
+
+          <button
+            type="submit"
+            disabled={isGenerating}
+            className="w-full py-3 bg-indigo-600 text-white font-bold rounded-xl shadow hover:bg-indigo-700 transition disabled:opacity-50"
+          >
+            {isGenerating ? "🤖 Génération du fichier Excel par l'IA..." : "📥 Générer et Télécharger l'Excel"}
+          </button>
+        </form>
+      </div>
+
+      {/* SECTION 2 : IMPORTATION (EXCEL CORRIGÉ -> BDD) */}
+      <div className="bg-white p-6 rounded-2xl shadow-md border-t-4 border-green-600">
+        <h2 className="text-2xl font-bold mb-4 text-green-900">
+          2️⃣ Étape 2 : Importer le fichier Excel vérifié
+        </h2>
+        <p className="text-gray-600 text-sm mb-6">
+          Une fois vos modifications et corrections terminées dans Excel, importez le fichier ici pour la sauvegarde finale.
+        </p>
+
+        <form onSubmit={handleImportCorrectedExcel} className="space-y-4">
+          <input
+            type="file"
+            accept=".xlsx, .xls"
+            onChange={(e) => setExcelFile(e.target.files?.[0] || null)}
+            className="p-3 border rounded-xl w-full"
+            required
+          />
+
+          <button
+            type="submit"
+            disabled={isImporting}
+            className="w-full py-3 bg-green-600 text-white font-bold rounded-xl shadow hover:bg-green-700 transition disabled:opacity-50"
+          >
+            {isImporting ? "💾 Sauvegarde en BDD..." : "📤 Importer le fichier Excel corrigé"}
+          </button>
+        </form>
+      </div>
+
+    </div>
+  );
+}
+
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
   const adminToken = localStorage.getItem("adminToken");
   const itemsPerPage = 10;
 
-  // 👈 NOUVEAU : Ajout de l'onglet "ai" dans le state
   const [activeTab, setActiveTab] = useState<"ai" | "students" | "import" | "summary">("ai");
+  
   // STATE : ÉTUDIANTS
   const [students, setStudents] = useState<Student[]>([]);
   const [name, setName] = useState("");
@@ -65,15 +264,6 @@ const AdminDashboard: React.FC = () => {
   const [generatedPdf, setGeneratedPdf] = useState<string | null>(null);
   const [uploadPdfFile, setUploadPdfFile] = useState<File | null>(null);
   const [creationMode, setCreationMode] = useState<"text" | "upload">("text");
-
-  // On met "ai" par défaut pour que l'onglet s'ouvre en premier
-  // Ajout du State pour le chapitre et mise à jour des types IA
-  const [aiPdfFile, setAiPdfFile] = useState<File | null>(null);
-  const [aiSubject, setAiSubject] = useState("");
-  const [aiChapter, setAiChapter] = useState(""); // NOUVEAU
-  const [aiType, setAiType] = useState<"qcm" | "exercise" | "astuce" | "controle" | "resume">("qcm"); // NOUVEAU
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [aiMessage, setAiMessage] = useState("");
 
   // CHARGEMENT INITIAL (EFFECTS)
   const fetchStudents = async () => {
@@ -210,88 +400,6 @@ const AdminDashboard: React.FC = () => {
     }
   };
 
-  const handleGenerateAI = async () => {
-    if (!aiPdfFile) return setAiMessage("⚠️ Veuillez choisir un fichier PDF.");
-    if (!aiSubject) return setAiMessage("⚠️ Veuillez indiquer la matière.");
-    if (!aiChapter) return setAiMessage("⚠️ Veuillez indiquer le chapitre.");
-    
-    setIsGenerating(true);
-    setAiMessage("⏳ L'IA analyse le PDF et génère le contenu... Cela peut prendre une minute.");
-    
-    const formData = new FormData();
-    formData.append("file", aiPdfFile);
-    formData.append("subject", aiSubject);
-    formData.append("chapter", aiChapter); // Ajout du chapitre pour le backend
-    formData.append("type", aiType);
-
-    const endpoint = `${API_BASE_URL}/api/questions/generate-from-pdf`;
-      
-    try {
-      const res = await axios.post(endpoint, formData, { 
-        headers: { "Content-Type": "multipart/form-data", Authorization: `Bearer ${adminToken}` } 
-      });
-      
-      setAiMessage(`✅ Succès : ${res.data.count} éléments générés et sauvegardés pour le chapitre "${aiChapter}" !`);
-      setAiPdfFile(null);
-      setAiSubject("");
-      setAiChapter("");
-    } catch (error: any) {
-      setAiMessage(`❌ Erreur : ${error.response?.data?.message || "Échec de la génération IA"}`);
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-
-// ... (Dans le rendu JSX (return), mettez à jour la partie de l'onglet IA)
-
-      {/* ----------- ONGLET : Génération IA ----------- */}
-      {activeTab === "ai" && (
-        <div className="bg-white p-6 rounded shadow border border-indigo-200">
-          <h2 className="text-2xl font-bold mb-4 text-indigo-800">🤖 Générer du contenu avec l'IA</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            Fournissez un cours au format PDF. L'IA l'analysera et extraira automatiquement le contenu ciblé.
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Matière ciblée :</label>
-              <input 
-                type="text" 
-                placeholder="Ex: SVT, Maths..." 
-                value={aiSubject} 
-                onChange={(e) => setAiSubject(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 outline-none"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Format souhaité :</label>
-              <select 
-                value={aiType} 
-                onChange={(e) => setAiType(e.target.value as any)}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 outline-none bg-white"
-              >
-                <option value="qcm">QCM Classiques</option>
-                <option value="exercise">Exercices Pratiques + Corrigés</option>
-                <option value="flashcard">Flashcards de révision</option>
-                <option value="astuce">Astuces & Méthodologie</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="mb-6 p-6 border-2 border-dashed border-indigo-300 rounded-lg bg-indigo-50/30 text-center">
-            <label className="block text-sm font-semibold text-indigo-700 mb-2">📄 Fichier Cours (.pdf)</label>
-            <input type="file" accept=".pdf" onChange={e => setAiPdfFile(e.target.files?.[0] || null)} className="mx-auto block text-sm text-gray-500" />
-          </div>
-
-          <button onClick={handleGenerateAI} disabled={isGenerating} className={`w-full text-white px-6 py-3 rounded-xl font-bold shadow ${isGenerating ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-700 transition-colors'}`}>
-            {isGenerating ? "🧠 Analyse en cours... (Veuillez patienter)" : `✨ Lancer la génération`}
-          </button>
-
-          {aiMessage && <p className={`mt-4 font-semibold p-3 rounded border ${aiMessage.includes('❌') ? 'bg-red-50 text-red-700 border-red-200' : 'bg-indigo-50 text-indigo-700 border-indigo-200'}`}>{aiMessage}</p>}
-        </div>
-      )}
-
   const totalPages = Math.ceil(details.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const currentItems = details.slice(startIndex, startIndex + itemsPerPage);
@@ -378,11 +486,11 @@ const AdminDashboard: React.FC = () => {
         </button>
       </div>
 
-      {/* Navigation entre les onglets */}
-        <div className="flex flex-wrap justify-center gap-4 mb-8">
+      {/* Navigation entre les onglets (BOUTONS CORRIGÉS) */}
+      <div className="flex flex-wrap justify-center gap-4 mb-8">
         <button 
-          onClick={() => setActiveTab("ai")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "ai" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+          onClick={() => setActiveTab("students")} 
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "students" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
         >
           🧑‍🎓 Gestion étudiants
         </button>
@@ -392,7 +500,6 @@ const AdminDashboard: React.FC = () => {
         >
           📂 Import Excel
         </button>
-        {/* 👈 NOUVEL ONGLET : Génération IA */}
         <button 
           onClick={() => setActiveTab("ai")} 
           className={`px-4 py-2 rounded transition-colors ${activeTab === "ai" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
@@ -400,8 +507,8 @@ const AdminDashboard: React.FC = () => {
           🧠 Génération IA
         </button>
         <button 
-          onClick={() => setActiveTab("students")} 
-          className={`px-4 py-2 rounded transition-colors ${activeTab === "students" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+          onClick={() => setActiveTab("summary")} 
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "summary" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
         >
           📝 Gestion résumés
         </button>
@@ -641,58 +748,7 @@ const AdminDashboard: React.FC = () => {
 
       {/* ----------- NOUVEL ONGLET : Génération IA ----------- */}
       {activeTab === "ai" && (
-        <div className="bg-white p-6 rounded shadow border border-indigo-200">
-          <h2 className="text-2xl font-bold mb-4 text-indigo-800">🤖 Générer du contenu par Chapitre</h2>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Matière :</label>
-              <input 
-                type="text" 
-                placeholder="Ex: Mathématiques" 
-                value={aiSubject} 
-                onChange={(e) => setAiSubject(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Chapitre :</label>
-              <input 
-                type="text" 
-                placeholder="Ex: Les Nombres Complexes" 
-                value={aiChapter} 
-                onChange={(e) => setAiChapter(e.target.value)}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-1">Type de contenu :</label>
-              <select 
-                value={aiType} 
-                onChange={(e) => setAiType(e.target.value as any)}
-                className="w-full p-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-400 bg-white"
-              >
-                <option value="qcm">QCM</option>
-                <option value="exercise">Exercices</option>
-                <option value="astuce">Astuces</option>
-                <option value="resume">Résumés ou Fiches</option>
-                <option value="controle">Contrôles</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="mb-6 p-6 border-2 border-dashed border-indigo-300 rounded-lg bg-indigo-50/30 text-center">
-            <input type="file" accept=".pdf" onChange={e => setAiPdfFile(e.target.files?.[0] || null)} className="mx-auto block text-sm text-gray-500" />
-          </div>
-
-          <button onClick={handleGenerateAI} disabled={isGenerating} className={`w-full text-white px-6 py-3 rounded-xl font-bold shadow ${isGenerating ? 'bg-indigo-400' : 'bg-indigo-600 hover:bg-indigo-700'}`}>
-            {isGenerating ? "🧠 Analyse en cours..." : "✨ Générer le contenu"}
-          </button>
-
-          {aiMessage && <p className="mt-4 font-semibold p-3 rounded border bg-indigo-50 text-indigo-700 border-indigo-200">{aiMessage}</p>}
-        </div>
+        <AdminAIGenerator />
       )}
 
       {/* ----------- Onglet Summary ----------- */}
