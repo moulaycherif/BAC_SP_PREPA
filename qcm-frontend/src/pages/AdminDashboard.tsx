@@ -42,7 +42,10 @@ function AdminAIGenerator() {
   
   // 👈 NOUVEAU : Ajout du niveau académique par défaut
   const [level, setLevel] = useState('Baccalauréat Sciences Physiques'); 
+<<<<<<< HEAD
   
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -68,21 +71,32 @@ function AdminAIGenerator() {
         },
         responseType: 'blob',
       });
+<<<<<<< HEAD
 
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       const blob = new Blob([response.data], { 
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       });
       const downloadUrl = window.URL.createObjectURL(blob);
+<<<<<<< HEAD
       
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.setAttribute('download', `Generations_IA_${contentType}_${Date.now()}.xlsx`);
       document.body.appendChild(link);
       link.click();
+<<<<<<< HEAD
       
       link.remove();
       window.URL.revokeObjectURL(downloadUrl);
 
+=======
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       alert("Fichier Excel généré avec succès ! Il a été téléchargé sur votre ordinateur. Vous pouvez maintenant le vérifier.");
     } catch (error) {
       console.error("Erreur de génération :", error);
@@ -96,20 +110,29 @@ function AdminAIGenerator() {
   const handleImportCorrectedExcel = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!excelFile) return alert("Veuillez sélectionner le fichier Excel corrigé.");
+<<<<<<< HEAD
 
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
     setIsImporting(true);
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
       formData.append("file", excelFile);
+<<<<<<< HEAD
 
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       const response = await axios.post(`${API_BASE_URL}/api/questions/import-ai-excel`, formData, {
         headers: {
           Authorization: `Bearer ${token}`,
           "Content-Type": "multipart/form-data",
         },
       });
+<<<<<<< HEAD
 
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       alert(`Succès ! ${response.data.count} éléments corrigés ont été enregistrés dans la base de données.`);
       setExcelFile(null);
     } catch (error) {
@@ -121,8 +144,12 @@ function AdminAIGenerator() {
   };
 
   return (
+<<<<<<< HEAD
     <div className="p-8 max-w-4xl mx-auto space-y-12">
       
+=======
+    <div className="p-8 max-w-4xl mx-auto space-y-12">      
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       {/* SECTION 1 : GÉNÉRATION IA (PDF -> EXCEL) */}
       <div className="bg-white p-6 rounded-2xl shadow-md border-t-4 border-indigo-600">
         <h2 className="text-2xl font-bold mb-4 text-indigo-900">
@@ -131,9 +158,13 @@ function AdminAIGenerator() {
         <p className="text-gray-600 text-sm mb-6">
           Sélectionnez un document PDF. L'IA analysera le contenu et vous téléchargera un fichier Excel à relire.
         </p>
+<<<<<<< HEAD
 
         <form onSubmit={handleGenerateExcel} className="space-y-4">
           
+=======
+        <form onSubmit={handleGenerateExcel} className="space-y-4">          
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
           {/* NOUVEAU : Sélecteur de Niveau */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Niveau académique cible :</label>
@@ -148,7 +179,10 @@ function AdminAIGenerator() {
               <option value="1ère Année Baccalauréat">1ère Année Baccalauréat</option>
             </select>
           </div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <input
               type="text"
@@ -167,12 +201,19 @@ function AdminAIGenerator() {
               required
             />
           </div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <select
               value={contentType}
               onChange={(e) => setContentType(e.target.value)}
+<<<<<<< HEAD
               className="p-3 border rounded-xl w-full bg-white"
+=======
+              className="p-3 border rounded-xl w-full bg-indigo"
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
             >
               <option value="qcm">QCM</option>
               <option value="exercise">Exercice Complexe</option>
@@ -180,7 +221,10 @@ function AdminAIGenerator() {
               <option value="resume">Résumé de cours</option>
               <option value="controle">Contrôle</option>
             </select>
+<<<<<<< HEAD
 
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
             <input
               type="file"
               accept=".pdf"
@@ -189,7 +233,10 @@ function AdminAIGenerator() {
               required
             />
           </div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
           <button
             type="submit"
             disabled={isGenerating}
@@ -199,7 +246,10 @@ function AdminAIGenerator() {
           </button>
         </form>
       </div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
       {/* SECTION 2 : IMPORTATION (EXCEL CORRIGÉ -> BDD) */}
       <div className="bg-white p-6 rounded-2xl shadow-md border-t-4 border-green-600">
         <h2 className="text-2xl font-bold mb-4 text-green-900">
@@ -208,7 +258,10 @@ function AdminAIGenerator() {
         <p className="text-gray-600 text-sm mb-6">
           Une fois vos modifications et corrections terminées dans Excel, importez le fichier ici pour la sauvegarde finale.
         </p>
+<<<<<<< HEAD
 
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
         <form onSubmit={handleImportCorrectedExcel} className="space-y-4">
           <input
             type="file"
@@ -217,7 +270,10 @@ function AdminAIGenerator() {
             className="p-3 border rounded-xl w-full"
             required
           />
+<<<<<<< HEAD
 
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
           <button
             type="submit"
             disabled={isImporting}
@@ -227,7 +283,10 @@ function AdminAIGenerator() {
           </button>
         </form>
       </div>
+<<<<<<< HEAD
 
+=======
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
     </div>
   );
 }
@@ -487,6 +546,7 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Navigation entre les onglets (BOUTONS CORRIGÉS) */}
+<<<<<<< HEAD
       <div className="flex flex-wrap justify-center gap-4 mb-8">
         <button 
           onClick={() => setActiveTab("students")} 
@@ -513,6 +573,60 @@ const AdminDashboard: React.FC = () => {
           📝 Gestion résumés
         </button>
       </div>
+=======
+     <div className="flex flex-wrap justify-center gap-4 mb-8">
+  <button 
+    onClick={() => setActiveTab("students")} 
+    className={`px-4 py-2 rounded transition-colors ${
+      activeTab === "students" 
+        ? "!bg-blue-600 !text-white font-semibold shadow" 
+        : "!bg-blue-900 !text-white hover:!bg-blue-800"
+    }`}
+  >
+    🧑‍🎓 Gestion étudiants
+  </button>
+
+  <button 
+    onClick={() => setActiveTab("import")} 
+    className={`px-4 py-2 rounded transition-colors ${
+      activeTab === "import" 
+        ? "!bg-indigo-600 !text-white font-semibold shadow" 
+        : "!bg-indigo-900 !text-white hover:!bg-indigo-800"
+    }`}
+  >
+    📂 Import Excel
+  </button>
+
+  <button 
+    onClick={() => setActiveTab("ai")} 
+    className={`px-4 py-2 rounded transition-colors ${
+      activeTab === "ai" 
+        ? "!bg-blue-600 !text-white font-semibold shadow" 
+        : "!bg-blue-900 !text-white hover:!bg-blue-800"
+    }`}
+  >
+    🧠 Génération IA
+  </button>
+
+  <button 
+    onClick={() => setActiveTab("summary")} 
+    className={`px-4 py-2 rounded transition-colors ${
+      activeTab === "summary" 
+        ? "!bg-indigo-600 !text-white font-semibold shadow" 
+        : "!bg-indigo-900 !text-white hover:!bg-indigo-800"
+    }`}
+  >
+    📝 Gestion résumés
+  </button>
+
+  <button 
+    onClick={() => navigate('/admin/upload')}
+    className="!bg-blue-600 !text-white px-4 py-2 rounded shadow hover:!bg-blue-700 transition-colors"
+  >
+    📥 Importation Examen (Excel)
+  </button>
+</div>
+>>>>>>> abb3a1d748097daf122089a9cf4749aa4aec83bd
 
       {/* ----------- Onglet Étudiants ----------- */}
       {activeTab === "students" && (
@@ -753,63 +867,65 @@ const AdminDashboard: React.FC = () => {
 
       {/* ----------- Onglet Summary ----------- */}
       {activeTab === "summary" && (
-        <div className="bg-white p-6 rounded shadow">
-          <h2 className="text-2xl font-bold mb-6">📝 Gestion des résumés</h2>
+        <div className="bg-white p-8 rounded-xl shadow-md border border-gray-200">
+          <h2 className="text-3xl font-extrabold mb-6 text-gray-900">📝 Gestion des résumés</h2>
 
           <SummaryList />
 
-          <hr className="my-8 border-gray-200" />
+          <hr className="my-8 border-gray-300" />
 
-          <h3 className="text-xl font-bold mb-6 text-indigo-700">➕ Créer ou Importer un résumé PDF</h3>
+          <h3 className="text-xl font-bold mb-6 text-indigo-900 bg-indigo-50 p-4 rounded-lg border border-indigo-100">
+            ➕ Créer ou Importer un résumé PDF
+          </h3>
 
-          <div className="mb-6 flex flex-wrap gap-6 bg-gray-50 p-4 rounded-lg">
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" className="w-4 h-4 text-indigo-600" checked={creationMode === "text"} onChange={() => setCreationMode("text")} /> 
-              <span className="font-medium">Saisir du contenu (Générer PDF)</span>
+          <div className="mb-6 flex flex-wrap gap-6 bg-slate-100 p-5 rounded-xl border border-slate-200 shadow-inner">
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input type="radio" className="w-5 h-5 text-indigo-600 focus:ring-indigo-500" checked={creationMode === "text"} onChange={() => setCreationMode("text")} /> 
+              <span className="font-bold text-slate-800">Saisir du contenu (Générer PDF)</span>
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="radio" className="w-4 h-4 text-indigo-600" checked={creationMode === "upload"} onChange={() => setCreationMode("upload")} /> 
-              <span className="font-medium">Importer un fichier PDF existant</span>
+            <label className="flex items-center gap-3 cursor-pointer">
+              <input type="radio" className="w-5 h-5 text-indigo-600 focus:ring-indigo-500" checked={creationMode === "upload"} onChange={() => setCreationMode("upload")} /> 
+              <span className="font-bold text-slate-800">Importer un fichier PDF existant</span>
             </label>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
             <div>
-              <label className="font-semibold block mb-1">Matière :</label>
-              <input type="text" placeholder="Ex: Mathématiques" className="border px-3 py-2 rounded w-full" value={subject} onChange={(e) => setSubject(e.target.value)} />
+              <label className="font-bold text-gray-800 block mb-2">Matière :</label>
+              <input type="text" placeholder="Ex: Mathématiques" className="border-2 border-gray-300 px-4 py-3 rounded-lg w-full text-gray-900 bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-colors" value={subject} onChange={(e) => setSubject(e.target.value)} />
             </div>
             <div>
-              <label className="font-semibold block mb-1">Chapitre :</label>
-              <input type="text" placeholder="Ex: Les Nombres Complexes" className="border px-3 py-2 rounded w-full" value={chapter} onChange={(e) => setChapter(e.target.value)} />
+              <label className="font-bold text-gray-800 block mb-2">Chapitre :</label>
+              <input type="text" placeholder="Ex: Les Nombres Complexes" className="border-2 border-gray-300 px-4 py-3 rounded-lg w-full text-gray-900 bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none transition-colors" value={chapter} onChange={(e) => setChapter(e.target.value)} />
             </div>
           </div>
 
           {creationMode === "text" && (
             <div className="mt-4">
-              <label className="font-semibold block mb-2">Contenu du résumé :</label>
-              <textarea placeholder="Rédigez le résumé ici..." className="border w-full h-64 p-4 rounded-lg focus:ring-2 focus:ring-indigo-200 outline-none resize-y" value={resumeContent} onChange={(e) => setResumeContent(e.target.value)} />
-              <button onClick={createResumeFromText} className="bg-green-600 text-white px-6 py-2 rounded mt-4 hover:bg-green-700 font-semibold shadow flex items-center gap-2">
+              <label className="font-bold text-gray-800 block mb-2">Contenu du résumé :</label>
+              <textarea placeholder="Rédigez le résumé ici..." className="border-2 border-gray-300 w-full h-64 p-5 rounded-lg text-gray-900 bg-gray-50 focus:bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none resize-y shadow-inner transition-colors" value={resumeContent} onChange={(e) => setResumeContent(e.target.value)} />
+              <button onClick={createResumeFromText} className="bg-green-600 text-white px-6 py-3 rounded-lg mt-4 hover:bg-green-700 font-bold shadow-md flex items-center gap-2 transition-transform transform hover:-translate-y-0.5">
                 📄 Générer le PDF
               </button>
             </div>
           )}
 
           {creationMode === "upload" && (
-            <div className="mt-4 border-2 border-dashed border-gray-300 p-8 rounded-lg text-center bg-gray-50">
-              <input type="file" accept="application/pdf" onChange={(e) => setUploadPdfFile(e.target.files?.[0] || null)} className="mx-auto block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 mb-4" />
-              <button onClick={createResumeFromUpload} className="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 font-semibold shadow inline-flex items-center gap-2">
+            <div className="mt-4 border-2 border-dashed border-indigo-300 p-8 rounded-xl text-center bg-indigo-50/50 hover:bg-indigo-50 transition-colors">
+              <input type="file" accept="application/pdf" onChange={(e) => setUploadPdfFile(e.target.files?.[0] || null)} className="mx-auto block text-sm text-gray-700 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-bold file:bg-indigo-100 file:text-indigo-800 hover:file:bg-indigo-200 mb-6 cursor-pointer" />
+              <button onClick={createResumeFromUpload} className="bg-indigo-600 text-white px-8 py-3 rounded-lg hover:bg-indigo-700 font-bold shadow-md inline-flex items-center gap-2 transition-transform transform hover:-translate-y-0.5">
                 📤 Uploader le PDF
               </button>
             </div>
           )}
 
           {generatedPdf && (
-            <div className="mt-6 p-4 bg-green-50 border border-green-200 rounded flex gap-6 items-center">
-              <span className="text-green-800 font-medium">✅ Document prêt :</span>
-              <a href={generatedPdf} target="_blank" rel="noreferrer" className="text-blue-600 hover:text-blue-800 underline font-medium">
+            <div className="mt-8 p-5 bg-green-50 border-l-4 border-green-500 rounded-r-lg shadow-sm flex gap-6 items-center">
+              <span className="text-green-900 font-bold text-lg">✅ Document prêt :</span>
+              <a href={generatedPdf} target="_blank" rel="noreferrer" className="text-blue-700 hover:text-blue-900 underline font-bold flex items-center gap-1">
                 👁️ Ouvrir le PDF
               </a>
-              <a href={generatedPdf} download className="text-green-600 hover:text-green-800 underline font-medium">
+              <a href={generatedPdf} download className="text-green-700 hover:text-green-900 underline font-bold flex items-center gap-1">
                 📥 Télécharger
               </a>
             </div>

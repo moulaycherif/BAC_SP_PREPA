@@ -10,11 +10,13 @@ import concoursImg from "../assets/CONCOURS.jfif";
 import mathsImg from "../assets/MATHS.jfif";
 import physiqueImg from "../assets/PHYSIQUE.jfif";
 import chimieImg from "../assets/CHIMIE.jfif";
+import physique_chimieImg from "../assets/PHYSIQUE-CHIMIE.jpg";
 import svtImg from "../assets/SVT.jfif";
 import bgImage from "/Image3.jfif";
 import StudentDashboardStats from "../components/stats/StudentDashboardStats";
 import StudentAstuceDetail from "./StudentAstuceDetail";
 import PdfViewer from "../components/PdfViewer";
+import React from 'react';
 
 // Indispensable pour l'interprétation globale
 (window as any).katex = katex;
@@ -66,21 +68,40 @@ interface Question {
           "Chapitre IX : Calcul intégral",
           "Chapitre X : Equations différentielles",
           "Chapitre XI : Produit scalaire et produit vectoriel dans l'espace",
-          "Chapitre XII : Dénombrement et probabilités",
+          "Chapitre XII : Dénombrement et probabilités"
         ],
         Physique: [
-          "Chapitre I : Les ondes",
-          "Chapitre II : Nucléaire",
-          "Chapitre III : Electricité",
-          "Chapitre IV : Lois de Newton & Théorème d'énergie cinétique",
-          "Chapitre V : Système oscillant & Pendule élastique",
+          "CHAPITRE 1 : Ondes mécaniques progressives",
+          "CHAPITRE 2 : Ondes mécaniques progressives périodiques",
+          "CHAPITRE 3 : Propagation d’une onde lumineuse",
+          "CHAPITRE 4 : Décroissance radioactive",
+          "CHAPITRE 5 : Noyaux, masse et énergie",
+          "CHAPITRE 6 : Dipôle RC",
+          "CHAPITRE 7 : Dipôle RL",
+          "CHAPITRE 8 : Oscillations libres d'un circuit RLC série",
+          "CHAPITRE 9 : Ondes électromagnétiques",
+          "CHAPITRE 10 : Modulation d'amplitude",
+          "CHAPITRE 11 : Lois de Newton",
+          "CHAPITRE 12 : Chute verticale d'un corps solide",
+          "CHAPITRE 13 : Mouvements plans",
+          "CHAPITRE 14 : Mouvement des satellites et des planètes",
+          "CHAPITRE 15 : Mouvement de rotation d’un solide autour d’un axe fixe",
+          "CHAPITRE 16 : Système mécanique oscillant",
+          "CHAPITRE 17 : Aspects énergétiques",
+          "CHAPITRE 18 : Atome et mécanique de Newton"
         ],
         Chimie: [
-          "Chapitre I : Chimie des solutions",
-          "Chapitre II : Cinétique chimique",
-          "Chapitre III : Les piles",
-          "Chapitre IV : Chimie organique",
-        ],
+          "Chapitre 1 : Transformations lentes et transformations rapides",
+          "Chapitre 2 : Suivi temporel d'une transformation chimique - Vitesse de réaction",
+          "Chapitre 3 : Transformations chimiques s'effectuant dans les 2 sens",
+          "Chapitre 4 : État d'équilibre d'un système chimique",
+          "Chapitre 5 : Transformations associées à des réactions acido-basiques en solution aqueuse",
+          "Chapitre 6 : Évolution spontanée d'un système chimique",
+          "Chapitre 7 : Transformations spontanées dans les piles et production d'énergie",
+          "Chapitre 8 : Transformations forcées (Électrolyse)",
+          "Chapitre 9 : Réactions d'estérification et d'hydrolyse",
+          "Chapitre 10 : Contrôle de l'évolution d'un système chimique"
+          ],
         SVT: [
           "Chapitre 1 : Les réactions responsables de la libération de l'énergie emmagasinée dans la matière organique",
           "Chapitre 2 : Rôle du muscle strié squelettique dans la conversion de l'énergie",
@@ -178,8 +199,7 @@ const getAccessibleSubjects = () => {
 
   if (safeOptions.includes("MATH")) subjects.push("Mathématique");
   if (safeOptions.includes("PC")) {
-    subjects.push("Physique");
-    subjects.push("Chimie");
+    subjects.push("Physique-Chimie");
   }
   if (safeOptions.includes("SVT")) subjects.push("SVT");
   
@@ -629,7 +649,6 @@ const Flashcard = ({ title, content }: { title: string, content: string }) => {
 if (section === "home" && !selectedAction) {
       const accessibleSubjects = getAccessibleSubjects();
 
-      // 🛡️ NOUVELLE SÉCURITÉ : Si aucune matière n'est trouvée
       if (accessibleSubjects.length === 0) {
         return (
           <div className="flex flex-col items-center justify-center h-full p-6 text-center">
@@ -645,120 +664,138 @@ if (section === "home" && !selectedAction) {
         );
       }
 
+      // Fonction utilitaire pour rendre un chapitre (Accordéon)
+      const renderChapterAccordion = (chapter: string, matiereAPI: string, matiereAffichage: string) => {
+        const isExpanded = selectedChapter === chapter && selectedMatiere === matiereAPI;
+        return (
+          <div key={`${matiereAPI}-${chapter}`} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-4">
+            <button
+              onClick={() => {
+                setSelectedMatiere(matiereAPI); // Important pour que l'API cherche la bonne matière (Physique ou Chimie)
+                setSelectedChapter(isExpanded ? null : chapter);
+                setSelectedAction(null); 
+              }}
+              className={`w-full text-left p-5 text-lg font-semibold transition-colors flex justify-between items-center ${
+                isExpanded ? "bg-blue-800 text-white" : "bg-white hover:bg-gray-50 text-gray-800"
+              }`}
+            >
+              <span className={chapter === "Toute l'épreuve" ? "text-purple-300 font-extrabold flex items-center gap-2" : ""}>
+                {chapter === "Toute l'épreuve" && "🏆 "} {chapter}
+              </span>
+              <span className="text-xl">{isExpanded ? "🔽" : "▶️"}</span>
+            </button>
+
+            {isExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="flex flex-wrap gap-4 p-5 bg-blue-50 border-t-2 border-blue-100"
+              >
+                <button onClick={() => setSelectedAction("Exercises")} className="flex-1 min-w-[200px] bg-white border border-blue-200 text-blue-800 px-4 py-3 rounded-xl shadow hover:bg-blue-100 hover:border-blue-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">📝</span> QCM & Exercices
+                </button>
+                <button onClick={() => setSelectedAction("Astuces")} className="flex-1 min-w-[200px] bg-white border border-yellow-200 text-yellow-700 px-4 py-3 rounded-xl shadow hover:bg-yellow-50 hover:border-yellow-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">💡</span> Astuces
+                </button>
+                <button onClick={() => setSelectedAction("Résumé")} className="flex-1 min-w-[200px] bg-white border border-green-200 text-green-700 px-4 py-3 rounded-xl shadow hover:bg-green-50 hover:border-green-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">📄</span> Fiches ou Résumés
+                </button>
+                <button onClick={() => setSelectedAction("Controles")} className="flex-1 min-w-[200px] bg-white border border-purple-200 text-purple-700 px-4 py-3 rounded-xl shadow hover:bg-purple-50 hover:border-purple-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">✍️</span> Contrôles
+                </button>
+              </motion.div>
+            )}
+          </div>
+        );
+      };
+
       return (
         <div className="p-6 space-y-12 h-full overflow-y-auto">
           {accessibleSubjects.map((matiere) => (
             <div key={matiere} className="bg-white rounded-3xl shadow-xl p-8 border-t-8 border-blue-800">
               
-              {/* 1. Titre de la Matière */}
               <h2 className="text-4xl font-extrabold text-blue-900 mb-8 border-b-2 border-gray-100 pb-4 text-center uppercase tracking-wide">
                 {matiere}
               </h2>
                   
-              {/* 2. Boutons Globaux (Haut) */}
-              <div className="flex justify-center gap-6 mb-10">
-                <button className="px-8 py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg hover:bg-red-700 hover:-translate-y-1 transition transform flex items-center gap-3">
-                  <span className="text-2xl animate-pulse">🔴</span>
-                  <span className="text-lg">LIVE</span>
-                </button>
-
+              {/* Boutons Globaux (Haut) - Extrême Gauche et Extrême Droite */}
+              <div className="flex justify-between items-center mb-10 w-full">
                 <button className="px-8 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg hover:bg-blue-700 hover:-translate-y-1 transition transform flex items-center gap-3">
                   <span className="text-2xl">▶️</span>
                   <span className="text-lg">Vidéos enregistrées</span>
                 </button>
+                
+                <button className="px-8 py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg hover:bg-red-700 hover:-translate-y-1 transition transform flex items-center gap-3">
+                  <span className="text-2xl animate-pulse">🔴</span>
+                  <span className="text-lg">LIVE</span>
+                </button>
               </div>
 
-              {/* 3. Liste des Chapitres (Mode Accordéon) */}
-              <div className="bg-gray-50 rounded-2xl shadow-inner p-6 mb-10 border border-gray-200">
-                <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
-                  <span>📚</span> Programme de l'année
-                </h3>
-                
-                <div className="flex flex-col gap-4">
-                  {chaptersBySubject[matiere]?.map((chapter, index) => {
-                    // Vérifie si ce chapitre est celui cliqué par l'étudiant
-                    const isExpanded = selectedChapter === chapter && selectedMatiere === matiere;
-
-                    return (
-                      <div key={index} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                        <button
-                          onClick={() => {
-                            setSelectedMatiere(matiere);
-                            // Si on clique sur le chapitre déjà ouvert, on le referme (null), sinon on l'ouvre
-                            setSelectedChapter(isExpanded ? null : chapter);
-                            // On réinitialise l'action pour ne pas charger directement un contenu
-                            setSelectedAction(null); 
-                          }}
-                          className={`w-full text-left p-5 text-lg font-semibold transition-colors flex justify-between items-center ${
-                            isExpanded
-                              ? "bg-blue-800 text-white"
-                              : "bg-white hover:bg-gray-50 text-gray-800"
-                          }`}
-                        >
-                          <span>{chapter}</span>
-                          <span className="text-xl">{isExpanded ? "🔽" : "▶️"}</span>
-                        </button>
-
-                        {/* 4. SOUS-MENU : Les boutons de contenu (Visibles si le chapitre est cliqué) */}
-                        {isExpanded && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            className="flex flex-wrap gap-4 p-5 bg-blue-50 border-t-2 border-blue-100"
-                          >
-                            <button 
-                              onClick={() => setSelectedAction("Exercises")} 
-                              className="flex-1 min-w-[200px] bg-white border border-blue-200 text-blue-800 px-4 py-3 rounded-xl shadow hover:bg-blue-100 hover:border-blue-400 font-bold transition flex flex-col items-center gap-2"
-                            >
-                              <span className="text-2xl">📝</span> QCM & Exercices
-                            </button>
-                            
-                            <button 
-                              onClick={() => setSelectedAction("Astuces")} 
-                              className="flex-1 min-w-[200px] bg-white border border-yellow-200 text-yellow-700 px-4 py-3 rounded-xl shadow hover:bg-yellow-50 hover:border-yellow-400 font-bold transition flex flex-col items-center gap-2"
-                            >
-                              <span className="text-2xl">💡</span> Astuces
-                            </button>
-                            
-                            <button 
-                              onClick={() => setSelectedAction("Résumé")} 
-                              className="flex-1 min-w-[200px] bg-white border border-green-200 text-green-700 px-4 py-3 rounded-xl shadow hover:bg-green-50 hover:border-green-400 font-bold transition flex flex-col items-center gap-2"
-                            >
-                              <span className="text-2xl">📄</span> Fiches ou Résumés
-                            </button>
-                            
-                            <button 
-                              onClick={() => setSelectedAction("Controles")} 
-                              className="flex-1 min-w-[200px] bg-white border border-purple-200 text-purple-700 px-4 py-3 rounded-xl shadow hover:bg-purple-50 hover:border-purple-400 font-bold transition flex flex-col items-center gap-2"
-                            >
-                              <span className="text-2xl">✍️</span> Contrôles
-                            </button>
-                          </motion.div>
-                        )}
+             {/* Contenu principal de la matière */}
+              {matiere === "Physique-Chimie" ? (
+                /* --- DISPOSITION SPÉCIFIQUE PHYSIQUE-CHIMIE (2 COLONNES) --- */
+                <> {/* <-- Ajout du Fragment React ici */}
+                  <h2 className="text-center text-2xl font-bold mb-6 text-gray-800">
+                    📚 Programme de l'année
+                  </h2>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+                    {/* Colonne Gauche : CHIMIE */}
+                    <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
+                      <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <span>🧪</span> Chimie
+                      </h3>
+                      <div className="flex flex-col">
+                        {chaptersBySubject["Chimie"]?.map((chapter) => renderChapterAccordion(chapter, "Chimie", matiere))}
                       </div>
-                    );
-                  })}
+                    </div>
+                    
+                    {/* Colonne Droite : PHYSIQUE */}
+                    <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
+                      <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <span>⚡</span> Physique
+                      </h3>
+                      <div className="flex flex-col">
+                        {chaptersBySubject["Physique"]?.map((chapter) => renderChapterAccordion(chapter, "Physique", matiere))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* --- DISPOSITION STANDARD (1 COLONNE) --- */
+                <div className="bg-gray-50 rounded-2xl shadow-inner p-6 mb-10 border border-gray-200 w-full max-w-4xl mx-auto">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2 justify-center">
+                    <span>📚</span> Programme de l'année
+                  </h3>
+                  <div className="flex flex-col">
+                    {chaptersBySubject[matiere]?.map((chapter) => renderChapterAccordion(chapter, matiere, matiere))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              {/* 5. Boutons Globaux (Bas) */}
-              <div className="flex justify-center gap-6 mt-6 border-t-2 border-gray-100 pt-8">
-                <button 
-                  onClick={() => setSection("blancs")}
-                  className="px-8 py-4 bg-gray-800 text-white font-bold rounded-2xl shadow-lg hover:bg-gray-900 transition hover:-translate-y-1 flex items-center gap-3"
-                >
-                  <span className="text-2xl">📚</span>
-                  <span className="text-lg">Contrôles & Examens blancs</span>
-                </button>
-                
-                <button 
-                  onClick={() => setSection("concours")}
-                  className="px-8 py-4 bg-green-700 text-white font-bold rounded-2xl shadow-lg hover:bg-green-800 transition hover:-translate-y-1 flex items-center gap-3"
-                >
-                  <span className="text-2xl">🎓</span>
-                  <span className="text-lg">Examens nationaux</span>
-                </button>
-              </div>
+              {/* Boutons Globaux (Bas) - Section des Examens */}
+              <div className="flex flex-col items-center mt-10 border-t-2 border-gray-100 pt-8">
+                <h2 className="text-2xl font-bold mb-6 text-gray-800">Entraînement & Évaluation</h2>
+                <div className="flex flex-col sm:flex-row justify-center gap-6 w-full max-w-4xl">
+                  <button onClick={() => setSection("blancs")} className="flex-1 px-8 py-4 bg-gray-800 text-white font-bold rounded-2xl shadow-lg hover:bg-gray-900 transition hover:-translate-y-1 flex items-center justify-center gap-3">
+                    <span className="text-2xl">📚</span>
+                    <span className="text-lg">Contrôles & Examens blancs</span>
+                  </button>
+                  {/* NOUVEAU BOUTON DYNAMIQUE POUR LE BAC SIMULATOR */}
+    <button 
+      onClick={() => {
+        // On adapte le nom de la matière pour l'URL en fonction de la boucle actuelle
+        const matiereUrl = matiere === "Mathématique" ? "Mathématique" : matiere;
+        navigate(`/student/bac-simulator?matiere=${matiereUrl}`);
+      }} 
+      className="flex-1 px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition hover:-translate-y-1 flex items-center justify-center gap-3"
+    >
+      <span className="text-2xl">🎓</span>
+      <span className="text-lg text-center">Examens nationaux (Bac Simulator)</span>
+    </button>
+
+  </div>
+</div>
 
             </div>
           ))}
@@ -952,30 +989,67 @@ if (section === "home" && !selectedAction) {
 
     if (section === "concours") {
       return (
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-wrap gap-6 justify-start items-start min-h-full"
-        >
-          {exams.map((exam) => (
+        <div className="p-6">
+          <h2 className="text-3xl font-bold text-center mb-8 text-green-700 border-b-2 border-green-200 pb-4">
+            🎓 Examens nationaux
+          </h2>
+          
+          {exams.length === 0 ? (
+            <div className="text-center mt-10">
+              <p className="text-gray-500 text-lg bg-gray-50 p-8 rounded-xl border border-gray-200 inline-block shadow-sm">
+                Aucun examen national n'est disponible pour le moment.
+              </p>
+            </div>
+          ) : (
             <motion.div
-              key={exam._id}
-              whileHover={{ scale: 1.05 }}
-              className="relative cursor-pointer rounded-2xl overflow-hidden shadow-lg bg-white/90 hover:bg-white transition-all"
-              onClick={() => {
-                resetQcm();
-                setSection("qcm");
-                setCurrentExam(exam.title);
-                setCurrentExamId(exam._id);
-              }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-wrap gap-6 justify-center items-start min-h-full"
             >
-              <img src={concoursImg} className="w-48 h-48 object-cover" alt={exam.title} />
-              <div className="absolute bottom-0 left-0 right-0 bg-white/60 text-black text-center py-2 font-semibold">
-                {exam.title}
-              </div>
+              {exams.map((exam) => (
+                <motion.div
+                  key={exam._id}
+                  whileHover={{ scale: 1.05 }}
+                  className="relative cursor-pointer rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-white to-gray-100 hover:from-green-50 hover:to-white transition-all border-l-4 border-green-500 w-64 h-48 flex flex-col items-center justify-center p-4 text-center"
+                  onClick={() => {
+                    const examTitle = exam.title || exam._id;
+                    
+                    // --- Logique d'extraction des paramètres pour le simulateur ---
+                    // Valeurs par défaut
+                    let selectedSubject = "SP";
+                    let selectedYear = "2026";
+                    let selectedSession = "normale";
+                    
+                    // 1. Extraction de la matière et de l'année (Format attendu: BAC-SP-2026...)
+                    const match = examTitle.match(/BAC-([A-Z]+)-(\d{4})/i);
+                    if (match) {
+                      selectedSubject = match[1].toUpperCase();
+                      selectedYear = match[2];
+                    }
+                    
+                    // 2. Extraction de la session (Normale ou Rattrapage)
+                    if (examTitle.toLowerCase().includes("rattrapage")) {
+                      selectedSession = "rattrapage";
+                    } else if (examTitle.toLowerCase().includes("normale")) {
+                      selectedSession = "normale";
+                    }
+
+                    // 3. Redirection vers le simulateur
+                    navigate(`/bac-simulator/${selectedSubject}/${selectedYear}/${selectedSession}`);
+                  }}
+                >
+                  <span className="text-5xl mb-4">🎓</span>
+                  <div className="font-bold text-green-800 text-lg">
+                    {exam.title || exam._id}
+                  </div>
+                  <div className="mt-2 text-xs font-semibold text-gray-500 bg-gray-200 px-3 py-1 rounded-full">
+                    Simulateur de note
+                  </div>
+                </motion.div>
+              ))}
             </motion.div>
-          ))}
-        </motion.div>
+          )}
+        </div>
       );
     }
 
