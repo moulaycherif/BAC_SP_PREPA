@@ -10,11 +10,13 @@ import concoursImg from "../assets/CONCOURS.jfif";
 import mathsImg from "../assets/MATHS.jfif";
 import physiqueImg from "../assets/PHYSIQUE.jfif";
 import chimieImg from "../assets/CHIMIE.jfif";
+import physique_chimieImg from "../assets/PHYSIQUE-CHIMIE.jpg";
 import svtImg from "../assets/SVT.jfif";
 import bgImage from "/Image3.jfif";
 import StudentDashboardStats from "../components/stats/StudentDashboardStats";
 import StudentAstuceDetail from "./StudentAstuceDetail";
 import PdfViewer from "../components/PdfViewer";
+import React from 'react';
 
 // Indispensable pour l'interprétation globale
 (window as any).katex = katex;
@@ -55,27 +57,51 @@ interface Question {
 }
   const chaptersBySubject: Record<string, string[]> = {
         Mathématique: [
-          "Chapitre I : Suites & Sommes",
-          "Chapitre II : Etude de fonctions",
-          "Chapitre III : Equations différentielles",
-          "Chapitre IV : Nombres complexes",
-          "Chapitre V : Intégrales",
-          "Chapitre VI : Géométrie dans l'espace",
-          "Chapitre VII : Probabilité",
+          "Chapitre I : Limites et Continuité",
+          "Chapitre II : Dérivation et étude de fonctions",
+          "Chapitre III : Suites numériques",
+          "Chapitre IV : Fonctions primitives",
+          "Chapitre V : Fonctions logarithmiques",
+          "Chapitre VI : Nombres complexes (Partie 1)",
+          "Chapitre VII : Fonctions exponentielles",
+          "Chapitre VIII : Nombres complexes (Partie 2)",
+          "Chapitre IX : Calcul intégral",
+          "Chapitre X : Equations différentielles",
+          "Chapitre XI : Produit scalaire et produit vectoriel dans l'espace",
+          "Chapitre XII : Dénombrement et probabilités"
         ],
         Physique: [
-          "Chapitre I : Les ondes",
-          "Chapitre II : Nucléaire",
-          "Chapitre III : Electricité",
-          "Chapitre IV : Lois de Newton & Théorème d'énergie cinétique",
-          "Chapitre V : Système oscillant & Pendule élastique",
+          "CHAPITRE 1 : Ondes mécaniques progressives",
+          "CHAPITRE 2 : Ondes mécaniques progressives périodiques",
+          "CHAPITRE 3 : Propagation d’une onde lumineuse",
+          "CHAPITRE 4 : Décroissance radioactive",
+          "CHAPITRE 5 : Noyaux, masse et énergie",
+          "CHAPITRE 6 : Dipôle RC",
+          "CHAPITRE 7 : Dipôle RL",
+          "CHAPITRE 8 : Oscillations libres d'un circuit RLC série",
+          "CHAPITRE 9 : Ondes électromagnétiques",
+          "CHAPITRE 10 : Modulation d'amplitude",
+          "CHAPITRE 11 : Lois de Newton",
+          "CHAPITRE 12 : Chute verticale d'un corps solide",
+          "CHAPITRE 13 : Mouvements plans",
+          "CHAPITRE 14 : Mouvement des satellites et des planètes",
+          "CHAPITRE 15 : Mouvement de rotation d’un solide autour d’un axe fixe",
+          "CHAPITRE 16 : Système mécanique oscillant",
+          "CHAPITRE 17 : Aspects énergétiques",
+          "CHAPITRE 18 : Atome et mécanique de Newton"
         ],
         Chimie: [
-          "Chapitre I : Chimie des solutions",
-          "Chapitre II : Cinétique chimique",
-          "Chapitre III : Les piles",
-          "Chapitre IV : Chimie organique",
-        ],
+          "Chapitre 1 : Transformations lentes et transformations rapides",
+          "Chapitre 2 : Suivi temporel d'une transformation chimique - Vitesse de réaction",
+          "Chapitre 3 : Transformations chimiques s'effectuant dans les 2 sens",
+          "Chapitre 4 : État d'équilibre d'un système chimique",
+          "Chapitre 5 : Transformations associées à des réactions acido-basiques en solution aqueuse",
+          "Chapitre 6 : Évolution spontanée d'un système chimique",
+          "Chapitre 7 : Transformations spontanées dans les piles et production d'énergie",
+          "Chapitre 8 : Transformations forcées (Électrolyse)",
+          "Chapitre 9 : Réactions d'estérification et d'hydrolyse",
+          "Chapitre 10 : Contrôle de l'évolution d'un système chimique"
+          ],
         SVT: [
           "Chapitre 1 : Les réactions responsables de la libération de l'énergie emmagasinée dans la matière organique",
           "Chapitre 2 : Rôle du muscle strié squelettique dans la conversion de l'énergie",
@@ -118,6 +144,8 @@ export default function StudentPage() {
   const [selectedTipId, setSelectedTipId] = useState<string | null>(null);
   const [selectedTip, setSelectedTip] = useState<Astuce | null>(null);
   const [focusMode, setFocusMode] = useState(false);
+
+  const [controles, setControles] = useState<any[]>([]);
 
   const matieres = ["Mathématique", "Physique", "Chimie", "SVT"];
   const isShortResume = (selectedResume?.chapter?.length ?? 0) < 30;
@@ -171,8 +199,7 @@ const getAccessibleSubjects = () => {
 
   if (safeOptions.includes("MATH")) subjects.push("Mathématique");
   if (safeOptions.includes("PC")) {
-    subjects.push("Physique");
-    subjects.push("Chimie");
+    subjects.push("Physique-Chimie");
   }
   if (safeOptions.includes("SVT")) subjects.push("SVT");
   
@@ -210,20 +237,6 @@ const getAccessibleSubjects = () => {
   }, []);
 
   useEffect(() => {
-    if (selectedAction !== "Résumé" || !selectedChapter) return;
-    const token = localStorage.getItem("token"); 
-    axios
-      .get(`${API_BASE_URL}/api/resume/by-chapter/${encodeURIComponent(selectedChapter)}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      })
-      .then((res) => setResumes(res.data))
-      .catch((err) => {
-        console.error("❌ SUMMARY ERROR =", err);
-        setResumes([]);
-      });
-  }, [selectedAction, selectedChapter]);
-
-  useEffect(() => {
     if (currentExam) {
       let url = `${API_BASE_URL}/api/questions?exam=${encodeURIComponent(currentExam)}`;
       if (selectedMatiere) {
@@ -242,82 +255,176 @@ const getAccessibleSubjects = () => {
     }
   }, [currentExam, selectedMatiere]);
 
+  // =========================================================================
+  // 🌟 USE-EFFECT HYBRIDE : FUSION DU CONTENU MANUEL ET DU CONTENU IA 🌟
+  // =========================================================================
   useEffect(() => {
-    if (!selectedChapter) return;
-    if (selectedAction === "Astuces") {
-      fetchAstucesByChapter(selectedChapter)
-        .then((data) => setAstuces(data as Astuce[]))
-        .catch(() => setAstuces([]));
-    }
-  }, [selectedAction, selectedChapter]);
+    if (!selectedChapter || !selectedAction || !selectedMatiere) return;
 
-  useEffect(() => {
-    const isExerciseAction = selectedAction === "Exercises";
-    const isWhiteExamAction = selectedAction === "Astuces" && selectedMatiere === "SVT";
-
-    if ((isExerciseAction || isWhiteExamAction) && selectedChapter && selectedMatiere) {
+    const loadHybridContent = async () => {
       const token = localStorage.getItem("token");
-      const isWhiteExamParam = isWhiteExamAction ? "true" : "false";
+      const headers = { Authorization: `Bearer ${token}` };
+      
+      // 🛡️ SÉCURITÉ URL : On encode les espaces et caractères spéciaux
+      const safeMatiere = encodeURIComponent(selectedMatiere);
+      const safeChapter = encodeURIComponent(selectedChapter);
 
-      axios
-        .get(`${API_BASE_URL}/api/exercises/${encodeURIComponent(selectedMatiere)}/${encodeURIComponent(selectedChapter)}?isWhiteExam=${isWhiteExamParam}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        })
-        .then((res) => {
+      // ---------------------------------------------------------
+      // A. GESTION DES RÉSUMÉS (PDF Manuels + Textes IA)
+      // ---------------------------------------------------------
+      if (selectedAction === "Résumé") {
+        let manualData: any[] = [], aiData: any[] = [];
+        
+        try {
+          const resManual = await axios.get(`${API_BASE_URL}/api/resume/by-chapter/${safeChapter}`, { headers });
+          manualData = resManual.data || [];
+        } catch (err) { console.error("Erreur Résumés manuels", err); }
+
+        try {
+          // 🔄 CORRECTION : Ajout de ${API_BASE_URL}
+          const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=resume`, { headers });
+          aiData = resAi.data || [];
+        } catch (err) { console.error("Erreur Résumés IA", err); }
+
+        setResumes([...manualData, ...aiData]);
+      }
+
+      // ---------------------------------------------------------
+      // B. GESTION DES ASTUCES & EXAMENS BLANCS SVT
+      // ---------------------------------------------------------
+      else if (selectedAction === "Astuces") {
+        const isWhiteExamAction = selectedMatiere === "SVT";
+
+        if (isWhiteExamAction) {
+          try {
+            const res = await axios.get(`${API_BASE_URL}/api/exercises/${safeMatiere}/${safeChapter}?isWhiteExam=true`, { headers });
+            const rawExercises = res.data || [];
+            
+            const normalizeForCompare = (val?: string) => val ? val.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/gi, '').replace(/\s+/g, '').toLowerCase().trim() : "";
+            const groupedExercises: any[] = [];
+            rawExercises.forEach((ex: any) => {
+              const exText = normalizeForCompare(ex.contextText);
+              const exImg = (ex.contextImage || "").trim();
+              const existingGroup = groupedExercises.find((g) => normalizeForCompare(g.contextText) === exText && (g.contextImage || "").trim() === exImg);
+              
+              if (existingGroup) existingGroup.subQuestions = [...existingGroup.subQuestions, ...(ex.subQuestions || [])];
+              else groupedExercises.push({ ...ex, subQuestions: [...(ex.subQuestions || [])] });
+            });
+            setWhiteExams(groupedExercises);
+          } catch (err) { setWhiteExams([]); }
+        } else {
+          let manualData: Astuce[] = [], aiData: Astuce[] = [];
+          
+          try {
+            const data = await fetchAstucesByChapter(selectedChapter);
+            manualData = (data as Astuce[]) || [];
+          } catch (err) { console.error("Erreur Astuces", err); }
+          
+          try {
+            // 🔄 CORRECTION : Ajout de ${API_BASE_URL}
+            const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=astuce`, { headers });
+            const rawAiData = resAi.data || [];
+            
+            aiData = rawAiData.map((q: any) => ({
+              _id: q._id,
+              title: q.texte || "Astuce générée par IA", 
+              subject: q.subject,
+              chapter: q.chapter,
+              cases: [
+                {
+                  title: "Explication de l'IA",
+                  content: q.explication || "Aucune explication fournie."
+                }
+              ]
+            }));
+          } catch (err) { console.error("Erreur Astuces IA", err); }
+          
+          setAstuces([...manualData, ...aiData]);
+        }
+      }
+
+     // ---------------------------------------------------------
+      // C. GESTION DES EXERCICES ET QCM
+      // ---------------------------------------------------------
+      else if (selectedAction === "Exercises" || selectedAction === "Exercices" || selectedAction === "QCM") {
+        let manualExercises: any[] = [], aiExercises: any[] = [];
+
+        try {
+          const res = await axios.get(`${API_BASE_URL}/api/exercises/${safeMatiere}/${safeChapter}?isWhiteExam=false`, { headers });
           const rawExercises = res.data || [];
           
-          const normalizeForCompare = (val?: string) => {
-            if (!val) return "";
-            return val
-              .replace(/<[^>]*>?/gm, '') 
-              .replace(/&nbsp;/gi, '')   
-              .replace(/\s+/g, '')       
-              .toLowerCase()             
-              .trim();
-          };
-
+          const normalizeForCompare = (val?: string) => val ? val.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/gi, '').replace(/\s+/g, '').toLowerCase().trim() : "";
           const groupedExercises: any[] = [];
-          
           rawExercises.forEach((ex: any) => {
             const exText = normalizeForCompare(ex.contextText);
             const exImg = (ex.contextImage || "").trim();
-
-            const existingGroup = groupedExercises.find((g) => {
-              const gText = normalizeForCompare(g.contextText);
-              const gImg = (g.contextImage || "").trim();
-              return gText === exText && gImg === exImg;
-            });
+            const existingGroup = groupedExercises.find((g) => normalizeForCompare(g.contextText) === exText && (g.contextImage || "").trim() === exImg);
             
-            if (existingGroup) {
-              existingGroup.subQuestions = [
-                ...existingGroup.subQuestions, 
-                ...(ex.subQuestions || [])
-              ];
-            } else {
-              groupedExercises.push({ 
-                ...ex, 
-                subQuestions: [...(ex.subQuestions || [])] 
-              });
-            }
+            if (existingGroup) existingGroup.subQuestions = [...existingGroup.subQuestions, ...(ex.subQuestions || [])];
+            else groupedExercises.push({ ...ex, subQuestions: [...(ex.subQuestions || [])] });
           });
+          manualExercises = groupedExercises;
+        } catch (err) { console.error("Erreur Exercices Manuels", err); }
 
-          if (isWhiteExamAction) {
-            setWhiteExams(groupedExercises);
-          } else {
-            setExercises(groupedExercises);
+        try {
+          // 👇 NOUVEAU : On lance 2 requêtes simultanées pour récupérer les QCM ET les Exercices
+          const [resAiQcm, resAiExo] = await Promise.all([
+            axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers }),
+            axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=exercise`, { headers })
+          ]);
+          
+          console.log("📥 Résultat QCM IA reçus :", resAiQcm.data);
+          console.log("📥 Résultat Exercices IA reçus :", resAiExo.data);
+          
+          // On fusionne les deux tableaux de résultats
+          const aiData = [...(resAiQcm.data || []), ...(resAiExo.data || [])];
+          
+          if (aiData.length > 0) {
+            const aiSubQuestions = aiData.map((q: any) => ({
+              _id: q._id,
+              questionText: q.texte,
+              // On adapte le type : "qcm" pour les QCM, et on peut utiliser "open" (question ouverte) pour les exercices
+              qType: q.type === 'exercise' ? 'open' : 'qcm', 
+              options: q.options || [],
+              correctAnswer: q.reponseCorrecte,
+              // Pour un exercice, le corrigé se trouve dans l'explication
+              explanation: q.explication,
+              image: q.image
+            }));
+
+            aiExercises = [{
+              _id: "ia-group-" + Date.now(),
+              contextText: "🧠 Questions d'entraînement (QCM & Exercices générés par l'IA)", 
+              subQuestions: aiSubQuestions
+            }];
           }
+        } catch (err) { console.error("Erreur Exercices IA", err); }
 
-          setExerciseIndex(0);
-          setExerciseAnswers({});
-          setExerciseSubmitted(false);
-          setExerciseScore(null);
-        })
-        .catch((err) => {
-          console.error("❌ Erreur de récupération", err);
-          if (isWhiteExamAction) setWhiteExams([]);
-          else setExercises([]);
-        });
-    }
+        setExercises([...manualExercises, ...aiExercises]);
+        setExerciseIndex(0);
+        setExerciseAnswers({});
+        setExerciseSubmitted(false);
+        setExerciseScore(null);
+      }
+
+// ---------------------------------------------------------
+      // D. GESTION DES CONTRÔLES
+      // ---------------------------------------------------------
+      else if (selectedAction === "Controles") {
+        try {
+          // On utilise type=controle car c'est ce que votre backend génère
+          const res = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=controle`, { headers });
+          console.log("📥 Contrôles reçus :", res.data);
+          setControles(res.data || []);
+        } catch (err) { 
+          console.error("Erreur lors de la récupération des contrôles", err); 
+          setControles([]);
+        }
+      }
+
+    };
+
+    loadHybridContent();
   }, [selectedAction, selectedChapter, selectedMatiere]);
 
   const resetQcm = () => {
@@ -340,8 +447,8 @@ const getAccessibleSubjects = () => {
       .replace(/&nbsp;/gi, " ")
       .replace(/<smiles>[\s\S]*?<\/smiles>/gi, "");
 
-    // 2. Regex ultra-tolérante (gère les espaces et retours à la ligne autour de [[IMG=...]])
-    const combinedRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|(?<![\\<])\$[^$\n<>]+?\$|\[\[\s*IMG\s*=\s*[^\]]+\s*\]\])/gi;
+   // 2. Regex ultra-tolérante (gère les sauts de ligne, les symboles < >, et les doubles échappements de l'IA)
+    const combinedRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\\\\\[[\s\S]*?\\\\\]|\\\\\([\s\S]*?\\\\\)|(?<![\\<])\$[^$]+?\$|\[\[\s*IMG\s*=\s*[^\]]+\s*\]\])/gi;
     const parts = processedText.split(combinedRegex);
 
     return (
@@ -421,6 +528,54 @@ const getAccessibleSubjects = () => {
       </span>
     );
   }
+ 
+      // 🃏 COMPOSANT FLASHCARD À AJOUTER EN HAUT DU FICHIER
+const Flashcard = ({ title, content }: { title: string, content: string }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  return (
+    <div 
+      className="relative w-full h-80 cursor-pointer group"
+      style={{ perspective: '1000px' }}
+      onClick={() => setIsFlipped(!isFlipped)}
+    >
+      <div 
+        className="relative w-full h-full transition-transform duration-700 ease-in-out"
+        style={{ 
+          transformStyle: 'preserve-3d', 
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' 
+        }}
+      >
+        {/* --- FACE AVANT (RECTO) : LE CONCEPT --- */}
+        <div 
+          className="absolute w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center text-center text-white border-2 border-indigo-400 hover:shadow-2xl transition-shadow"
+          style={{ backfaceVisibility: 'hidden' }}
+        >
+          <span className="text-4xl mb-4 block">💡</span>
+          <h3 className="text-2xl font-bold leading-tight">
+            <MixedContentRenderer text={title} />
+          </h3>
+          <p className="absolute bottom-5 text-indigo-200 text-sm font-medium animate-pulse">
+            Cliquez pour retourner ↺
+          </p>
+        </div>
+
+        {/* --- FACE ARRIÈRE (VERSO) : L'EXPLICATION --- */}
+        <div 
+          className="absolute w-full h-full bg-white rounded-2xl shadow-xl p-6 overflow-y-auto flex items-center justify-center border-4 border-indigo-100 custom-scrollbar"
+          style={{ 
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)'
+          }}
+        >
+          <div className="text-gray-800 text-lg font-medium w-full text-left">
+            <MixedContentRenderer text={content} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
   // =========================================================================
   function renderContent(content?: string) {
@@ -491,10 +646,9 @@ const getAccessibleSubjects = () => {
       return <StudentAstuceDetail id={selectedTipId} onBack={() => setSelectedTipId(null)} />;
     }
     
-if (section === "home") {
+if (section === "home" && !selectedAction) {
       const accessibleSubjects = getAccessibleSubjects();
 
-      // 🛡️ NOUVELLE SÉCURITÉ : Si aucune matière n'est trouvée
       if (accessibleSubjects.length === 0) {
         return (
           <div className="flex flex-col items-center justify-center h-full p-6 text-center">
@@ -510,49 +664,139 @@ if (section === "home") {
         );
       }
 
+      // Fonction utilitaire pour rendre un chapitre (Accordéon)
+      const renderChapterAccordion = (chapter: string, matiereAPI: string, matiereAffichage: string) => {
+        const isExpanded = selectedChapter === chapter && selectedMatiere === matiereAPI;
+        return (
+          <div key={`${matiereAPI}-${chapter}`} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-4">
+            <button
+              onClick={() => {
+                setSelectedMatiere(matiereAPI); // Important pour que l'API cherche la bonne matière (Physique ou Chimie)
+                setSelectedChapter(isExpanded ? null : chapter);
+                setSelectedAction(null); 
+              }}
+              className={`w-full text-left p-5 text-lg font-semibold transition-colors flex justify-between items-center ${
+                isExpanded ? "bg-blue-800 text-white" : "bg-white hover:bg-gray-50 text-gray-800"
+              }`}
+            >
+              <span className={chapter === "Toute l'épreuve" ? "text-purple-300 font-extrabold flex items-center gap-2" : ""}>
+                {chapter === "Toute l'épreuve" && "🏆 "} {chapter}
+              </span>
+              <span className="text-xl">{isExpanded ? "🔽" : "▶️"}</span>
+            </button>
+
+            {isExpanded && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                className="flex flex-wrap gap-4 p-5 bg-blue-50 border-t-2 border-blue-100"
+              >
+                <button onClick={() => setSelectedAction("Exercises")} className="flex-1 min-w-[200px] bg-white border border-blue-200 text-blue-800 px-4 py-3 rounded-xl shadow hover:bg-blue-100 hover:border-blue-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">📝</span> QCM & Exercices
+                </button>
+                <button onClick={() => setSelectedAction("Astuces")} className="flex-1 min-w-[200px] bg-white border border-yellow-200 text-yellow-700 px-4 py-3 rounded-xl shadow hover:bg-yellow-50 hover:border-yellow-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">💡</span> Astuces
+                </button>
+                <button onClick={() => setSelectedAction("Résumé")} className="flex-1 min-w-[200px] bg-white border border-green-200 text-green-700 px-4 py-3 rounded-xl shadow hover:bg-green-50 hover:border-green-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">📄</span> Fiches ou Résumés
+                </button>
+                <button onClick={() => setSelectedAction("Controles")} className="flex-1 min-w-[200px] bg-white border border-purple-200 text-purple-700 px-4 py-3 rounded-xl shadow hover:bg-purple-50 hover:border-purple-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">✍️</span> Contrôles
+                </button>
+              </motion.div>
+            )}
+          </div>
+        );
+      };
+
       return (
-        <div className="p-6 space-y-8 h-full overflow-y-auto">
+        <div className="p-6 space-y-12 h-full overflow-y-auto">
           {accessibleSubjects.map((matiere) => (
-            <div key={matiere} className="bg-white rounded-2xl shadow-lg p-6 border-l-8 border-blue-800">
-              <h2 className="text-3xl font-bold text-blue-900 mb-6 border-b pb-2 text-center">
-                Matière : {matiere}
+            <div key={matiere} className="bg-white rounded-3xl shadow-xl p-8 border-t-8 border-blue-800">
+              
+              <h2 className="text-4xl font-extrabold text-blue-900 mb-8 border-b-2 border-gray-100 pb-4 text-center uppercase tracking-wide">
+                {matiere}
               </h2>
                   
-              {/* Boutons d'action généraux de la matière */}
-              <div className="flex justify-between items-center mb-6">
-                {/* 1️⃣ LIVE (Tout à gauche) */}
-                <button className="px-6 py-3 bg-green-600 text-white font-bold rounded-xl shadow hover:bg-green-700 transition flex items-center gap-2">
-                  <span className="text-lg">📡</span>
-                  <span className="animate-pulse h-3 w-3 bg-white rounded-full"></span>
-                  LIVE
+              {/* Boutons Globaux (Haut) - Extrême Gauche et Extrême Droite */}
+              <div className="flex justify-between items-center mb-10 w-full">
+                <button className="px-8 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg hover:bg-blue-700 hover:-translate-y-1 transition transform flex items-center gap-3">
+                  <span className="text-2xl">▶️</span>
+                  <span className="text-lg">Vidéos enregistrées</span>
                 </button>
-
-                {/* 2️⃣ Vidéos enregistrées (Tout à droite) */}
-                <button className="px-6 py-3 bg-red-600 text-white font-bold rounded-xl shadow hover:bg-red-700 transition flex items-center gap-2">
-                  <span>🎥</span>
-                  Vidéos enregistrées
+                
+                <button className="px-8 py-4 bg-red-600 text-white font-bold rounded-2xl shadow-lg hover:bg-red-700 hover:-translate-y-1 transition transform flex items-center gap-3">
+                  <span className="text-2xl animate-pulse">🔴</span>
+                  <span className="text-lg">LIVE</span>
                 </button>
               </div>
 
-              {/* Boutons des chapitres */}
-              <h3 className="text-xl font-semibold text-gray-700 mb-4">Chapitres :</h3>
-              <div className="flex flex-wrap gap-3">
-                {chaptersBySubject[matiere]?.map((chapter, index) => (
-                  <motion.button
-                    key={index}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => {
-                      setSelectedMatiere(matiere);
-                      setSelectedChapter(chapter);
-                      setSection("soutien");
-                    }}
-                    className="px-4 py-2 bg-blue-100 text-blue-800 font-medium rounded-lg shadow-sm hover:bg-blue-200 transition border border-blue-200"
-                  >
-                    {chapter}
-                  </motion.button>
-                ))}
-              </div>
+             {/* Contenu principal de la matière */}
+              {matiere === "Physique-Chimie" ? (
+                /* --- DISPOSITION SPÉCIFIQUE PHYSIQUE-CHIMIE (2 COLONNES) --- */
+                <> {/* <-- Ajout du Fragment React ici */}
+                  <h2 className="text-center text-2xl font-bold mb-6 text-gray-800">
+                    📚 Programme de l'année
+                  </h2>
+                  
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+                    {/* Colonne Gauche : CHIMIE */}
+                    <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
+                      <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <span>🧪</span> Chimie
+                      </h3>
+                      <div className="flex flex-col">
+                        {chaptersBySubject["Chimie"]?.map((chapter) => renderChapterAccordion(chapter, "Chimie", matiere))}
+                      </div>
+                    </div>
+                    
+                    {/* Colonne Droite : PHYSIQUE */}
+                    <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
+                      <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                        <span>⚡</span> Physique
+                      </h3>
+                      <div className="flex flex-col">
+                        {chaptersBySubject["Physique"]?.map((chapter) => renderChapterAccordion(chapter, "Physique", matiere))}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                /* --- DISPOSITION STANDARD (1 COLONNE) --- */
+                <div className="bg-gray-50 rounded-2xl shadow-inner p-6 mb-10 border border-gray-200 w-full max-w-4xl mx-auto">
+                  <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2 justify-center">
+                    <span>📚</span> Programme de l'année
+                  </h3>
+                  <div className="flex flex-col">
+                    {chaptersBySubject[matiere]?.map((chapter) => renderChapterAccordion(chapter, matiere, matiere))}
+                  </div>
+                </div>
+              )}
+
+              {/* Boutons Globaux (Bas) - Section des Examens */}
+              <div className="flex flex-col items-center mt-10 border-t-2 border-gray-100 pt-8">
+                <h2 className="text-2xl font-bold mb-6 text-gray-800">Entraînement & Évaluation</h2>
+                <div className="flex flex-col sm:flex-row justify-center gap-6 w-full max-w-4xl">
+                  <button onClick={() => setSection("blancs")} className="flex-1 px-8 py-4 bg-gray-800 text-white font-bold rounded-2xl shadow-lg hover:bg-gray-900 transition hover:-translate-y-1 flex items-center justify-center gap-3">
+                    <span className="text-2xl">📚</span>
+                    <span className="text-lg">Contrôles & Examens blancs</span>
+                  </button>
+                  {/* NOUVEAU BOUTON DYNAMIQUE POUR LE BAC SIMULATOR */}
+    <button 
+      onClick={() => {
+        // On adapte le nom de la matière pour l'URL en fonction de la boucle actuelle
+        const matiereUrl = matiere === "Mathématique" ? "Mathématique" : matiere;
+        navigate(`/student/bac-simulator?matiere=${matiereUrl}`);
+      }} 
+      className="flex-1 px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition hover:-translate-y-1 flex items-center justify-center gap-3"
+    >
+      <span className="text-2xl">🎓</span>
+      <span className="text-lg text-center">Examens nationaux (Bac Simulator)</span>
+    </button>
+
+  </div>
+</div>
+
             </div>
           ))}
         </div>
@@ -745,30 +989,67 @@ if (section === "home") {
 
     if (section === "concours") {
       return (
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-wrap gap-6 justify-start items-start min-h-full"
-        >
-          {exams.map((exam) => (
+        <div className="p-6">
+          <h2 className="text-3xl font-bold text-center mb-8 text-green-700 border-b-2 border-green-200 pb-4">
+            🎓 Examens nationaux
+          </h2>
+          
+          {exams.length === 0 ? (
+            <div className="text-center mt-10">
+              <p className="text-gray-500 text-lg bg-gray-50 p-8 rounded-xl border border-gray-200 inline-block shadow-sm">
+                Aucun examen national n'est disponible pour le moment.
+              </p>
+            </div>
+          ) : (
             <motion.div
-              key={exam._id}
-              whileHover={{ scale: 1.05 }}
-              className="relative cursor-pointer rounded-2xl overflow-hidden shadow-lg bg-white/90 hover:bg-white transition-all"
-              onClick={() => {
-                resetQcm();
-                setSection("qcm");
-                setCurrentExam(exam.title);
-                setCurrentExamId(exam._id);
-              }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex flex-wrap gap-6 justify-center items-start min-h-full"
             >
-              <img src={concoursImg} className="w-48 h-48 object-cover" alt={exam.title} />
-              <div className="absolute bottom-0 left-0 right-0 bg-white/60 text-black text-center py-2 font-semibold">
-                {exam.title}
-              </div>
+              {exams.map((exam) => (
+                <motion.div
+                  key={exam._id}
+                  whileHover={{ scale: 1.05 }}
+                  className="relative cursor-pointer rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-white to-gray-100 hover:from-green-50 hover:to-white transition-all border-l-4 border-green-500 w-64 h-48 flex flex-col items-center justify-center p-4 text-center"
+                  onClick={() => {
+                    const examTitle = exam.title || exam._id;
+                    
+                    // --- Logique d'extraction des paramètres pour le simulateur ---
+                    // Valeurs par défaut
+                    let selectedSubject = "SP";
+                    let selectedYear = "2026";
+                    let selectedSession = "normale";
+                    
+                    // 1. Extraction de la matière et de l'année (Format attendu: BAC-SP-2026...)
+                    const match = examTitle.match(/BAC-([A-Z]+)-(\d{4})/i);
+                    if (match) {
+                      selectedSubject = match[1].toUpperCase();
+                      selectedYear = match[2];
+                    }
+                    
+                    // 2. Extraction de la session (Normale ou Rattrapage)
+                    if (examTitle.toLowerCase().includes("rattrapage")) {
+                      selectedSession = "rattrapage";
+                    } else if (examTitle.toLowerCase().includes("normale")) {
+                      selectedSession = "normale";
+                    }
+
+                    // 3. Redirection vers le simulateur
+                    navigate(`/bac-simulator/${selectedSubject}/${selectedYear}/${selectedSession}`);
+                  }}
+                >
+                  <span className="text-5xl mb-4">🎓</span>
+                  <div className="font-bold text-green-800 text-lg">
+                    {exam.title || exam._id}
+                  </div>
+                  <div className="mt-2 text-xs font-semibold text-gray-500 bg-gray-200 px-3 py-1 rounded-full">
+                    Simulateur de note
+                  </div>
+                </motion.div>
+              ))}
             </motion.div>
-          ))}
-        </motion.div>
+          )}
+        </div>
       );
     }
 
@@ -1078,44 +1359,79 @@ if (section === "home") {
         );
       }
 
-      if (selectedChapter && selectedAction === "Résumé") {
+      if (selectedChapter && (selectedAction === "Résumé" || selectedAction === "Fiches ou résumés")) {
         return (
-          <div className="p-6 relative">
-            <h2 className="text-3xl font-bold text-center mb-8">📘 {selectedChapter} — Résumés</h2>
-            {resumes.length === 0 ? (
-              <p className="text-center text-gray-500 font-bold">En option (sur demande)…</p>
+          <div className="p-6 relative max-w-7xl mx-auto">
+            <div className="text-center mb-10">
+              <h2 className="text-3xl md:text-4xl font-extrabold text-indigo-900 mb-4">
+                🧠 Flashcards de Révision
+              </h2>
+              <p className="text-gray-600 text-lg">
+                Chapitre : <span className="font-bold text-indigo-600">{selectedChapter}</span>
+              </p>
+            </div>
+            
+            {(!resumes || resumes.length === 0) ? (
+               <div className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-indigo-400 text-center max-w-lg mx-auto">
+                 <span className="text-5xl block mb-4">📭</span>
+                 <p className="text-gray-600 text-lg font-medium">
+                   Aucune fiche n'a encore été générée pour ce chapitre.
+                 </p>
+               </div>
             ) : (
-              <div className="flex flex-wrap gap-3 justify-center">
-                {resumes.map((sum) => (
-                  <button
-                    key={sum._id}
-                    onClick={async () => {
-                      setSelectedResume(sum);
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+                {resumes.map((resume, index) => {
+                  
+                  // 1. CAS EXCEPTIONNEL : Si c'est un ancien résumé au format PDF manuel
+                  if (resume.pdfUrl) {
+                    return (
+                      <button
+                        key={resume._id || index}
+                        onClick={() => setSelectedResume(resume)}
+                        className="h-80 w-full bg-gradient-to-br from-red-500 to-red-700 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center text-white hover:scale-105 transition-transform"
+                      >
+                        <span className="text-5xl mb-4 block">📄</span>
+                        <h3 className="text-2xl font-bold">Ouvrir le PDF</h3>
+                        <p className="mt-2 text-red-100">{resume.title || "Fiche de cours"}</p>
+                      </button>
+                    );
+                  }
+
+                  // 2. CAS CLASSIQUE : Flashcard générée par l'IA
+                  const cardTitle = resume.texte || resume.title || `Concept ${index + 1}`;
+                  const cardContent = resume.explication || "Aucune explication détaillée disponible.";
+
+                  return (
+                    <div key={resume._id || index} onClick={async () => {
+                      // Optionnel : On garde votre logique de tracking d'activité quand l'étudiant clique sur une carte
                       try {
                         const token = localStorage.getItem("token");
-                        await axios.post(`${API_BASE_URL}/api/student-activity`, {
-                          type: "RESUME",
-                          subject: selectedMatiere,
-                          chapter: selectedChapter,
-                          referenceId: sum._id,
-                        }, { headers: { Authorization: `Bearer ${token}` } });
+                        if (token) {
+                          await axios.post(`${API_BASE_URL}/api/student-activity`, {
+                            type: "RESUME",
+                            subject: selectedMatiere,
+                            chapter: selectedChapter,
+                            referenceId: resume._id,
+                          }, { headers: { Authorization: `Bearer ${token}` } });
+                        }
                       } catch (err) { console.error(err); }
-                    }}
-                    className="px-5 py-2 rounded-full bg-blue-100 text-blue-700 hover:bg-blue-200 shadow"
-                  >
-                    {sum.chapter}
-                  </button>
-                ))}
+                    }}>
+                      <Flashcard title={cardTitle} content={cardContent} />
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {selectedResume && (
-              <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50" onClick={() => setSelectedResume(null)}>
-                <div onClick={(e) => e.stopPropagation()} className={`bg-white rounded-2xl shadow-2xl w-full max-w-2xl ${isShortResume ? "max-h-[55vh]" : "max-h-[75vh]"} flex flex-col`}>
-                  <h2 className="text-lg font-bold p-3 text-center border-b">{selectedResume.chapter}</h2>
-                  <div className="flex-1 overflow-y-auto p-2">
-                    <iframe src={selectedResume.pdfUrl + "#toolbar=0"} className="w-full h-full min-h-[300px] rounded-b-2xl" title="Résumé PDF" />
+            {/* Modal conservé UNIQUEMENT pour afficher les anciens PDF si on clique dessus */}
+            {selectedResume && selectedResume.pdfUrl && (
+              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedResume(null)}>
+                <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden">
+                  <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+                    <h2 className="text-xl font-bold text-red-900">{selectedResume.title || "Document PDF"}</h2>
+                    <button onClick={() => setSelectedResume(null)} className="text-gray-500 hover:text-black font-bold text-2xl px-2">✖</button>
                   </div>
+                  <iframe src={selectedResume.pdfUrl + "#toolbar=0"} className="w-full h-full" title="Résumé PDF" />
                 </div>
               </div>
             )}
@@ -1123,7 +1439,7 @@ if (section === "home") {
         );
       }
 
-      if (selectedChapter && selectedAction === "Exercises") {
+      if (selectedChapter && (selectedAction === "Exercises" || selectedAction === "Exercices" || selectedAction === "QCM")) {
         const currentEx = exercises[exerciseIndex];
         if (exercises.length === 0) {
           return <p className="text-center mt-10">Aucun exercice trouvé</p>;
@@ -1289,38 +1605,55 @@ if (section === "home") {
         );
       }
 
-     if (selectedChapter) {
-        const actions = [
-          { 
-            label: selectedMatiere === "SVT" ? "📝 Examen blanc" : "💡 Astuces", 
-            value: "Astuces",
-            color: selectedMatiere === "SVT" ? "bg-red-400 text-white" : "bg-yellow-400 text-black" 
-          },
-          { label: "📘 Résumé", value: "Résumé", color: "bg-blue-400 text-black" },
-          { label: "🧩 Exercises", value: "Exercises", color: "bg-green-400 text-black" },
-        ];
-
+      if (selectedChapter && selectedAction === "Controles") {
         return (
-          <div className="flex flex-col items-center justify-center gap-8 mt-20">
-            <h2 className="text-2xl font-bold text-gray-800 text-center max-w-2xl px-4">{selectedChapter}</h2>
-            <div className="flex gap-8">
-              {actions.map((action, index) => (
-                <motion.button
-                  key={index}
-                  whileHover={{ scale: 1.1 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setSelectedAction(action.value)}
-                  className={`${action.color} font-semibold px-8 py-4 rounded-2xl shadow-lg hover:shadow-2xl transition`}
-                >
-                  {action.label}
-                </motion.button>
-              ))}
-            </div>
+          <div className="p-6 relative text-center">
+            <h2 className="text-3xl font-bold mb-8 text-purple-800">✍️ {selectedChapter} — Contrôles</h2>
+            
+            {controles.length === 0 ? (
+              <div className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-purple-500 inline-block">
+                <span className="text-4xl block mb-4">🚧</span>
+                <p className="text-gray-600 text-lg font-medium">
+                  Aucun contrôle n'est encore disponible pour ce chapitre.
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-6 text-left">
+                {controles.map((controle, index) => (
+                  <div key={controle._id || index} className="bg-white p-6 rounded-xl shadow-md border-l-4 border-purple-500">
+                    <div className="flex items-center gap-3 mb-4 border-b pb-2">
+                      <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
+                        Question {index + 1}
+                      </span>
+                      {controle.note && (
+                        <span className="text-gray-500 text-sm font-medium">({controle.note} points)</span>
+                      )}
+                    </div>
+                    
+                    {/* Affichage de l'énoncé du contrôle avec prise en charge du LaTeX et des images */}
+                    <div className="text-lg text-gray-800 font-medium">
+                      <MixedContentRenderer text={controle.texte || controle.question || "Contenu indisponible."} />
+                    </div>
+
+                    {/* Affichage conditionnel des options si le contrôle est un format QCM */}
+                    {controle.options && controle.options.length > 0 && (
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 pl-4">
+                        {controle.options.map((opt: string, i: number) => (
+                          <div key={i} className="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                            <MixedContentRenderer text={opt} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         );
       }
 
-      // 🎯 Rendu par défaut si aucune condition n'est remplie
+    // 🎯 Rendu par défaut si aucune condition n'est remplie
       return <StudentDashboardStats />;
       
   }; // 👈 L'ACCOLADE EST ICI : Elle ferme PROPREMENT renderCenterContent !
@@ -1382,4 +1715,4 @@ if (section === "home") {
       </motion.div>
     </div>
   );
-} // 👈 ET CELLE-CI FERME LE COMPOSANT STUDENTPAGE
+} 

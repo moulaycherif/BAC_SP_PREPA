@@ -1,6 +1,7 @@
 {
   "name": "bac-sp-prepa",
   "dependencies": {
+    "@cerebras/cerebras_cloud_sdk": "^1.91.0",
     "jsonwebtoken": "^9.0.3",
     "smiles-drawer": "^2.3.0"
   },

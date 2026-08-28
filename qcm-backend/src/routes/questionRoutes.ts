@@ -1,5 +1,4 @@
 import express from "express";
-import multer from "multer";
 import {
   getQuestions,
   importExcel,
@@ -9,32 +8,33 @@ import {
   deleteAllQuestions,
 } from "../controllers/questionController";
 import { authenticateStudent } from "../middleware/authMiddleware";
-
-// 👇 AJOUT : On importe le middleware qui décode le jeton Admin
 import { authenticateAdmin } from "../middleware/authAdmin"; 
 
 const router = express.Router();
 
+// Import du nouveau contrôleur IA
 const aiController = require('../controllers/aiController');
 const { upload } = require('../utils/multerConfig');
 const { verifyAdmin } = require('../middleware/verifyAdmin');
 
-// 👇 CORRECTION : Ajout de authenticateAdmin avant verifyAdmin
-router.post('/generate-from-pdf', authenticateAdmin, verifyAdmin, upload.single('file'), aiController.generateQcmFromPdf);
+// 👇 1. Route pour générer les questions et TÉLÉCHARGER LE FICHIER EXCEL
+router.post('/generate-from-pdf', authenticateAdmin, verifyAdmin, upload.single('file'), aiController.generateContentFromPdf);
 
-// 👇 CORRECTION : Ajout des protections Admin sur l'import Excel
+// 👇 2. NOUVELLE ROUTE : Pour UPLOADER LE FICHIER EXCEL CORRIGÉ
+router.post('/import-ai-excel', authenticateAdmin, verifyAdmin, upload.single('file'), aiController.importCorrectedExcel);
+
+// Import Excel Classique
 router.post("/import", authenticateAdmin, verifyAdmin, upload.single("file"), importExcel);
 
-// 📄 Questions (filtrables) 
-// 🔒 ON GARDE LA PROTECTION ICI : Seuls les étudiants connectés/invités voient les questions
+// Questions (Étudiants)
 router.get("/", authenticateStudent, getQuestions);
 
-// 🔓 ON RETIRE LA PROTECTION ICI : Permet à l'Admin d'afficher les menus déroulants
+// Menus déroulants
 router.get("/exams", getExams);
 router.get("/exams/blancs", getConcoursBlancs);
 router.get("/subjects/:exam", getSubjectsByExam);
 
-// 👇 CORRECTION : Ajout des protections Admin sur la suppression
+// Suppression
 router.delete("/all", authenticateAdmin, verifyAdmin, deleteAllQuestions);
 
 export default router;

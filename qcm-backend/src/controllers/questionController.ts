@@ -21,17 +21,23 @@ const getCell = (row: any, key: string) => {
 ============================================================ */
 export const getQuestions = async (req: AuthenticatedRequest, res: Response) => {
   try {
-    // 👈 NOUVEAU : Ajout de numeroConcoursBlanc et typeEpreuve dans les paramètres attendus
-    const { exam, subject, numeroConcoursBlanc, typeEpreuve } = req.query as any;
+    const { exam, subject, numeroConcoursBlanc, typeEpreuve, chapter, type } = req.query as any;
     const isGuest = req.student?.role === "guest";
     const filter: any = {};
     
-    if (exam) filter.exam = { $regex: new RegExp(`^${exam.trim()}$`, "i") };
-    if (subject) filter.subject = { $regex: new RegExp(`^${subject.trim()}$`, "i") };
+    // 🛡️ Fonction pour échapper les caractères spéciaux dans la Regex (ex: :, (, ), ?)
+    const escapeRegex = (text: string) => text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, "\\$&");
+
+    if (exam) filter.exam = { $regex: new RegExp(escapeRegex(exam.trim()), "i") };
     
-    // 👈 NOUVEAU : Application des filtres pour concours blancs
+    // 🔍 Filtre assoupli pour éviter le blocage Singulier / Pluriel
+    if (subject) filter.subject = { $regex: new RegExp(escapeRegex(subject.trim().replace(/s$/i, "")), "i") };
+    
     if (typeEpreuve) filter.typeEpreuve = typeEpreuve;
     if (numeroConcoursBlanc) filter.numeroConcoursBlanc = numeroConcoursBlanc;
+
+    if (chapter) filter.chapter = { $regex: new RegExp(escapeRegex(chapter.trim()), "i") };
+    if (type) filter.type = type;
 
     let query = Question.find(filter)
       .populate({

@@ -14,10 +14,15 @@ import StudentAstuceDetail from "./pages/StudentAstuceDetail";
 import StudentQuiz from "./pages/StudentQuiz";
 import PdfPage from "./pages/PdfPage";
 
+// 🚀 Import des pages du Bac Simulator (Version centralisée)
+import BacSimulatorIndex from "./pages/BacSimulator/Index";
+import BacSimulatorWorkspace from "./pages/BacSimulator/Workspace";
+
 // 🧩 Import des composants
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SessionGuard from "./components/SessionGuard"; // 👈 On importe proprement le gardien séparé
+import AdminExamUpload from "./pages/AdminExamUpload";
 
 export default function App() {
   return (
@@ -40,10 +45,16 @@ export default function App() {
           <Route path="/student/quiz/:tipId" element={<StudentQuiz />} />
           <Route path="/student/pdf/:id" element={<PdfPage />} />
 
+          {/* 🚀 Routes du Bac Simulator */}
+          <Route path="/student/bac-simulator" element={<BacSimulatorIndex />} />
+          <Route path="/student/bac-simulator/workspace" element={<BacSimulatorWorkspace />} />
+          <Route path="/examens-nationaux" element={<BacSimulatorIndex />}/>
+
           {/* 👑 Pages Admin */}
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/admin/exercises" element={<AdminExercises />} />
           <Route path="/admin/astuces" element={<AdminAstuces />} />
+          <Route path="/admin/upload" element={<AdminExamUpload />} />
 
           {/* ❌ Page introuvable (404) */}
           <Route path="/*" element={<div className="p-10 text-center text-red-600 font-semibold text-xl">Page non trouvée</div>} />
