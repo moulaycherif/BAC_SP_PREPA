@@ -21,7 +21,7 @@ const BacSimulator: React.FC = () => {
   const { subject, year, session, theme } = useParams<{ subject: string; year: string; session: string; theme: string }>();
   const navigate = useNavigate();
 // 💡 AJOUTE CECI :
-  console.log("📍 Le composant BacSimulator est bien monté !", { subject, year, session, theme });
+  console.log("📍 Le composant BacSimulator est monté !", { subject, year, session, theme });
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);
 

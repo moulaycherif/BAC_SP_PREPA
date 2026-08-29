@@ -19,7 +19,7 @@ interface IAGeneratedData {
   items: IAItemResponse[];
 }
 
-console.log("JE NE SAIS PAS CE QUI SE PASSE")
+console.log("JE NE SAIS PAS CE QUI SE PASSE aujourd")
 
 // Initialisation dynamique du client IA
 const getAIClient = (): any => { // Ajout de ": any" pour contourner l'erreur de typage avec CEREBRAS
