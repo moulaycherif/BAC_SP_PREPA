@@ -42,6 +42,7 @@ function AdminAIGenerator() {
   
   // 👈 NOUVEAU : Ajout du niveau académique par défaut
   const [level, setLevel] = useState('Baccalauréat Sciences Physiques'); 
+  
   const [isGenerating, setIsGenerating] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
 
@@ -71,13 +72,16 @@ function AdminAIGenerator() {
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
       });
       const downloadUrl = window.URL.createObjectURL(blob);
+      
       const link = document.createElement('a');
       link.href = downloadUrl;
       link.setAttribute('download', `Generations_IA_${contentType}_${Date.now()}.xlsx`);
       document.body.appendChild(link);
       link.click();
+      
       link.remove();
       window.URL.revokeObjectURL(downloadUrl);
+
       alert("Fichier Excel généré avec succès ! Il a été téléchargé sur votre ordinateur. Vous pouvez maintenant le vérifier.");
     } catch (error) {
       console.error("Erreur de génération :", error);
@@ -113,7 +117,8 @@ function AdminAIGenerator() {
   };
 
   return (
-    <div className="p-8 max-w-4xl mx-auto space-y-12">      
+    <div className="p-8 max-w-4xl mx-auto space-y-12">
+      
       {/* SECTION 1 : GÉNÉRATION IA (PDF -> EXCEL) */}
       <div className="bg-white p-6 rounded-2xl shadow-md border-t-4 border-indigo-600">
         <h2 className="text-2xl font-bold mb-4 text-indigo-900">
@@ -122,7 +127,9 @@ function AdminAIGenerator() {
         <p className="text-gray-600 text-sm mb-6">
           Sélectionnez un document PDF. L'IA analysera le contenu et vous téléchargera un fichier Excel à relire.
         </p>
-        <form onSubmit={handleGenerateExcel} className="space-y-4">          
+
+        <form onSubmit={handleGenerateExcel} className="space-y-4">
+          
           {/* NOUVEAU : Sélecteur de Niveau */}
           <div>
             <label className="block text-sm font-bold text-gray-700 mb-1">Niveau académique cible :</label>
@@ -159,7 +166,7 @@ function AdminAIGenerator() {
             <select
               value={contentType}
               onChange={(e) => setContentType(e.target.value)}
-              className="p-3 border rounded-xl w-full bg-indigo"
+              className="p-3 border rounded-xl w-full bg-white"
             >
               <option value="qcm">QCM</option>
               <option value="exercise">Exercice Complexe</option>
@@ -468,58 +475,32 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* Navigation entre les onglets (BOUTONS CORRIGÉS) */}
-     <div className="flex flex-wrap justify-center gap-4 mb-8">
-  <button 
-    onClick={() => setActiveTab("students")} 
-    className={`px-4 py-2 rounded transition-colors ${
-      activeTab === "students" 
-        ? "!bg-blue-600 !text-white font-semibold shadow" 
-        : "!bg-blue-900 !text-white hover:!bg-blue-800"
-    }`}
-  >
-    🧑‍🎓 Gestion étudiants
-  </button>
-
-  <button 
-    onClick={() => setActiveTab("import")} 
-    className={`px-4 py-2 rounded transition-colors ${
-      activeTab === "import" 
-        ? "!bg-indigo-600 !text-white font-semibold shadow" 
-        : "!bg-indigo-900 !text-white hover:!bg-indigo-800"
-    }`}
-  >
-    📂 Import Excel
-  </button>
-
-  <button 
-    onClick={() => setActiveTab("ai")} 
-    className={`px-4 py-2 rounded transition-colors ${
-      activeTab === "ai" 
-        ? "!bg-blue-600 !text-white font-semibold shadow" 
-        : "!bg-blue-900 !text-white hover:!bg-blue-800"
-    }`}
-  >
-    🧠 Génération IA
-  </button>
-
-  <button 
-    onClick={() => setActiveTab("summary")} 
-    className={`px-4 py-2 rounded transition-colors ${
-      activeTab === "summary" 
-        ? "!bg-indigo-600 !text-white font-semibold shadow" 
-        : "!bg-indigo-900 !text-white hover:!bg-indigo-800"
-    }`}
-  >
-    📝 Gestion résumés
-  </button>
-
-  <button 
-    onClick={() => navigate('/admin/upload')}
-    className="!bg-blue-600 !text-white px-4 py-2 rounded shadow hover:!bg-blue-700 transition-colors"
-  >
-    📥 Importation Examen (Excel)
-  </button>
-</div>
+      <div className="flex flex-wrap justify-center gap-4 mb-8">
+        <button 
+          onClick={() => setActiveTab("students")} 
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "students" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+        >
+          🧑‍🎓 Gestion étudiants
+        </button>
+        <button 
+          onClick={() => setActiveTab("import")} 
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "import" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+        >
+          📂 Import Excel
+        </button>
+        <button 
+          onClick={() => setActiveTab("ai")} 
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "ai" ? "bg-indigo-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+        >
+          🧠 Génération IA
+        </button>
+        <button 
+          onClick={() => setActiveTab("summary")} 
+          className={`px-4 py-2 rounded transition-colors ${activeTab === "summary" ? "bg-blue-600 text-white" : "bg-gray-200 hover:bg-gray-300"}`}
+        >
+          📝 Gestion résumés
+        </button>
+      </div>
 
       {/* ----------- Onglet Étudiants ----------- */}
       {activeTab === "students" && (
