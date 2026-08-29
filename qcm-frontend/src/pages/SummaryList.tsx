@@ -11,6 +11,7 @@ interface Summary {
   createdAt: string;
 }
 
+console.log("WAW KIFACH")
 const SummaryList: React.FC = () => {
   const [summaries, setSummaries] = useState<Summary[]>([]);
   const [filtered, setFiltered] = useState<Summary[]>([]);
