@@ -20,6 +20,8 @@ import adminExamRouter from "./routes/adminExam";
 
 dotenv.config();
 
+console.log("app.ts (back)")
+
 const app = express();
 
 // 📁 Création des dossiers de stockage si inexistants

@@ -1,5 +1,7 @@
 import { supabase } from "../config/supabase";
 
+console.log("supabaseUpload (services-back)")
+
 export async function uploadToSupabase(file: Buffer, fileName: string) {
   const bucket = process.env.SUPABASE_BUCKET!;
 

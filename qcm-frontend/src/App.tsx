@@ -24,6 +24,8 @@ import Footer from "./components/Footer";
 import SessionGuard from "./components/SessionGuard"; // 👈 On importe proprement le gardien séparé
 import AdminExamUpload from "./pages/AdminExamUpload";
 
+console.log("App.tsx (FR)")
+
 export default function App() {
   return (
     <Router>

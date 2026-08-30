@@ -15,6 +15,8 @@ import { ensureUploadDirs } from "./utils/ensureUploadDirs";
 import Admin from "./models/Admin";
 import bcrypt from "bcrypt";
 
+console.log("server.ts (back)")
+
 ensureUploadDirs();
 
 app.use(

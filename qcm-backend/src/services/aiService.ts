@@ -11,6 +11,8 @@ export interface IAiResponse {
   }>;
 }
 
+console.log("aiService (services - back)")
+
 /**
  * Envoie l'énoncé à l'IA via OpenRouter et récupère les indices et la checklist au format JSON.
  * @param statement L'énoncé complet de la question.

@@ -6,6 +6,8 @@ const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
+console.log("axios (api-fr)")
+
 // 🔹 1. Intercepteur de Requête Adaptatif
 api.interceptors.request.use(
   (config) => {
