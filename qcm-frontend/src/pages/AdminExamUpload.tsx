@@ -6,8 +6,6 @@ export default function AdminExamUpload() {
   const [loading, setLoading] = useState(false);
   const [statusMessage, setStatusMessage] = useState('');
 
-  console.log("AdminExamUpload (pages)")
-
   const handleUpload = async () => {
     if (!file) return alert("Sélectionnez un fichier Excel !");
 

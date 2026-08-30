@@ -24,8 +24,6 @@ export default function LoginPage() {
     }
   }, []);
 
-  console.log("LoginPage (pages)")
-
   const handleLogin = async (e: React.FormEvent, force: boolean = false) => {
     e.preventDefault();
     // 🧼 Nettoyage préventif pour éviter que l'ancienne session étudiant ne pollue l'admin

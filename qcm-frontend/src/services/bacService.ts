@@ -26,8 +26,6 @@ export interface BacExercise {
   }[];
 }
 
-console.log("bacService (services)")
-
 /**
  * Récupère les listes dynamiques pour les menus déroulants (Années, Sessions, Thèmes) en fonction de la matière
  */

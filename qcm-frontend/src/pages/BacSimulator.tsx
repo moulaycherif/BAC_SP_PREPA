@@ -17,8 +17,6 @@ interface Question {
   checklist: any[]; 
 }
 
-console.log("BacSimulator (pages)")
-
 const BacSimulator: React.FC = () => {
   const { subject, year, session, theme } = useParams<{ subject: string; year: string; session: string; theme: string }>();
   const navigate = useNavigate();

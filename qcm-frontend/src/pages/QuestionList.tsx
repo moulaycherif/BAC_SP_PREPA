@@ -11,8 +11,6 @@ interface Question {
   exam: string;
 }
 
-console.log("QuestionList (pages)")
-
 const QuestionList: React.FC = () => {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(true);

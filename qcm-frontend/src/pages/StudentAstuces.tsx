@@ -11,8 +11,6 @@ interface Tip {
   description: string;
 }
 
-console.log("StudentAstuces (pages)")
-
 const StudentAstuces: React.FC = () => {
   const [tips, setTips] = useState<Tip[]>([]);
   const [subjects, setSubjects] = useState<string[]>([]);

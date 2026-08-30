@@ -33,8 +33,6 @@ interface Exam {
   title: string;
 }
 
-console.log("AdminDashboard (pages)")
-
 function AdminAIGenerator() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [excelFile, setExcelFile] = useState<File | null>(null);
@@ -502,6 +500,13 @@ const AdminDashboard: React.FC = () => {
         >
           📝 Gestion résumés
         </button>
+         
+        <button 
+  onClick={() => navigate('/admin/upload')}
+  className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700"
+>
+  📥 Importation Examen (Excel)
+</button>
       </div>
 
       {/* ----------- Onglet Étudiants ----------- */}

@@ -6,8 +6,6 @@ import Footer from "../components/Footer";
 import BackgroundWrapper from "../components/BackgroundWrapper";
 import { Link } from "react-router-dom";
 
-console.log("HomePage (pages)")
-
 export default function HomePage() {
   return (
     <BackgroundWrapper>
