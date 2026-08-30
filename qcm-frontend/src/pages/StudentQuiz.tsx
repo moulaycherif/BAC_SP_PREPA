@@ -24,6 +24,8 @@ interface Exercise {
   subQuestions: SubQuestion[];
 }
 
+console.log("StudentQuiz (pages)")
+
 export default function StudentQuiz() {
   const { examName, subject } = useParams<{ examName?: string; subject?: string }>();
   const location = useLocation();

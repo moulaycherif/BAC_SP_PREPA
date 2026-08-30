@@ -16,6 +16,8 @@ const storage = multer.diskStorage({
 
 const upload = multer({ storage });
 
+console.log("uploadRoutes (routes)")
+
 // 🔒 Interdit aux invités, réservé aux créateurs de contenu authentifiés
 router.post("/image", authenticateStudent, blockGuest, upload.single("image"), (req, res) => {
   if (!req.file) {

@@ -7,6 +7,8 @@ interface Props {
   exercise: BacExercise; // 👈 Déclaration de la prop attendue
 }
 
+console.log("Dual (BacSimulator)")
+
 const DualPanelLayout: React.FC<Props> = ({ exercise }) => {
   return (
     // Conteneur principal flexbox prenant toute la hauteur de l'écran

@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+console.log("astuce (models)")
+
 const AstuceSchema = new mongoose.Schema(
   {
     subject: { type: String, required: true },

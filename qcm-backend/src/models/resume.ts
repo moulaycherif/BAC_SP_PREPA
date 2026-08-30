@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+console.log("resume (models)")
+
 const ResumeSchema = new mongoose.Schema(
   {
     subject: { type: String, required: true },

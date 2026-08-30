@@ -14,6 +14,8 @@ interface ExtendedBacExercise extends BacExercise {
   Theme?: string;
 }
 
+console.log("Workspace (BacSimulator-pages)")
+
 export default function BacSimulatorWorkspace() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();

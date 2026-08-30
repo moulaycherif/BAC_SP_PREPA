@@ -12,6 +12,8 @@ import { authenticateAdmin } from "../middleware/authAdmin";
 
 const router = express.Router();
 
+console.log("questionRoutes (routes)")
+
 // Import du nouveau contrôleur IA
 const aiController = require('../controllers/aiController');
 const { upload } = require('../utils/multerConfig');

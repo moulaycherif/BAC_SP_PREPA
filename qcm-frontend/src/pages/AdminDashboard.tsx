@@ -33,6 +33,8 @@ interface Exam {
   title: string;
 }
 
+console.log("AdminDashboard (pages)")
+
 function AdminAIGenerator() {
   const [pdfFile, setPdfFile] = useState<File | null>(null);
   const [excelFile, setExcelFile] = useState<File | null>(null);

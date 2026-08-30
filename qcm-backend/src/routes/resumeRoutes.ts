@@ -14,6 +14,8 @@ const router = express.Router();
 
 const bucket = process.env.SUPABASE_BUCKET!;
 
+console.log("resumeRoutes (routes)")
+
 // 🟢 L'invité peut voir la liste pour découvrir l'interface
 router.get("/by-subject/:subject", authenticateStudent, getResumesBySubject);
 

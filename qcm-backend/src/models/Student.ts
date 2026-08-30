@@ -11,6 +11,8 @@ export interface IStudent extends Document {
   options: string[]; 
 }
 
+console.log("Student (models)")
+
 const StudentSchema = new Schema<IStudent>(
   {
     name: { type: String, required: true },

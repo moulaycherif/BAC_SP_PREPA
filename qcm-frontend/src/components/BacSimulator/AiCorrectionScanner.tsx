@@ -18,6 +18,8 @@ const AiCorrectionScanner: React.FC = () => {
     }
   };
 
+  console.log("AiCorrectionScanner (BacSimulator)")
+
   // Simulation de l'appel API vers l'IA
   const handleScanClick = () => {
     if (!file) return;

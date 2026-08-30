@@ -9,6 +9,8 @@ export interface IAdmin extends Document {
   currentIp?: string | null;
 }
 
+console.log("admin (models)")
+
 const AdminSchema = new Schema<IAdmin>({
   // ✅ AJOUT DE LA VALEUR PAR DÉFAUT : Si quelqu'un crée un admin sans nom, Mongoose mettra "Administrateur" au lieu de faire crasher le serveur (Erreur 500)
   name: { type: String, required: true, default: "Administrateur" },

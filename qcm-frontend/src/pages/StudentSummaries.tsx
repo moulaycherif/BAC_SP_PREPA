@@ -10,6 +10,8 @@ interface ResumeItem {
   created_at: string | null;
 }
 
+console.log("StudentSummaries (pages)")
+
 export default function StudentSummaries({
   selectedSubject,
   selectedChapter,

@@ -10,6 +10,8 @@ interface ResumeItem {
   createdAt: string;
 }
 
+console.log("SummaryListAdmin (pages)")
+
 const SummaryListAdmin: React.FC = () => {
   const [resumes, setResumes] = useState<ResumeItem[]>([]);
   const [filtered, setFiltered] = useState<ResumeItem[]>([]);

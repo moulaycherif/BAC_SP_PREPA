@@ -6,6 +6,8 @@ import StudentActivity from "../models/StudentActivity";
 // 🚨 NOUVEAU : Import du type personnalisé
 import { AuthenticatedRequest } from "../middleware/authMiddleware";
 
+console.log("resumeController")
+
 // 📌 Récupérer les résumés par matière
 export const getResumesBySubject = async (req: AuthenticatedRequest, res: Response) => {
   try {

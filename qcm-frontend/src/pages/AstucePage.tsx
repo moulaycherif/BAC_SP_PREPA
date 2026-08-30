@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AnimatedQaViewer from "../components/AnimatedQaViewer";
 
+console.log("AstucePage (pages)")
+
 // Exemple de données (tu pourras remplacer par API plus tard)
 const ASTUCES: Record<string, { chapter: string; qas: { question: string; answer: string }[] }[]> = {
   math: [

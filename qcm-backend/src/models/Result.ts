@@ -7,6 +7,8 @@ export interface IResult extends Document {
   date: Date;
 }
 
+console.log("Result (models)")
+
 const ResultSchema = new Schema<IResult>(
   {
     studentId: { type: Schema.Types.ObjectId, ref: "Student", required: true },

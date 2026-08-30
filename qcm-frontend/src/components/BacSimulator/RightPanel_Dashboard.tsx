@@ -17,6 +17,8 @@ const MarkdownRenderer = ({ content }: { content: string }) => (
   </ReactMarkdown>
 );
 
+console.log("Right (BacSimulator)")
+
 const RightPanel_Dashboard: React.FC<Props> = ({ exercise }) => {
   const [helpLevel, setHelpLevel] = useState<number>(0);
   const [isFinished, setIsFinished] = useState<boolean>(false);

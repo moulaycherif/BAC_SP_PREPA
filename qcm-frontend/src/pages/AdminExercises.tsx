@@ -34,6 +34,8 @@ const emptySubQuestion: SubQuestion = {
   image: "", // 👈 INITIALISATION DU CHAMP
 };
 
+console.log("AdminExercises (pages)")
+
 const AdminExercises: React.FC = () => {
   // 🔹 Données
   const [exercises, setExercises] = useState<Exercise[]>([]);

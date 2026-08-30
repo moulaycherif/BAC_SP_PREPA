@@ -113,6 +113,8 @@ interface Question {
         ],
       };
 
+      console.log("StudentPage (pages)")
+
 export default function StudentPage() {
   const navigate = useNavigate();
   const [section, setSection] = useState<"home" | "concours" | "matiere" | "soutien" | "qcm" | "blancs">("home");

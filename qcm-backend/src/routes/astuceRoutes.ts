@@ -12,6 +12,8 @@ import { authenticateStudent } from "../middleware/authMiddleware";
 const upload = multer();
 const router = Router();
 
+console.log("astuceRoutes (routes)")
+
 /* 🔵 ADMIN — LISTE TOUTES LES ASTUCES */
 router.get("/", async (req, res) => {
   try {

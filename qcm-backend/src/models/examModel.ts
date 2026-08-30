@@ -7,6 +7,8 @@ export interface IExam extends Document {
   isFree: boolean; // 👈 AJOUT ICI
 }
 
+console.log("examModel (models)")
+
 const ExamSchema = new Schema<IExam>({
   title: { type: String, required: true, unique: true, trim: true },
   subject: { type: String, required: true },

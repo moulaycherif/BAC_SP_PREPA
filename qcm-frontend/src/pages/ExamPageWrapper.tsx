@@ -11,6 +11,8 @@ interface Question {
   note: number;
 }
 
+console.log("ExamPageWrapper (pages)")
+
 const ExamPageWrapper: React.FC = () => {
   const { examName } = useParams<{ examName: string }>();
   const [questions, setQuestions] = useState<Question[]>([]);

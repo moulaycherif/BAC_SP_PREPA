@@ -19,6 +19,8 @@ export interface IQuestion extends Document {
   numeroConcoursBlanc?: string; 
 }
 
+console.log("Question (models)")
+
 const questionSchema = new Schema<IQuestion>(
   {
     texte: { type: String, default: null, trim: true },

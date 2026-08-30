@@ -24,6 +24,8 @@ interface Tip {
   pdfUrl?: string;
 }
 
+console.log("AdminAstuces (pages)")
+
 /* ===================== COMPONENT ===================== */
 
 const AdminAstuces: React.FC = () => {

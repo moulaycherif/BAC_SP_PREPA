@@ -30,6 +30,8 @@ interface Tip {
   pdfUrl?: string;
 }
 
+console.log("StudentAstuceDetail (pages)")
+
 /* ================= COMPONENT ================= */
 
 const StudentAstuceDetail = ({ id, onBack }: any) => {

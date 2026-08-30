@@ -10,6 +10,8 @@ interface Props {
   exercise: BacExercise;
 }
 
+console.log("Left (BacSimulator)")
+
 const LeftPanel_Exam: React.FC<Props> = ({ exercise }) => {
   return (
     <div className="p-8">

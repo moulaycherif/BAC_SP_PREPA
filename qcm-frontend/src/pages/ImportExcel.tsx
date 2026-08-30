@@ -7,6 +7,8 @@ import React, { useState } from "react";
 import axios from "../api/axios";
 import { useNavigate } from "react-router-dom";
 
+console.log("ImportExcel (pages)")
+
 export default function ImportExcel({ onImported }: { onImported?: () => void }) {
   const [file, setFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState<string | null>(null);
