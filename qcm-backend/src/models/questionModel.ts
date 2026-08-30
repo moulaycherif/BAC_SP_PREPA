@@ -13,8 +13,6 @@ export interface IQuestion extends Document {
   isFree: boolean; // 👈 AJOUT ICI
 }
 
-console.log("questionModel (models)")
-
 const questionSchema = new Schema<IQuestion>(
   {
     texte: { type: String, default: null, trim: true },

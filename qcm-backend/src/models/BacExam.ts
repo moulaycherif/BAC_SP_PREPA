@@ -27,8 +27,6 @@ export interface IBacExam extends Document {
   createdAt: Date;
 }
 
-console.log("bacExam (models)")
-
 const BacExamSchema: Schema = new Schema({
   matiere: { 
     type: String, 

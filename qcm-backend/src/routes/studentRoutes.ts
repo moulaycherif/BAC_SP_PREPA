@@ -9,8 +9,6 @@ import StudentActivity from "../models/StudentActivity";
 
 const router = express.Router();
 
-console.log("studentRoutes (routes)")
-
 // 🔹 Profil étudiant (🟢 Accessible en démo)
 router.get("/profile", authenticateStudent, async (req: AuthenticatedRequest, res) => {
   res.json({

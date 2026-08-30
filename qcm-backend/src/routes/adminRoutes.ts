@@ -67,8 +67,6 @@ router.delete("/students/:id", authenticateAdmin, async (req, res) => {
   }
 });
 
-console.log("adminRoutes (routes)")
-
 // 🔹 Mettre à jour un étudiant existant (ADMIN)
 router.put("/students/:id", authenticateAdmin, async (req, res) => {
   try {

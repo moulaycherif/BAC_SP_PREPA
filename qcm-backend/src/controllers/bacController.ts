@@ -213,8 +213,6 @@ export const getCompleteExam = async (req: Request, res: Response): Promise<void
       return;
     }
 
-    console.log("bacController")
-
     const epreuveGroupee = questions.reduce((acc: any[], question) => {
       let exerciceBlock = acc.find(ex => ex.titre === question.numeroExercice);
 

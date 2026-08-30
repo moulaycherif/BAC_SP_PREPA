@@ -74,8 +74,6 @@ export const loginStudent = async (req: Request, res: Response) => {
   }
 };
 
-console.log("authController")
-
 // controllers/authController.ts
 
 export const logoutStudent = async (req: AuthenticatedRequest, res: Response) => {

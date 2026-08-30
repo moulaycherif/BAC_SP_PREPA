@@ -9,8 +9,6 @@ import {
   getCompleteExam 
 } from "../controllers/bacController";
 
-console.log("bacRoutes (routes)")
-
 const router = Router();
 
 // Configuration de Multer pour garder l'image en RAM (Buffer)

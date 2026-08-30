@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fetchBacFilters, BacFilters } from '../../services/bacService';
 
-console.log("Index (BacSimulator-pages)")
-
 export default function BacSimulatorIndex() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();

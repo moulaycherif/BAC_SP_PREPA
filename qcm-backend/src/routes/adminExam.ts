@@ -42,8 +42,6 @@ router.post('/upload-excel', upload.single('file'), async (req: Request, res: Re
       const rawMatiere = row['Matière'] || row['Matiere'] || row['matiere'] || "Non classée";
       const rawNumber = row["Numéro d'exercice"] || row["Numero d'exercice"] || row["Exercice"] || "Exercice";
 
-      console.log("adminExam (routes)")
-
       // ----------------------------------------------------
       // 1. CAS OÙ LA LIGNE EST UN GROUPE (Ex: Contexte / Partie)
       // ----------------------------------------------------

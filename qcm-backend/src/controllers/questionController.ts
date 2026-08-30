@@ -60,8 +60,6 @@ export const getQuestions = async (req: AuthenticatedRequest, res: Response) => 
   }
 };
 
-console.log("questionController")
-
 /* ============================================================
     📥 IMPORT EXCEL — GROUPES + QUESTIONS
 ============================================================ */

@@ -9,8 +9,6 @@ export interface IQuestionGroup extends Document {
   isFree: boolean; // 👈 AJOUT ICI
 }
 
-console.log("QuestionGroup (models)")
-
 const questionGroupSchema = new Schema<IQuestionGroup>(
   {
     image: { type: String, default: null },

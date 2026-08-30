@@ -86,8 +86,6 @@ export const uploadAstucePdf = async (req: AuthenticatedRequest, res: Response) 
 
     const fileName = `astuces/${Date.now()}-${req.file.originalname}`;
 
-    console.log("astuceController")
-
     const { error } = await supabase.storage
       .from("astuces")
       .upload(fileName, req.file.buffer, {

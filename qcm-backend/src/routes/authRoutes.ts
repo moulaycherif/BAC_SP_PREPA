@@ -68,8 +68,6 @@ router.delete("/students/:id", authenticateAdmin, deleteStudent);
 // 🚀 Route pour la Démo
 router.post("/guest", loginGuest);
 
-console.log("authRoutes (routes)")
-
 // ==========================================
 // 🛡️ VÉRIFICATION DE SESSION (/me)
 // ==========================================

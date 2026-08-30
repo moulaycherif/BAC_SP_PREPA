@@ -26,8 +26,6 @@ export interface IExercise extends Document {
   updatedAt: Date;
 }
 
-console.log("Exercise (models)")
-
 // ======================================================
 // 🗄️ Schémas Mongoose
 // ======================================================

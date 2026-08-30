@@ -13,8 +13,6 @@ import xlsx from "xlsx";
 
 const router = express.Router();
 
-console.log("exerciseRoutes (routes)")
-
 // Configuration Multer standard pour les images
 const uploadDir = path.join(process.cwd(), "uploads", "exercises");
 if (!fs.existsSync(uploadDir)) {
