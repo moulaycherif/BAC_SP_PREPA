@@ -6,7 +6,6 @@ import Question from "../models/Question";
 import { jsonrepair } from 'jsonrepair';
 import * as xlsx from 'xlsx';
 
-// Typage strict pour éviter les erreurs "any"
 interface IAItemResponse {
   question?: string;
   options?: string[];
@@ -19,9 +18,10 @@ interface IAGeneratedData {
   items: IAItemResponse[];
 }
 
-// Initialisation dynamique du client IA
-const getAIClient = (): any => { // Ajout de ": any" pour contourner l'erreur de typage avec CEREBRAS
-  const provider = process.env.AI_PROVIDER;
+// Configuration des clients IA
+const getAIConfig = (): { client: OpenAI | null; model: string; provider: string } => {
+  const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
+
   switch (provider) {
     case 'CEREBRAS':
       return {
@@ -30,18 +30,33 @@ const getAIClient = (): any => { // Ajout de ": any" pour contourner l'erreur de
         provider: 'CEREBRAS'
       };
     case 'GROQ':
-      return new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: "https://api.groq.com/openai/v1" });
+      return {
+        client: new OpenAI({ 
+          apiKey: process.env.GROQ_API_KEY, 
+          baseURL: "https://api.groq.com/openai/v1" 
+        }),
+        model: "llama-3.3-70b-versatile",
+        provider: 'GROQ'
+      };
     case 'OPENROUTER':
-      return new OpenAI({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: "https://openrouter.ai/api/v1" });
+      return {
+        client: new OpenAI({ 
+          apiKey: process.env.OPENROUTER_API_KEY, 
+          baseURL: "https://openrouter.ai/api/v1" 
+        }),
+        model: "meta-llama/llama-3.1-8b-instruct:free",
+        provider: 'OPENROUTER'
+      };
     case 'OPENAI':
     default:
-      return new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      return {
+        client: new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
+        model: "gpt-4o-mini",
+        provider: 'OPENAI'
+      };
   }
 };
 
-/**
- * 1️⃣ GÉNÉRATION : Appelle l'IA et renvoie un fichier EXCEL (Human-in-the-Loop)
- */
 export const generateContentFromPdf = async (req: Request, res: Response): Promise<void> => {
   try {
     const file = req.file;
@@ -53,13 +68,12 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       return;
     }
 
-    // Gestion optimisée en mémoire
     let dataBuffer: Buffer;
     if (file.buffer) {
       dataBuffer = file.buffer;
     } else if (file.path) {
       dataBuffer = fs.readFileSync(file.path);
-      fs.unlinkSync(file.path); // Nettoyage immédiat du disque
+      fs.unlinkSync(file.path); 
     } else {
       res.status(400).json({ message: "Format de fichier non supporté." });
       return;
@@ -73,7 +87,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
        return;
     }
 
-    // Instructions générales renforcées pour le Bac Sciences Physiques
     const baseMathInstruction = `
     NIVEAU CIBLE : Baccalauréat Sciences Physiques (Terminale Scientifique).
     Le contenu, le vocabulaire, la rigueur scientifique et les calculs doivent correspondre EXACTEMENT aux attentes d'une épreuve de Physique-Chimie du Bac.
@@ -86,7 +99,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     IMPORTANT : Ta réponse DOIT être uniquement un objet JSON valide, sans texte additionnel.
     `;
 
-    // Personnalisation selon le type
     let systemPrompt = "";
     if (contentType === "qcm") {
       systemPrompt = `Tu es un professeur expert de Physique-Chimie. Génère 5 QCM (PAS PLUS) de HAUT NIVEAU (type Bac Sciences Physiques) basés sur ce texte. L'étudiant doit raisonner et faire des calculs.
@@ -105,25 +117,156 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
     }
 
-    const openai = getAIClient();
-    let modelName = "gpt-4o-mini"; 
-    if (process.env.AI_PROVIDER === 'GROQ') modelName = "llama-3.1-8b-instant";
-    if (process.env.AI_PROVIDER === 'OPENROUTER') modelName = "meta-llama/llama-3.3-70b-instruct:free";
+    const { client: aiClient, model: defaultModel, provider } = getAIConfig();
+    let responseContent: string | undefined = undefined;
 
-    const response = await openai.chat.completions.create({
-      model: modelName,
-      messages: [
-        { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
-        { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.5, 
-      frequency_penalty: 0.8, 
-      presence_penalty: 0.3,
-      max_tokens: 2500, 
-    });
+    // --- BRANCHE CEREBRAS ---
+    if (provider === 'CEREBRAS') {
+      let targetModel = defaultModel;
+      try {
+        const modelsResponse = await fetch("https://api.cerebras.ai/v1/models", {
+          headers: { "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}` }
+        });
+        
+        if (modelsResponse.ok) {
+          const modelsData = await modelsResponse.json();
+          const availableModels = modelsData.data?.map((m: any) => m.id) || [];
+          if (availableModels.length > 0) {
+            const llamaModel = availableModels.find((m: string) => m.toLowerCase().includes('llama'));
+            targetModel = llamaModel || availableModels[0];
+          }
+        }
+      } catch (e) {
+        console.warn("Cerebras models check fallback.");
+      }
 
-    const responseContent = response.choices[0]?.message?.content;
+      const cerebrasResponse = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: targetModel,
+          messages: [
+            { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
+            { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
+          ],
+          temperature: 0.2,
+          max_tokens: 2500
+        })
+      });
+
+      if (!cerebrasResponse.ok) {
+        const errorText = await cerebrasResponse.text();
+        throw new Error(`Erreur API Cerebras HTTP ${cerebrasResponse.status}: ${errorText}`);
+      }
+
+      const responseData = await cerebrasResponse.json();
+      responseContent = responseData.choices?.[0]?.message?.content;
+
+    // --- BRANCHE GROQ, OPENROUTER OU OPENAI ---
+    } else if (aiClient) {
+
+      if (provider === 'GROQ') {
+        let groqCandidateModels: string[] = [];
+
+        // Récupération dynamique et priorisation intelligente des modèles actifs
+        try {
+          console.log("[GROQ] Récupération dynamique de la liste des modèles actifs...");
+          const modelsList = await aiClient.models.list();
+          const availableIds: string[] = modelsList.data.map((m: any) => m.id);
+
+          // 1. Filtrer les modèles non adaptés (audio, TTS, guard, vision, embeddings)
+          const filtered = availableIds.filter((id: string) => {
+            const lower = id.toLowerCase();
+            return !lower.includes('whisper') && 
+                   !lower.includes('guard') && 
+                   !lower.includes('embed') && 
+                   !lower.includes('vision') &&
+                   !lower.includes('orpheus') &&
+                   !lower.includes('audio');
+          });
+
+          // 2. Prioriser les modèles LLM texte les plus performants et stables
+          const priorityKeywords = [
+            'gpt-oss-120b',
+            'llama-3.3-70b',
+            'llama-3.1-8b',
+            'gpt-oss-20b',
+            'qwen3',
+            'compound-mini'
+          ];
+
+          groqCandidateModels = filtered.sort((a, b) => {
+            const indexA = priorityKeywords.findIndex(kw => a.toLowerCase().includes(kw));
+            const indexB = priorityKeywords.findIndex(kw => b.toLowerCase().includes(kw));
+            return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+          });
+
+          console.log(`[GROQ] Modèles prioritaires détectés (${groqCandidateModels.length}) :`, groqCandidateModels);
+        } catch (e: any) {
+          console.warn(`[GROQ] Impossible de récupérer la liste dynamique (${e.message}). Utilisation de la liste de secours.`);
+        }
+
+        // Liste de secours à jour au cas où l'API de liste échoue
+        if (groqCandidateModels.length === 0) {
+          groqCandidateModels = [
+            "openai/gpt-oss-120b",
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "openai/gpt-oss-20b",
+            "groq/compound-mini"
+          ];
+        }
+
+        let lastError: any = null;
+
+        for (const candidateModel of groqCandidateModels) {
+          try {
+            console.log(`[GROQ] Tentative de génération avec le modèle : ${candidateModel}...`);
+            const response = await aiClient.chat.completions.create({
+              model: candidateModel,
+              messages: [
+                { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
+                { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
+              ],
+              response_format: { type: "json_object" },
+              temperature: 0.2,
+              max_tokens: 2500
+            });
+
+            responseContent = response.choices[0]?.message?.content || undefined;
+            if (responseContent) {
+              console.log(`[GROQ] Succès avec le modèle : ${candidateModel}`);
+              break; // Succès ! On sort de la boucle immédiatement.
+            }
+          } catch (err: any) {
+            console.warn(`[GROQ] Le modèle ${candidateModel} a échoué (${err.message}). Essai du suivant...`);
+            lastError = err;
+          }
+        }
+
+        if (!responseContent) {
+          throw new Error(`Tous les modèles Groq ont échoué. Dernière erreur : ${lastError?.message || "Erreur inconnue"}`);
+        }
+
+      } else {
+        // Mode OpenAI / OpenRouter standard
+        const response = await aiClient.chat.completions.create({
+          model: defaultModel,
+          messages: [
+            { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
+            { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+          max_tokens: 2500
+        });
+        responseContent = response.choices[0]?.message?.content || undefined;
+      }
+    }
+
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
     const firstBrace = responseContent.indexOf('{');
@@ -190,9 +333,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
   }
 };
 
-/**
- * 2️⃣ IMPORTATION : Route pour recevoir l'Excel corrigé et le sauvegarder en BDD
- */
 export const importCorrectedExcel = async (req: Request, res: Response): Promise<void> => {
     try {
       const file = req.file;
