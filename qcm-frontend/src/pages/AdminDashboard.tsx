@@ -150,7 +150,7 @@ function AdminAIGenerator() {
               placeholder="Matière (ex: Mathématique)"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
-              className="p-3 border rounded-xl w-full"
+              className="p-3 border rounded-xl w-full !bg-blue-600"
               required
             />
             <input
@@ -158,7 +158,7 @@ function AdminAIGenerator() {
               placeholder="Chapitre"
               value={chapter}
               onChange={(e) => setChapter(e.target.value)}
-              className="p-3 border rounded-xl w-full"
+              className="p-3 border rounded-xl w-full !bg-blue-800"
               required
             />
           </div>
@@ -178,7 +178,7 @@ function AdminAIGenerator() {
               type="file"
               accept=".pdf"
               onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
-              className="p-2 border rounded-xl w-full"
+              className="p-2 border rounded-xl w-full !bg-blue-600"
               required
             />
           </div>
