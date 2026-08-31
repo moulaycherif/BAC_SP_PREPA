@@ -166,7 +166,7 @@ function AdminAIGenerator() {
             <select
               value={contentType}
               onChange={(e) => setContentType(e.target.value)}
-              className="p-3 border rounded-xl w-full bg-white"
+              className="p-3 border rounded-xl w-full !bg-indigo-900"
             >
               <option value="qcm">QCM</option>
               <option value="exercise">Exercice Complexe</option>
