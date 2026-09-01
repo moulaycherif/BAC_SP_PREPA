@@ -1039,9 +1039,10 @@ export default function StudentPage() {
             `}</style>
 
             <div className="mb-4 text-center">
-              <h2 className="text-3xl font-bold mb-2 text-red-600">📝 Examen Blanc</h2>
-              <p className="font-semibold text-gray-600">Question {exerciseIndex + 1} / {whiteExams.length}</p>
-            </div>
+  <h2 className="text-3xl font-bold mb-2 text-red-600">📝 Examen Blanc</h2>
+  {/* On remplace "Question" par "Exercice" */}
+  <p className="font-semibold text-gray-600">Exercice {whiteExams.length > 1 ? `${exerciseIndex + 1} / ${whiteExams.length}` : "1"}</p>
+</div>
 
             <div className="bg-white p-6 rounded-xl shadow border-t-4 border-red-500">
               <div className="mb-8 border-b-2 border-gray-100 pb-6 bg-gray-50 p-4 rounded-lg">
@@ -1064,8 +1065,8 @@ export default function StudentPage() {
                     <div className="font-medium mb-2 flex flex-col items-start text-lg leading-relaxed">
                       <div className="flex items-start w-full">
                         <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-[12px] mr-2 mt-0.5 shrink-0 font-bold">
-                          Q{index + 1}
-                        </span>
+  {index + 1}) {/* Formatage 1), 2), etc. */}
+</span>
                         <div className="flex-1 text-lg font-medium text-gray-900">
                           <MixedContentRenderer text={subQ.questionText || subQ.question || subQ.texte || ""} />
                         </div>
@@ -1372,8 +1373,9 @@ export default function StudentPage() {
           {/* Entête de l'exercice */}
           <div className="mb-6 text-center">
             <h2 className="text-3xl font-extrabold text-blue-900 tracking-wide uppercase">
-              EXERCICE {exercises.length > 1 ? `${exerciseIndex + 1} / ${exercises.length}` : ""}
-            </h2>
+    {/* Affiche "EXERCICE 1", "EXERCICE 2", etc. */}
+    EXERCICE {exercises.length > 1 ? exerciseIndex + 1 : ""} 
+  </h2>
             <p className="font-semibold text-gray-500 text-sm mt-1">
               (Total : {totalQuestionsCount} question{totalQuestionsCount > 1 ? "s" : ""})
             </p>
@@ -1410,9 +1412,9 @@ export default function StudentPage() {
                     {/* Intitulé de la question */}
                     <div className="font-medium mb-3 flex flex-col items-start text-lg leading-relaxed">
                       <div className="flex items-start w-full gap-2">
-                        <span className="bg-blue-800 text-white px-2.5 py-0.5 rounded-md text-sm font-bold shrink-0 mt-0.5">
-                          Question {index + 1}
-                        </span>
+                       <span className="bg-blue-800 text-white px-2.5 py-0.5 rounded-md text-sm font-bold shrink-0 mt-0.5">
+  {index + 1}) {/* Formatage de la question en 1), 2)... */}
+</span>
                         <div className="flex-1 text-lg font-medium text-gray-900">
                           <MixedContentRenderer text={subQ.questionText || subQ.question || subQ.texte || ""} />
                         </div>
