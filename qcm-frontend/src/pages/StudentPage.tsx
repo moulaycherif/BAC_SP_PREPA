@@ -41,8 +41,8 @@ interface TipCase {
 interface Question {
   _id: string;
   texte?: string;
-  questionText?: string; // 👈 AJOUT
-  question?: string;     // 👈 AJOUT
+  questionText?: string;
+  question?: string;
   image?: string | null;
   subject?: string;
   groupId?: {
@@ -55,63 +55,64 @@ interface Question {
   reponseCorrecte: string;
   note: number;
 }
-  const chaptersBySubject: Record<string, string[]> = {
-        Mathématique: [
-          "Chapitre I : Limites et Continuité",
-          "Chapitre II : Dérivation et étude de fonctions",
-          "Chapitre III : Suites numériques",
-          "Chapitre IV : Fonctions primitives",
-          "Chapitre V : Fonctions logarithmiques",
-          "Chapitre VI : Nombres complexes (Partie 1)",
-          "Chapitre VII : Fonctions exponentielles",
-          "Chapitre VIII : Nombres complexes (Partie 2)",
-          "Chapitre IX : Calcul intégral",
-          "Chapitre X : Equations différentielles",
-          "Chapitre XI : Produit scalaire et produit vectoriel dans l'espace",
-          "Chapitre XII : Dénombrement et probabilités"
-        ],
-        Physique: [
-          "CHAPITRE 1 : Ondes mécaniques progressives",
-          "CHAPITRE 2 : Ondes mécaniques progressives périodiques",
-          "CHAPITRE 3 : Propagation d’une onde lumineuse",
-          "CHAPITRE 4 : Décroissance radioactive",
-          "CHAPITRE 5 : Noyaux, masse et énergie",
-          "CHAPITRE 6 : Dipôle RC",
-          "CHAPITRE 7 : Dipôle RL",
-          "CHAPITRE 8 : Oscillations libres d'un circuit RLC série",
-          "CHAPITRE 9 : Ondes électromagnétiques",
-          "CHAPITRE 10 : Modulation d'amplitude",
-          "CHAPITRE 11 : Lois de Newton",
-          "CHAPITRE 12 : Chute verticale d'un corps solide",
-          "CHAPITRE 13 : Mouvements plans",
-          "CHAPITRE 14 : Mouvement des satellites et des planètes",
-          "CHAPITRE 15 : Mouvement de rotation d’un solide autour d’un axe fixe",
-          "CHAPITRE 16 : Système mécanique oscillant",
-          "CHAPITRE 17 : Aspects énergétiques",
-          "CHAPITRE 18 : Atome et mécanique de Newton"
-        ],
-        Chimie: [
-          "Chapitre 1 : Transformations lentes et transformations rapides",
-          "Chapitre 2 : Suivi temporel d'une transformation chimique - Vitesse de réaction",
-          "Chapitre 3 : Transformations chimiques s'effectuant dans les 2 sens",
-          "Chapitre 4 : État d'équilibre d'un système chimique",
-          "Chapitre 5 : Transformations associées à des réactions acido-basiques en solution aqueuse",
-          "Chapitre 6 : Évolution spontanée d'un système chimique",
-          "Chapitre 7 : Transformations spontanées dans les piles et production d'énergie",
-          "Chapitre 8 : Transformations forcées (Électrolyse)",
-          "Chapitre 9 : Réactions d'estérification et d'hydrolyse",
-          "Chapitre 10 : Contrôle de l'évolution d'un système chimique"
-          ],
-        SVT: [
-          "Chapitre 1 : Les réactions responsables de la libération de l'énergie emmagasinée dans la matière organique",
-          "Chapitre 2 : Rôle du muscle strié squelettique dans la conversion de l'énergie",
-          "Chapitre 3 : L'information génétique",
-          "Chapitre 4 : Le génie génétique",
-          "Chapitre 5 : La génétique humaine",
-          "Chapitre 6 : La génétique des populations",
-          "Chapitre 7 : L'immunité"
-        ],
-      };
+
+const chaptersBySubject: Record<string, string[]> = {
+  Mathématique: [
+    "Chapitre I : Limites et Continuité",
+    "Chapitre II : Dérivation et étude de fonctions",
+    "Chapitre III : Suites numériques",
+    "Chapitre IV : Fonctions primitives",
+    "Chapitre V : Fonctions logarithmiques",
+    "Chapitre VI : Nombres complexes (Partie 1)",
+    "Chapitre VII : Fonctions exponentielles",
+    "Chapitre VIII : Nombres complexes (Partie 2)",
+    "Chapitre IX : Calcul intégral",
+    "Chapitre X : Equations différentielles",
+    "Chapitre XI : Produit scalaire et produit vectoriel dans l'espace",
+    "Chapitre XII : Dénombrement et probabilités"
+  ],
+  Physique: [
+    "CHAPITRE 1 : Ondes mécaniques progressives",
+    "CHAPITRE 2 : Ondes mécaniques progressives périodiques",
+    "CHAPITRE 3 : Propagation d’une onde lumineuse",
+    "CHAPITRE 4 : Décroissance radioactive",
+    "CHAPITRE 5 : Noyaux, masse et énergie",
+    "CHAPITRE 6 : Dipôle RC",
+    "CHAPITRE 7 : Dipôle RL",
+    "CHAPITRE 8 : Oscillations libres d'un circuit RLC série",
+    "CHAPITRE 9 : Ondes électromagnétiques",
+    "CHAPITRE 10 : Modulation d'amplitude",
+    "CHAPITRE 11 : Lois de Newton",
+    "CHAPITRE 12 : Chute verticale d'un corps solide",
+    "CHAPITRE 13 : Mouvements plans",
+    "CHAPITRE 14 : Mouvement des satellites et des planètes",
+    "CHAPITRE 15 : Mouvement de rotation d’un solide autour d’un axe fixe",
+    "CHAPITRE 16 : Système mécanique oscillant",
+    "CHAPITRE 17 : Aspects énergétiques",
+    "CHAPITRE 18 : Atome et mécanique de Newton"
+  ],
+  Chimie: [
+    "Chapitre 1 : Transformations lentes et transformations rapides",
+    "Chapitre 2 : Suivi temporel d'une transformation chimique - Vitesse de réaction",
+    "Chapitre 3 : Transformations chimiques s'effectuant dans les 2 sens",
+    "Chapitre 4 : État d'équilibre d'un système chimique",
+    "Chapitre 5 : Transformations associées à des réactions acido-basiques en solution aqueuse",
+    "Chapitre 6 : Évolution spontanée d'un système chimique",
+    "Chapitre 7 : Transformations spontanées dans les piles et production d'énergie",
+    "Chapitre 8 : Transformations forcées (Électrolyse)",
+    "Chapitre 9 : Réactions d'estérification et d'hydrolyse",
+    "Chapitre 10 : Contrôle de l'évolution d'un système chimique"
+  ],
+  SVT: [
+    "Chapitre 1 : Les réactions responsables de la libération de l'énergie emmagasinée dans la matière organique",
+    "Chapitre 2 : Rôle du muscle strié squelettique dans la conversion de l'énergie",
+    "Chapitre 3 : L'information génétique",
+    "Chapitre 4 : Le génie génétique",
+    "Chapitre 5 : La génétique humaine",
+    "Chapitre 6 : La génétique des populations",
+    "Chapitre 7 : L'immunité"
+  ],
+};
 
 export default function StudentPage() {
   const navigate = useNavigate();
@@ -147,9 +148,6 @@ export default function StudentPage() {
 
   const [controles, setControles] = useState<any[]>([]);
 
-  const matieres = ["Mathématique", "Physique", "Chimie", "SVT"];
-  const isShortResume = (selectedResume?.chapter?.length ?? 0) < 30;
-
   const subjectImages: Record<string, string> = {
     Mathématique: mathsImg,
     Physique: physiqueImg,
@@ -166,45 +164,37 @@ export default function StudentPage() {
 
   const [studentOptions, setStudentOptions] = useState<string[]>([]);
 
-// ✅ Un seul useEffect, totalement sécurisé contre les erreurs (Crash-proof)
-useEffect(() => {
-  try {
-    const storedOptions = localStorage.getItem("studentOptions");
-    
-    // On vérifie que la valeur existe ET qu'elle n'est pas le texte "undefined"
-    if (storedOptions && storedOptions !== "undefined") {
-      const parsed = JSON.parse(storedOptions);
-      
-      // On s'assure que c'est bien un tableau pour éviter le crash de ".includes()"
-      if (Array.isArray(parsed)) {
-        setStudentOptions(parsed);
+  useEffect(() => {
+    try {
+      const storedOptions = localStorage.getItem("studentOptions");
+      if (storedOptions && storedOptions !== "undefined") {
+        const parsed = JSON.parse(storedOptions);
+        if (Array.isArray(parsed)) {
+          setStudentOptions(parsed);
+        } else {
+          setStudentOptions([parsed]); 
+        }
       } else {
-        // Si c'est juste un string (ex: "PC"), on le transforme en tableau
-        setStudentOptions([parsed]); 
+        setStudentOptions([]);
       }
-    } else {
-      setStudentOptions([]); // Rien n'est coché par défaut
+    } catch (error) {
+      console.error("❌ Erreur lors de la lecture des options :", error);
+      setStudentOptions([]);
     }
-  } catch (error) {
-    console.error("❌ Erreur lors de la lecture des options :", error);
-    setStudentOptions([]); // Fallback sécurisé en cas de problème de JSON
-  }
-}, []);
+  }, []);
 
-const getAccessibleSubjects = () => {
-  let subjects: string[] = [];
-  
-  // Par sécurité supplémentaire
-  const safeOptions = Array.isArray(studentOptions) ? studentOptions : [];
+  const getAccessibleSubjects = () => {
+    let subjects: string[] = [];
+    const safeOptions = Array.isArray(studentOptions) ? studentOptions : [];
 
-  if (safeOptions.includes("MATH")) subjects.push("Mathématique");
-  if (safeOptions.includes("PC")) {
-    subjects.push("Physique-Chimie");
-  }
-  if (safeOptions.includes("SVT")) subjects.push("SVT");
-  
-  return subjects;
-};
+    if (safeOptions.includes("MATH")) subjects.push("Mathématique");
+    if (safeOptions.includes("PC")) {
+      subjects.push("Physique-Chimie");
+    }
+    if (safeOptions.includes("SVT")) subjects.push("SVT");
+    
+    return subjects;
+  };
 
   useEffect(() => {
     const handleEsc = (e: KeyboardEvent) => {
@@ -255,43 +245,29 @@ const getAccessibleSubjects = () => {
     }
   }, [currentExam, selectedMatiere]);
 
-  // =========================================================================
-  // 🌟 USE-EFFECT HYBRIDE : FUSION DU CONTENU MANUEL ET DU CONTENU IA 🌟
-  // =========================================================================
   useEffect(() => {
     if (!selectedChapter || !selectedAction || !selectedMatiere) return;
 
     const loadHybridContent = async () => {
       const token = localStorage.getItem("token");
       const headers = { Authorization: `Bearer ${token}` };
-      
-      // 🛡️ SÉCURITÉ URL : On encode les espaces et caractères spéciaux
       const safeMatiere = encodeURIComponent(selectedMatiere);
       const safeChapter = encodeURIComponent(selectedChapter);
 
-      // ---------------------------------------------------------
-      // A. GESTION DES RÉSUMÉS (PDF Manuels + Textes IA)
-      // ---------------------------------------------------------
       if (selectedAction === "Résumé") {
         let manualData: any[] = [], aiData: any[] = [];
-        
         try {
           const resManual = await axios.get(`${API_BASE_URL}/api/resume/by-chapter/${safeChapter}`, { headers });
           manualData = resManual.data || [];
         } catch (err) { console.error("Erreur Résumés manuels", err); }
 
         try {
-          // 🔄 CORRECTION : Ajout de ${API_BASE_URL}
           const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=resume`, { headers });
           aiData = resAi.data || [];
         } catch (err) { console.error("Erreur Résumés IA", err); }
 
         setResumes([...manualData, ...aiData]);
       }
-
-      // ---------------------------------------------------------
-      // B. GESTION DES ASTUCES & EXAMENS BLANCS SVT
-      // ---------------------------------------------------------
       else if (selectedAction === "Astuces") {
         const isWhiteExamAction = selectedMatiere === "SVT";
 
@@ -321,7 +297,6 @@ const getAccessibleSubjects = () => {
           } catch (err) { console.error("Erreur Astuces", err); }
           
           try {
-            // 🔄 CORRECTION : Ajout de ${API_BASE_URL}
             const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=astuce`, { headers });
             const rawAiData = resAi.data || [];
             
@@ -342,10 +317,6 @@ const getAccessibleSubjects = () => {
           setAstuces([...manualData, ...aiData]);
         }
       }
-
-     // ---------------------------------------------------------
-      // C. GESTION DES EXERCICES ET QCM
-      // ---------------------------------------------------------
       else if (selectedAction === "Exercises" || selectedAction === "Exercices" || selectedAction === "QCM") {
         let manualExercises: any[] = [], aiExercises: any[] = [];
 
@@ -367,27 +338,20 @@ const getAccessibleSubjects = () => {
         } catch (err) { console.error("Erreur Exercices Manuels", err); }
 
         try {
-          // 👇 NOUVEAU : On lance 2 requêtes simultanées pour récupérer les QCM ET les Exercices
           const [resAiQcm, resAiExo] = await Promise.all([
             axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers }),
             axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=exercise`, { headers })
           ]);
           
-          console.log("📥 Résultat QCM IA reçus :", resAiQcm.data);
-          console.log("📥 Résultat Exercices IA reçus :", resAiExo.data);
-          
-          // On fusionne les deux tableaux de résultats
           const aiData = [...(resAiQcm.data || []), ...(resAiExo.data || [])];
           
           if (aiData.length > 0) {
             const aiSubQuestions = aiData.map((q: any) => ({
               _id: q._id,
-              questionText: q.texte,
-              // On adapte le type : "qcm" pour les QCM, et on peut utiliser "open" (question ouverte) pour les exercices
+              questionText: q.texte || q.questionText || q.question,
               qType: q.type === 'exercise' ? 'open' : 'qcm', 
               options: q.options || [],
               correctAnswer: q.reponseCorrecte,
-              // Pour un exercice, le corrigé se trouve dans l'explication
               explanation: q.explication,
               image: q.image
             }));
@@ -406,22 +370,15 @@ const getAccessibleSubjects = () => {
         setExerciseSubmitted(false);
         setExerciseScore(null);
       }
-
-// ---------------------------------------------------------
-      // D. GESTION DES CONTRÔLES
-      // ---------------------------------------------------------
       else if (selectedAction === "Controles") {
         try {
-          // On utilise type=controle car c'est ce que votre backend génère
           const res = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=controle`, { headers });
-          console.log("📥 Contrôles reçus :", res.data);
           setControles(res.data || []);
         } catch (err) { 
           console.error("Erreur lors de la récupération des contrôles", err); 
           setControles([]);
         }
       }
-
     };
 
     loadHybridContent();
@@ -436,18 +393,13 @@ const getAccessibleSubjects = () => {
     setScore(null);
   };
 
-// =========================================================================
-  // 🌟 MOTEUR NATIF ULTRA-TOLÉRANT : KATEX + CORRECTION RETOURS À LA LIGNE IMAGES
-  // =========================================================================
   function MixedContentRenderer({ text }: { text: string }) {
     if (!text) return null;
 
-    // 1. Nettoyage de base + Uniformisation des espaces
     const processedText = text
       .replace(/&nbsp;/gi, " ")
       .replace(/<smiles>[\s\S]*?<\/smiles>/gi, "");
 
-   // 2. Regex ultra-tolérante (gère les sauts de ligne, les symboles < >, et les doubles échappements de l'IA)
     const combinedRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\\\\\[[\s\S]*?\\\\\]|\\\\\([\s\S]*?\\\\\)|(?<![\\<])\$[^$]+?\$|\[\[\s*IMG\s*=\s*[^\]]+\s*\]\])/gi;
     const parts = processedText.split(combinedRegex);
 
@@ -458,9 +410,7 @@ const getAccessibleSubjects = () => {
 
           const trimmedPart = part.trim();
 
-          // 🌟 RECONNAISSANCE AMÉLIORÉE DE LA BALISE IMAGE
           if (trimmedPart.toUpperCase().startsWith("[[IMG=") && trimmedPart.endsWith("]]")) {
-            // Extraction propre du nom de fichier
             const filename = trimmedPart.substring(6, trimmedPart.length - 2).trim();
             
             return (
@@ -469,10 +419,6 @@ const getAccessibleSubjects = () => {
                   src={`/images/${filename.replace(/^\/images\//, '')}`} 
                   alt="Illustration" 
                   className="max-h-64 object-contain rounded-lg shadow-sm border border-gray-200"
-                  onError={(e) => {
-                    // Optionnel : affiche un message si le fichier physique est introuvable dans /public/images/
-                    console.error("Image introuvable dans le dossier public :", filename);
-                  }}
                 />
               </span>
             );
@@ -482,7 +428,6 @@ const getAccessibleSubjects = () => {
           let mathContent = part;
           let isBlock = false;
 
-          // Identification des blocs Mathématiques
           if (trimmedPart.startsWith("$$") && trimmedPart.endsWith("$$")) {
             isMath = true; isBlock = true; mathContent = trimmedPart.slice(2, -2);
           } else if (trimmedPart.startsWith("\\[") && trimmedPart.endsWith("\\]")) {
@@ -522,62 +467,57 @@ const getAccessibleSubjects = () => {
             }
           }
 
-          // Rendu du texte normal et du HTML résiduel (<br>, <b>, etc.)
           return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
         })}
       </span>
     );
   }
  
-      // 🃏 COMPOSANT FLASHCARD À AJOUTER EN HAUT DU FICHIER
-const Flashcard = ({ title, content }: { title: string, content: string }) => {
-  const [isFlipped, setIsFlipped] = useState(false);
+  const Flashcard = ({ title, content }: { title: string, content: string }) => {
+    const [isFlipped, setIsFlipped] = useState(false);
 
-  return (
-    <div 
-      className="relative w-full h-80 cursor-pointer group"
-      style={{ perspective: '1000px' }}
-      onClick={() => setIsFlipped(!isFlipped)}
-    >
+    return (
       <div 
-        className="relative w-full h-full transition-transform duration-700 ease-in-out"
-        style={{ 
-          transformStyle: 'preserve-3d', 
-          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' 
-        }}
+        className="relative w-full h-80 cursor-pointer group"
+        style={{ perspective: '1000px' }}
+        onClick={() => setIsFlipped(!isFlipped)}
       >
-        {/* --- FACE AVANT (RECTO) : LE CONCEPT --- */}
         <div 
-          className="absolute w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center text-center text-white border-2 border-indigo-400 hover:shadow-2xl transition-shadow"
-          style={{ backfaceVisibility: 'hidden' }}
-        >
-          <span className="text-4xl mb-4 block">💡</span>
-          <h3 className="text-2xl font-bold leading-tight">
-            <MixedContentRenderer text={title} />
-          </h3>
-          <p className="absolute bottom-5 text-indigo-200 text-sm font-medium animate-pulse">
-            Cliquez pour retourner ↺
-          </p>
-        </div>
-
-        {/* --- FACE ARRIÈRE (VERSO) : L'EXPLICATION --- */}
-        <div 
-          className="absolute w-full h-full bg-white rounded-2xl shadow-xl p-6 overflow-y-auto flex items-center justify-center border-4 border-indigo-100 custom-scrollbar"
+          className="relative w-full h-full transition-transform duration-700 ease-in-out"
           style={{ 
-            backfaceVisibility: 'hidden',
-            transform: 'rotateY(180deg)'
+            transformStyle: 'preserve-3d', 
+            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' 
           }}
         >
-          <div className="text-gray-800 text-lg font-medium w-full text-left">
-            <MixedContentRenderer text={content} />
+          <div 
+            className="absolute w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center text-center text-white border-2 border-indigo-400 hover:shadow-2xl transition-shadow"
+            style={{ backfaceVisibility: 'hidden' }}
+          >
+            <span className="text-4xl mb-4 block">💡</span>
+            <h3 className="text-2xl font-bold leading-tight">
+              <MixedContentRenderer text={title} />
+            </h3>
+            <p className="absolute bottom-5 text-indigo-200 text-sm font-medium animate-pulse">
+              Cliquez pour retourner ↺
+            </p>
+          </div>
+
+          <div 
+            className="absolute w-full h-full bg-white rounded-2xl shadow-xl p-6 overflow-y-auto flex items-center justify-center border-4 border-indigo-100 custom-scrollbar"
+            style={{ 
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)'
+            }}
+          >
+            <div className="text-gray-800 text-lg font-medium w-full text-left">
+              <MixedContentRenderer text={content} />
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
-  // =========================================================================
   function renderContent(content?: string) {
     if (!content) return null;
     return (
@@ -646,7 +586,7 @@ const Flashcard = ({ title, content }: { title: string, content: string }) => {
       return <StudentAstuceDetail id={selectedTipId} onBack={() => setSelectedTipId(null)} />;
     }
     
-if (section === "home" && !selectedAction) {
+    if (section === "home" && !selectedAction) {
       const accessibleSubjects = getAccessibleSubjects();
 
       if (accessibleSubjects.length === 0) {
@@ -664,14 +604,13 @@ if (section === "home" && !selectedAction) {
         );
       }
 
-      // Fonction utilitaire pour rendre un chapitre (Accordéon)
       const renderChapterAccordion = (chapter: string, matiereAPI: string, matiereAffichage: string) => {
         const isExpanded = selectedChapter === chapter && selectedMatiere === matiereAPI;
         return (
           <div key={`${matiereAPI}-${chapter}`} className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden mb-4">
             <button
               onClick={() => {
-                setSelectedMatiere(matiereAPI); // Important pour que l'API cherche la bonne matière (Physique ou Chimie)
+                setSelectedMatiere(matiereAPI);
                 setSelectedChapter(isExpanded ? null : chapter);
                 setSelectedAction(null); 
               }}
@@ -718,7 +657,6 @@ if (section === "home" && !selectedAction) {
                 {matiere}
               </h2>
                   
-              {/* Boutons Globaux (Haut) - Extrême Gauche et Extrême Droite */}
               <div className="flex justify-between items-center mb-10 w-full">
                 <button className="px-8 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg hover:bg-blue-700 hover:-translate-y-1 transition transform flex items-center gap-3">
                   <span className="text-2xl">▶️</span>
@@ -731,16 +669,13 @@ if (section === "home" && !selectedAction) {
                 </button>
               </div>
 
-             {/* Contenu principal de la matière */}
               {matiere === "Physique-Chimie" ? (
-                /* --- DISPOSITION SPÉCIFIQUE PHYSIQUE-CHIMIE (2 COLONNES) --- */
-                <> {/* <-- Ajout du Fragment React ici */}
+                <>
                   <h2 className="text-center text-2xl font-bold mb-6 text-gray-800">
                     📚 Programme de l'année
                   </h2>
                   
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
-                    {/* Colonne Gauche : CHIMIE */}
                     <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
                       <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                         <span>🧪</span> Chimie
@@ -750,7 +685,6 @@ if (section === "home" && !selectedAction) {
                       </div>
                     </div>
                     
-                    {/* Colonne Droite : PHYSIQUE */}
                     <div className="bg-gray-50 rounded-2xl shadow-inner p-6 border border-gray-200">
                       <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
                         <span>⚡</span> Physique
@@ -762,7 +696,6 @@ if (section === "home" && !selectedAction) {
                   </div>
                 </>
               ) : (
-                /* --- DISPOSITION STANDARD (1 COLONNE) --- */
                 <div className="bg-gray-50 rounded-2xl shadow-inner p-6 mb-10 border border-gray-200 w-full max-w-4xl mx-auto">
                   <h3 className="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2 justify-center">
                     <span>📚</span> Programme de l'année
@@ -773,7 +706,6 @@ if (section === "home" && !selectedAction) {
                 </div>
               )}
 
-              {/* Boutons Globaux (Bas) - Section des Examens */}
               <div className="flex flex-col items-center mt-10 border-t-2 border-gray-100 pt-8">
                 <h2 className="text-2xl font-bold mb-6 text-gray-800">Entraînement & Évaluation</h2>
                 <div className="flex flex-col sm:flex-row justify-center gap-6 w-full max-w-4xl">
@@ -781,21 +713,19 @@ if (section === "home" && !selectedAction) {
                     <span className="text-2xl">📚</span>
                     <span className="text-lg">Contrôles & Examens blancs</span>
                   </button>
-                  {/* NOUVEAU BOUTON DYNAMIQUE POUR LE BAC SIMULATOR */}
-    <button 
-      onClick={() => {
-        // On adapte le nom de la matière pour l'URL en fonction de la boucle actuelle
-        const matiereUrl = matiere === "Mathématique" ? "Mathématique" : matiere;
-        navigate(`/student/bac-simulator?matiere=${matiereUrl}`);
-      }} 
-      className="flex-1 px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition hover:-translate-y-1 flex items-center justify-center gap-3"
-    >
-      <span className="text-2xl">🎓</span>
-      <span className="text-lg text-center">Examens nationaux (Bac Simulator)</span>
-    </button>
 
-  </div>
-</div>
+                  <button 
+                    onClick={() => {
+                      const matiereUrl = matiere === "Mathématique" ? "Mathématique" : matiere;
+                      navigate(`/student/bac-simulator?matiere=${matiereUrl}`);
+                    }} 
+                    className="flex-1 px-8 py-4 bg-indigo-600 text-white font-bold rounded-2xl shadow-lg hover:bg-indigo-700 transition hover:-translate-y-1 flex items-center justify-center gap-3"
+                  >
+                    <span className="text-2xl">🎓</span>
+                    <span className="text-lg text-center">Examens nationaux (Bac Simulator)</span>
+                  </button>
+                </div>
+              </div>
 
             </div>
           ))}
@@ -881,7 +811,6 @@ if (section === "home" && !selectedAction) {
                         src={getImageUrl(q.image)}
                         className="max-w-lg my-3 rounded shadow mx-auto block object-contain max-h-[300px]"
                         alt="Illustration"
-                        
                       />
                     )}
                     
@@ -889,17 +818,17 @@ if (section === "home" && !selectedAction) {
                       {q.options.map((opt, i) => {
                         return (
                           <label
-  key={i}
-  className={`flex items-start p-3 border-2 border-gray-300 rounded-lg cursor-pointer transition-all ${
-    submitted
-      ? opt === q.reponseCorrecte
-        ? "bg-green-100 !border-green-500 font-medium"
-        : answers[q._id] === opt
-        ? "bg-red-100 !border-red-500 font-medium"
-        : "opacity-60"
-      : "hover:bg-blue-50/50 hover:border-blue-400"
-  }`}
->
+                            key={i}
+                            className={`flex items-start p-3 border-2 border-gray-300 rounded-lg cursor-pointer transition-all ${
+                              submitted
+                                ? opt === q.reponseCorrecte
+                                  ? "bg-green-100 !border-green-500 font-medium"
+                                  : answers[q._id] === opt
+                                  ? "bg-red-100 !border-red-500 font-medium"
+                                  : "opacity-60"
+                                : "hover:bg-blue-50/50 hover:border-blue-400"
+                            }`}
+                          >
                             <input
                               type="radio"
                               name={q._id}
@@ -961,21 +890,17 @@ if (section === "home" && !selectedAction) {
                   whileHover={{ scale: 1.05 }}
                   className="relative cursor-pointer rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-white to-gray-100 hover:from-red-50 hover:to-white transition-all border-l-4 border-red-500 w-64 h-48 flex flex-col items-center justify-center p-4 text-center"
                   onClick={() => {
-                    // 1. On affiche l'objet exam complet dans la console du navigateur
-  
                     resetQcm();
                     setSection("qcm");
-                    // On utilise exam._id si exam.title n'existe pas
-  const examName = exam.title || exam._id; 
-  
-  setCurrentExam(examName);
+                    const examName = exam.title || exam._id; 
+                    setCurrentExam(examName);
                     setCurrentExamId(exam._id);
                   }}
                 >
                   <span className="text-5xl mb-4">⏱️</span>
-                 <div className="font-bold text-red-800 text-lg">
-  {exam.title || exam._id}
-</div>
+                  <div className="font-bold text-red-800 text-lg">
+                    {exam.title || exam._id}
+                  </div>
                   <div className="mt-2 text-xs font-semibold text-gray-500 bg-gray-200 px-3 py-1 rounded-full">
                     Conditions réelles
                   </div>
@@ -1013,28 +938,22 @@ if (section === "home" && !selectedAction) {
                   className="relative cursor-pointer rounded-2xl overflow-hidden shadow-lg bg-gradient-to-br from-white to-gray-100 hover:from-green-50 hover:to-white transition-all border-l-4 border-green-500 w-64 h-48 flex flex-col items-center justify-center p-4 text-center"
                   onClick={() => {
                     const examTitle = exam.title || exam._id;
-                    
-                    // --- Logique d'extraction des paramètres pour le simulateur ---
-                    // Valeurs par défaut
                     let selectedSubject = "SP";
                     let selectedYear = "2026";
                     let selectedSession = "normale";
                     
-                    // 1. Extraction de la matière et de l'année (Format attendu: BAC-SP-2026...)
                     const match = examTitle.match(/BAC-([A-Z]+)-(\d{4})/i);
                     if (match) {
                       selectedSubject = match[1].toUpperCase();
                       selectedYear = match[2];
                     }
                     
-                    // 2. Extraction de la session (Normale ou Rattrapage)
                     if (examTitle.toLowerCase().includes("rattrapage")) {
                       selectedSession = "rattrapage";
                     } else if (examTitle.toLowerCase().includes("normale")) {
                       selectedSession = "normale";
                     }
 
-                    // 3. Redirection vers le simulateur
                     navigate(`/bac-simulator/${selectedSubject}/${selectedYear}/${selectedSession}`);
                   }}
                 >
@@ -1089,362 +1008,22 @@ if (section === "home" && !selectedAction) {
         </motion.div>
       );
     }
-      if (selectedChapter && selectedAction === "Astuces") {
-        
-        if (selectedMatiere === "SVT") {
-          const currentEx = whiteExams[exerciseIndex];
 
-          if (!whiteExams || whiteExams.length === 0) {
-            return (
-              <div className="p-6 text-center">
-                <h2 className="text-3xl font-bold text-center mb-8 text-red-600">📝 {selectedChapter} — Examen blanc</h2>
-                <p className="text-gray-500 bg-white p-6 rounded-xl shadow inline-block">
-                  Aucun examen blanc trouvé pour ce chapitre…
-                </p>
-              </div>
-            );
-          }
+    if (selectedChapter && selectedAction === "Astuces") {
+      if (selectedMatiere === "SVT") {
+        const currentEx = whiteExams[exerciseIndex];
 
+        if (!whiteExams || whiteExams.length === 0) {
           return (
-            <div className="p-6 exercice-view-container">
-              <style>{`
-                .exercice-view-container img, .ql-editor img {
-                  max-height: 260px !important;
-                  width: auto !important;
-                  max-width: 100% !important;
-                  margin: 0 auto;
-                  display: block;
-                  object-fit: contain;
-                  border-radius: 8px;
-                }
-              `}</style>
-
-              <div className="mb-4 text-center">
-                <h2 className="text-3xl font-bold mb-2 text-red-600">📝 Examen Blanc</h2>
-                <p className="font-semibold text-gray-600">Question {exerciseIndex + 1} / {whiteExams.length}</p>
-              </div>
-
-              <div className="bg-white p-6 rounded-xl shadow border-t-4 border-red-500">
-                <div className="mb-8 border-b-2 border-gray-100 pb-6 bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-lg font-bold text-gray-800 mb-2 uppercase tracking-wide">Énoncé</h3>
-                  <div className="text-lg font-medium text-gray-900">
-  <MixedContentRenderer text={currentEx?.contextText || currentEx?.enonce || currentEx?.texte || ""} />
-</div>
-                  {currentEx?.contextImage && (
-                    <img 
-                      src={getImageUrl(currentEx.contextImage)} 
-                      alt="Contexte Examen" 
-                      className="mt-4 mx-auto block object-contain max-h-[260px]" 
-                      
-                    />
-                  )}
-                </div>
-
-                <div className="space-y-3">
-                  {currentEx?.subQuestions?.map((subQ: any, index: number) => (
-                    <div key={subQ._id} className="pl-2 border-l-2 border-red-200 py-1">
-                      
-                      {/* --- En-tête de la question --- */}
-                      <div className="font-medium mb-2 flex flex-col items-start text-lg leading-relaxed">
-                        <div className="flex items-start w-full">
-                          <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-[12px] mr-2 mt-0.5 shrink-0 font-bold">
-                            Q{index + 1}
-                          </span>
-                          <div className="flex-1 text-lg font-medium text-gray-900">
-                            <MixedContentRenderer text={subQ.questionText || subQ.question || subQ.texte || ""} />
-                          </div>
-                        </div>
-
-                        {/* 🖼️ IMAGE DE LA QUESTION (COMPARAISON INFAILLIBLE) */}
-{subQ.image && (
-  !currentEx.contextImage || 
-  subQ.image.replace(/^\/images\//, '').trim() !== currentEx.contextImage.replace(/^\/images\//, '').trim()
-) && (
-  <div className="mt-3 w-full">
-    <img 
-      src={subQ.image.startsWith('/') ? subQ.image : `/images/${subQ.image.replace(/^\/images\//, '').trim()}`} 
-      alt="Illustration de question" 
-      className="max-h-[200px] object-contain mx-auto block rounded-lg shadow-sm border border-gray-100"
-    />
-  </div>
-)}
-                      </div>
-
-                      {/* --- Options de réponses --- */}
-                      <div className="ml-8 grid grid-cols-1 md:grid-cols-2 gap-2">
-                        {subQ.options?.map((opt: string, i: number) => {
-                          const isSelected = exerciseAnswers[subQ._id] === opt;
-                          const isCorrect = opt === subQ.correctAnswer;
-                          
-                          // Couleurs spécifiques SVT (rouge)
-                          let labelClass = "hover:bg-red-50 border-gray-200";
-                          if (exerciseSubmitted) {
-                            if (isSelected && isCorrect) labelClass = "bg-green-100 border-green-500 shadow-sm";
-                            else if (isSelected && !isCorrect) labelClass = "bg-red-100 border-red-500 shadow-sm";
-                            else labelClass = "bg-gray-50 opacity-50";
-                          }
-
-                          return (
-                            <label key={i} className={`flex items-start px-3 py-2 border rounded-md cursor-pointer text-base transition-all leading-snug ${labelClass}`}>
-                              <input 
-                                type="radio" 
-                                checked={isSelected} 
-                                disabled={exerciseSubmitted} 
-                                onChange={() => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: opt }))} 
-                                className="mt-1 mr-3 shrink-0" 
-                              />
-                              <div className="flex-1 w-full">
-                                <MixedContentRenderer text={opt} />
-                              </div>
-                            </label>
-                          );
-                        })}
-                      </div>
-
-                      {/* --- Correction SVT --- */}
-                      {exerciseSubmitted && exerciseAnswers[subQ._id] !== subQ.correctAnswer && (
-                        <div className="ml-8 mt-2 px-3 py-2 bg-red-50 text-red-800 rounded-md border border-red-100 text-sm">  
-                          <span className="font-bold flex items-center mb-1">💡 Correction :</span>
-                          <div className="prose max-w-none text-gray-800">
-                            <MixedContentRenderer text={subQ.explanation || ""} />
-                          </div>
-                        </div>
-                      )}
-                      
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-between mt-4">
-                <button onClick={() => setExerciseIndex((i) => i - 1)} disabled={exerciseIndex === 0} className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50">⬅️ Précédent</button>
-                <button onClick={() => setExerciseIndex((i) => i + 1)} disabled={exerciseIndex === Math.max(0, whiteExams.length - 1)} className="px-4 py-2 bg-red-600 text-white rounded disabled:opacity-50">➡️ Suivant</button>
-              </div>
-
-              {!exerciseSubmitted && (
-                <button
-                  onClick={async () => {
-                    let score = 0;
-                    let totalQuestions = 0;
-                    whiteExams.forEach((ex) => {
-                      ex.subQuestions?.forEach((subQ: any) => {
-                        totalQuestions++;
-                        if (exerciseAnswers[subQ._id] === subQ.correctAnswer) { score++; }
-                      });
-                    });
-                    const wrong = whiteExams.filter((ex) => ex.subQuestions?.some((subQ: any) => exerciseAnswers[subQ._id] !== subQ.correctAnswer));
-                    setExerciseScore(score);
-                    try {
-                      const token = localStorage.getItem("token");
-                      await axios.post(`${API_BASE_URL}/api/student-activity`, {
-                        type: "EXERCISE", 
-                        subject: selectedMatiere,
-                        chapter: selectedChapter,
-                        score,
-                        totalQuestions: whiteExams.length,
-                        successRate: totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0,
-                      }, { headers: { Authorization: `Bearer ${token}` } });
-                    } catch (err) { console.error(err); }
-                    setExerciseSubmitted(true); setWrongExercises(wrong);
-                  }}
-                  className="mt-6 px-6 py-2 bg-green-600 text-white rounded font-semibold shadow hover:bg-green-700 transition"
-                >
-                  ✅ Soumettre mes réponses
-                </button>
-              )}
-
-              {exerciseSubmitted && (
-                <div className="mt-4 text-center font-bold text-red-600 bg-red-50 py-2 rounded-xl border border-red-100">
-                  Note finale de l'examen : {exerciseScore} / {whiteExams.length}
-                </div>
-              )}
-              
-              {exerciseSubmitted && wrongExercises.length > 0 && (
-                <button
-                  onClick={() => {
-                    setExerciseAttempt((prev) => prev + 1);
-                    setWhiteExams(wrongExercises); setExerciseIndex(0); setExerciseAnswers({}); setExerciseSubmitted(false); setExerciseScore(null);
-                  }}
-                  className="mt-4 px-6 py-2 bg-orange-500 text-white rounded w-full md:w-auto shadow hover:bg-orange-600 transition"
-                >
-                  🔁 Corriger mes erreurs
-                </button>
-              )}
+            <div className="p-6 text-center">
+              <h2 className="text-3xl font-bold text-center mb-8 text-red-600">📝 {selectedChapter} — Examen blanc</h2>
+              <p className="text-gray-500 bg-white p-6 rounded-xl shadow inline-block">
+                Aucun examen blanc trouvé pour ce chapitre…
+              </p>
             </div>
           );
         }
 
-        return (
-          <div className="p-6 relative">
-            <h2 className="text-3xl font-bold text-center mb-8">💡 {selectedChapter} — Astuces</h2>
-            {astuces.length === 0 ? (
-              <p className="text-center text-gray-500">Aucune astuce trouvée…</p>
-            ) : (
-              <div className="flex flex-wrap gap-3 justify-center">
-                {astuces.map((tip) => (
-                  <motion.button
-                    key={tip._id}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={async () => {
-                      setSelectedTip(tip);
-                      setFocusMode(true);
-                      try {
-                        const token = localStorage.getItem("token");
-                        await axios.post(`${API_BASE_URL}/api/student-activity`, {
-                          type: "ASTUCE",
-                          subject: selectedMatiere,
-                          chapter: selectedChapter,
-                          referenceId: tip._id,
-                        }, { headers: { Authorization: `Bearer ${token}` } });
-                      } catch (err) { console.error(err); }
-                    }}
-                    className="px-5 py-2 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 shadow transition"
-                  >
-                    {tip.title}
-                  </motion.button>
-                ))}
-              </div>
-            )}
-
-            {selectedTip && (
-              <motion.div
-                className={`fixed inset-0 flex items-center justify-center z-50 transition ${
-                  focusMode ? "bg-violet-900/80 backdrop-blur-md" : "bg-white/50 backdrop-blur-sm"
-                }`}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                onClick={() => setSelectedTip(null)}
-              >
-                <motion.div
-                  className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden p-6 relative"
-                  initial={{ scale: 0.8, y: 50, opacity: 0 }}
-                  animate={{ scale: 1, y: 0, opacity: 1 }}
-                  transition={{ type: "spring", stiffness: 120 }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    onClick={() => { setSelectedTip(null); setFocusMode(false); }}
-                    className="absolute top-3 right-3 text-gray-500 hover:text-black text-xl"
-                  >
-                    ✖
-                  </button>
-                  <h2 className="text-2xl font-bold mb-4 text-center">{selectedTip.title}</h2>
-                  {selectedTip?.pdfUrl && <PdfViewer key={selectedTip._id} url={selectedTip?.pdfUrl} />}
-                  {!selectedTip.pdfUrl &&
-                    selectedTip.cases?.map((c, i) => (
-                      <div key={i} className="mb-8 overflow-y-auto max-h-[60vh]">
-                        {c.title && <h3 className="font-semibold text-lg mb-2 text-indigo-700">{c.title}</h3>}
-                        {c.image && (
-                          <div className="flex justify-center mb-4">
-                            <img 
-                              src={c.image} 
-                              className="max-h-72 object-contain rounded-xl shadow mx-auto" 
-                              alt={c.title} 
-                              
-                            />
-                          </div>
-                        )}
-                        {c.content && (
-                          <div className="bg-white p-6 rounded-xl shadow">
-                            {renderContent(c.content || "")}
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                </motion.div>
-              </motion.div>
-            )}
-          </div>
-        );
-      }
-
-      if (selectedChapter && (selectedAction === "Résumé" || selectedAction === "Fiches ou résumés")) {
-        return (
-          <div className="p-6 relative max-w-7xl mx-auto">
-            <div className="text-center mb-10">
-              <h2 className="text-3xl md:text-4xl font-extrabold text-indigo-900 mb-4">
-                🧠 Flashcards de Révision
-              </h2>
-              <p className="text-gray-600 text-lg">
-                Chapitre : <span className="font-bold text-indigo-600">{selectedChapter}</span>
-              </p>
-            </div>
-            
-            {(!resumes || resumes.length === 0) ? (
-               <div className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-indigo-400 text-center max-w-lg mx-auto">
-                 <span className="text-5xl block mb-4">📭</span>
-                 <p className="text-gray-600 text-lg font-medium">
-                   Aucune fiche n'a encore été générée pour ce chapitre.
-                 </p>
-               </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
-                {resumes.map((resume, index) => {
-                  
-                  // 1. CAS EXCEPTIONNEL : Si c'est un ancien résumé au format PDF manuel
-                  if (resume.pdfUrl) {
-                    return (
-                      <button
-                        key={resume._id || index}
-                        onClick={() => setSelectedResume(resume)}
-                        className="h-80 w-full bg-gradient-to-br from-red-500 to-red-700 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center text-white hover:scale-105 transition-transform"
-                      >
-                        <span className="text-5xl mb-4 block">📄</span>
-                        <h3 className="text-2xl font-bold">Ouvrir le PDF</h3>
-                        <p className="mt-2 text-red-100">{resume.title || "Fiche de cours"}</p>
-                      </button>
-                    );
-                  }
-
-                  // 2. CAS CLASSIQUE : Flashcard générée par l'IA
-                  const cardTitle = resume.texte || resume.title || `Concept ${index + 1}`;
-                  const cardContent = resume.explication || "Aucune explication détaillée disponible.";
-
-                  return (
-                    <div key={resume._id || index} onClick={async () => {
-                      // Optionnel : On garde votre logique de tracking d'activité quand l'étudiant clique sur une carte
-                      try {
-                        const token = localStorage.getItem("token");
-                        if (token) {
-                          await axios.post(`${API_BASE_URL}/api/student-activity`, {
-                            type: "RESUME",
-                            subject: selectedMatiere,
-                            chapter: selectedChapter,
-                            referenceId: resume._id,
-                          }, { headers: { Authorization: `Bearer ${token}` } });
-                        }
-                      } catch (err) { console.error(err); }
-                    }}>
-                      <Flashcard title={cardTitle} content={cardContent} />
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Modal conservé UNIQUEMENT pour afficher les anciens PDF si on clique dessus */}
-            {selectedResume && selectedResume.pdfUrl && (
-              <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedResume(null)}>
-                <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden">
-                  <div className="flex justify-between items-center p-4 border-b bg-gray-50">
-                    <h2 className="text-xl font-bold text-red-900">{selectedResume.title || "Document PDF"}</h2>
-                    <button onClick={() => setSelectedResume(null)} className="text-gray-500 hover:text-black font-bold text-2xl px-2">✖</button>
-                  </div>
-                  <iframe src={selectedResume.pdfUrl + "#toolbar=0"} className="w-full h-full" title="Résumé PDF" />
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      }
-
-      if (selectedChapter && (selectedAction === "Exercises" || selectedAction === "Exercices" || selectedAction === "QCM")) {
-        const currentEx = exercises[exerciseIndex];
-        if (exercises.length === 0) {
-          return <p className="text-center mt-10">Aucun exercice trouvé</p>;
-        }
-        const totalQuestionsCount = exercises.reduce((acc, ex) => acc + (ex.subQuestions?.length || 0), 0);
         return (
           <div className="p-6 exercice-view-container">
             <style>{`
@@ -1458,42 +1037,33 @@ if (section === "home" && !selectedAction) {
                 border-radius: 8px;
               }
             `}</style>
-            
+
             <div className="mb-4 text-center">
-              <p className="font-semibold text-gray-600">
-                Énoncé {exerciseIndex + 1} / {exercises.length} <span className="text-sm font-normal">(Total : {totalQuestionsCount} questions)</span>
-              </p>
+              <h2 className="text-3xl font-bold mb-2 text-red-600">📝 Examen Blanc</h2>
+              <p className="font-semibold text-gray-600">Question {exerciseIndex + 1} / {whiteExams.length}</p>
             </div>
-            
-           <div className="bg-white p-4 rounded-xl shadow border-t-4 border-blue-600">
-              
-              {/* --- 1. BLOC ÉNONCÉ --- */}
-              <div className="mb-4 border-b pb-4 bg-gray-50 p-4 rounded-lg">
-                <h3 className="text-sm font-bold text-gray-400 mb-1 uppercase tracking-wide">Énoncé</h3>
-                <div className="text-base font-medium text-gray-800">
-                  <MixedContentRenderer text={currentEx.contextText || currentEx.enonce || currentEx.texte || ""} />
+
+            <div className="bg-white p-6 rounded-xl shadow border-t-4 border-red-500">
+              <div className="mb-8 border-b-2 border-gray-100 pb-6 bg-gray-50 p-4 rounded-lg">
+                <h3 className="text-lg font-bold text-gray-800 mb-2 uppercase tracking-wide">Énoncé</h3>
+                <div className="text-lg font-medium text-gray-900">
+                  <MixedContentRenderer text={currentEx?.contextText || currentEx?.enonce || currentEx?.texte || ""} />
                 </div>
-                
-                {/* 🖼️ Affichage de l'image de l'énoncé (Unique et Corrigé) */}
-                {currentEx.contextImage && (
+                {currentEx?.contextImage && (
                   <img 
-                    src={`/images/${currentEx.contextImage.replace(/^\/images\//, '')}`} 
-                    alt="Illustration de l'énoncé" 
-                    className="max-h-48 block mx-auto my-5 rounded-lg shadow-sm border border-gray-200" 
-                    
+                    src={getImageUrl(currentEx.contextImage)} 
+                    alt="Contexte Examen" 
+                    className="mt-4 mx-auto block object-contain max-h-[260px]" 
                   />
                 )}
               </div>
-              
-              {/* --- 2. BLOC QUESTIONS --- */}
-              <div className="space-y-6">
-                {currentEx.subQuestions?.map((subQ: any, index: number) => (
-                  <div key={subQ._id} className="pl-2 border-l-2 border-blue-200 py-1">
-                    
+
+              <div className="space-y-3">
+                {currentEx?.subQuestions?.map((subQ: any, index: number) => (
+                  <div key={subQ._id} className="pl-2 border-l-2 border-red-200 py-1">
                     <div className="font-medium mb-2 flex flex-col items-start text-lg leading-relaxed">
-                      
                       <div className="flex items-start w-full">
-                        <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded text-[12px] mr-2 mt-0.5 shrink-0 font-bold">
+                        <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-[12px] mr-2 mt-0.5 shrink-0 font-bold">
                           Q{index + 1}
                         </span>
                         <div className="flex-1 text-lg font-medium text-gray-900">
@@ -1501,28 +1071,41 @@ if (section === "home" && !selectedAction) {
                         </div>
                       </div>
 
-                      {/* 🖼️ IMAGE DE LA QUESTION (COMPARAISON INFAILLIBLE) */}
-{subQ.image && (
-  !currentEx.contextImage || 
-  subQ.image.replace(/^\/images\//, '').trim() !== currentEx.contextImage.replace(/^\/images\//, '').trim()
-) && (
-  <div className="mt-3 w-full">
-    <img 
-      src={subQ.image.startsWith('/') ? subQ.image : `/images/${subQ.image.replace(/^\/images\//, '').trim()}`} 
-      alt="Illustration de question" 
-      className="max-h-[200px] object-contain mx-auto block rounded-lg shadow-sm border border-gray-100"
-    />
-  </div>
-)}
+                      {subQ.image && (
+                        !currentEx.contextImage || 
+                        subQ.image.replace(/^\/images\//, '').trim() !== currentEx.contextImage.replace(/^\/images\//, '').trim()
+                      ) && (
+                        <div className="mt-3 w-full">
+                          <img 
+                            src={subQ.image.startsWith('/') ? subQ.image : `/images/${subQ.image.replace(/^\/images\//, '').trim()}`} 
+                            alt="Illustration de question" 
+                            className="max-h-[200px] object-contain mx-auto block rounded-lg shadow-sm border border-gray-100"
+                          />
+                        </div>
+                      )}
                     </div>
-                    
+
                     <div className="ml-8 grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {subQ.options.map((opt: string, i: number) => {
+                      {subQ.options?.map((opt: string, i: number) => {
                         const isSelected = exerciseAnswers[subQ._id] === opt;
                         const isCorrect = opt === subQ.correctAnswer;
+                        
+                        let labelClass = "hover:bg-red-50 border-gray-200";
+                        if (exerciseSubmitted) {
+                          if (isSelected && isCorrect) labelClass = "bg-green-100 border-green-500 shadow-sm";
+                          else if (isSelected && !isCorrect) labelClass = "bg-red-100 border-red-500 shadow-sm";
+                          else labelClass = "bg-gray-50 opacity-50";
+                        }
+
                         return (
-                          <label key={i} className={`flex items-start px-3 py-2 border rounded-md cursor-pointer text-base transition-all leading-snug ${exerciseSubmitted ? isSelected && isCorrect ? "bg-green-100 border-green-500 shadow-sm" : isSelected && !isCorrect ? "bg-red-100 border-red-500 shadow-sm" : "bg-gray-50 opacity-50" : "hover:bg-red-50 border-gray-200"}`}>
-                            <input type="radio" checked={isSelected} disabled={exerciseSubmitted} onChange={() => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: opt }))} className="mt-1 mr-3 shrink-0" />
+                          <label key={i} className={`flex items-start px-3 py-2 border rounded-md cursor-pointer text-base transition-all leading-snug ${labelClass}`}>
+                            <input 
+                              type="radio" 
+                              checked={isSelected} 
+                              disabled={exerciseSubmitted} 
+                              onChange={() => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: opt }))} 
+                              className="mt-1 mr-3 shrink-0" 
+                            />
                             <div className="flex-1 w-full">
                               <MixedContentRenderer text={opt} />
                             </div>
@@ -1530,9 +1113,9 @@ if (section === "home" && !selectedAction) {
                         );
                       })}
                     </div>
-                    
+
                     {exerciseSubmitted && exerciseAnswers[subQ._id] !== subQ.correctAnswer && (
-                      <div className="ml-8 mt-2 px-3 py-2 bg-blue-50 text-blue-800 rounded-md border border-blue-100 text-sm">  
+                      <div className="ml-8 mt-2 px-3 py-2 bg-red-50 text-red-800 rounded-md border border-red-100 text-sm">  
                         <span className="font-bold flex items-center mb-1">💡 Correction :</span>
                         <div className="prose max-w-none text-gray-800">
                           <MixedContentRenderer text={subQ.explanation || ""} />
@@ -1543,25 +1126,432 @@ if (section === "home" && !selectedAction) {
                 ))}
               </div>
             </div>
-            
+
             <div className="flex justify-between mt-4">
-              <button onClick={() => setExerciseIndex((i) => i - 1)} disabled={exerciseIndex === 0} className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50 font-semibold">⬅️ Énoncé Précédent</button>
-              <button onClick={() => setExerciseIndex((i) => i + 1)} disabled={exerciseIndex === Math.max(0, exercises.length - 1)} className="px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50 font-semibold">Énoncé Suivant ➡️</button>
+              <button onClick={() => setExerciseIndex((i) => i - 1)} disabled={exerciseIndex === 0} className="px-4 py-2 bg-gray-300 rounded disabled:opacity-50">⬅️ Précédent</button>
+              <button onClick={() => setExerciseIndex((i) => i + 1)} disabled={exerciseIndex === Math.max(0, whiteExams.length - 1)} className="px-4 py-2 bg-red-600 text-white rounded disabled:opacity-50">➡️ Suivant</button>
             </div>
-            
+
             {!exerciseSubmitted && (
               <button
                 onClick={async () => {
                   let score = 0;
-                  let totalQ = 0;
-                  exercises.forEach((ex) => {
+                  let totalQuestions = 0;
+                  whiteExams.forEach((ex) => {
                     ex.subQuestions?.forEach((subQ: any) => {
-                      totalQ++;
+                      totalQuestions++;
                       if (exerciseAnswers[subQ._id] === subQ.correctAnswer) { score++; }
                     });
                   });
-                  const wrong = exercises.filter((ex) => ex.subQuestions?.some((subQ: any) => exerciseAnswers[subQ._id] !== subQ.correctAnswer));
+                  const wrong = whiteExams.filter((ex) => ex.subQuestions?.some((subQ: any) => exerciseAnswers[subQ._id] !== subQ.correctAnswer));
                   setExerciseScore(score);
+                  try {
+                    const token = localStorage.getItem("token");
+                    await axios.post(`${API_BASE_URL}/api/student-activity`, {
+                      type: "EXERCISE", 
+                      subject: selectedMatiere,
+                      chapter: selectedChapter,
+                      score,
+                      totalQuestions: whiteExams.length,
+                      successRate: totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0,
+                    }, { headers: { Authorization: `Bearer ${token}` } });
+                  } catch (err) { console.error(err); }
+                  setExerciseSubmitted(true); setWrongExercises(wrong);
+                }}
+                className="mt-6 px-6 py-2 bg-green-600 text-white rounded font-semibold shadow hover:bg-green-700 transition"
+              >
+                ✅ Soumettre mes réponses
+              </button>
+            )}
+
+            {exerciseSubmitted && (
+              <div className="mt-4 text-center font-bold text-red-600 bg-red-50 py-2 rounded-xl border border-red-100">
+                Note finale de l'examen : {exerciseScore} / {whiteExams.length}
+              </div>
+            )}
+            
+            {exerciseSubmitted && wrongExercises.length > 0 && (
+              <button
+                onClick={() => {
+                  setExerciseAttempt((prev) => prev + 1);
+                  setWhiteExams(wrongExercises); setExerciseIndex(0); setExerciseAnswers({}); setExerciseSubmitted(false); setExerciseScore(null);
+                }}
+                className="mt-4 px-6 py-2 bg-orange-500 text-white rounded w-full md:w-auto shadow hover:bg-orange-600 transition"
+              >
+                🔁 Corriger mes erreurs
+              </button>
+            )}
+          </div>
+        );
+      }
+
+      return (
+        <div className="p-6 relative">
+          <h2 className="text-3xl font-bold text-center mb-8">💡 {selectedChapter} — Astuces</h2>
+          {astuces.length === 0 ? (
+            <p className="text-center text-gray-500">Aucune astuce trouvée…</p>
+          ) : (
+            <div className="flex flex-wrap gap-3 justify-center">
+              {astuces.map((tip) => (
+                <motion.button
+                  key={tip._id}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={async () => {
+                    setSelectedTip(tip);
+                    setFocusMode(true);
+                    try {
+                      const token = localStorage.getItem("token");
+                      await axios.post(`${API_BASE_URL}/api/student-activity`, {
+                        type: "ASTUCE",
+                        subject: selectedMatiere,
+                        chapter: selectedChapter,
+                        referenceId: tip._id,
+                      }, { headers: { Authorization: `Bearer ${token}` } });
+                    } catch (err) { console.error(err); }
+                  }}
+                  className="px-5 py-2 rounded-full bg-indigo-100 text-indigo-700 hover:bg-indigo-200 shadow transition"
+                >
+                  {tip.title}
+                </motion.button>
+              ))}
+            </div>
+          )}
+
+          {selectedTip && (
+            <motion.div
+              className={`fixed inset-0 flex items-center justify-center z-50 transition ${
+                focusMode ? "bg-violet-900/80 backdrop-blur-md" : "bg-white/50 backdrop-blur-sm"
+              }`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              onClick={() => setSelectedTip(null)}
+            >
+              <motion.div
+                className="bg-white rounded-2xl shadow-2xl max-w-3xl w-full max-h-[90vh] overflow-hidden p-6 relative"
+                initial={{ scale: 0.8, y: 50, opacity: 0 }}
+                animate={{ scale: 1, y: 0, opacity: 1 }}
+                transition={{ type: "spring", stiffness: 120 }}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <button
+                  onClick={() => { setSelectedTip(null); setFocusMode(false); }}
+                  className="absolute top-3 right-3 text-gray-500 hover:text-black text-xl"
+                >
+                  ✖
+                </button>
+                <h2 className="text-2xl font-bold mb-4 text-center">{selectedTip.title}</h2>
+                {selectedTip?.pdfUrl && <PdfViewer key={selectedTip._id} url={selectedTip?.pdfUrl} />}
+                {!selectedTip.pdfUrl &&
+                  selectedTip.cases?.map((c, i) => (
+                    <div key={i} className="mb-8 overflow-y-auto max-h-[60vh]">
+                      {c.title && <h3 className="font-semibold text-lg mb-2 text-indigo-700">{c.title}</h3>}
+                      {c.image && (
+                        <div className="flex justify-center mb-4">
+                          <img 
+                            src={c.image} 
+                            className="max-h-72 object-contain rounded-xl shadow mx-auto" 
+                            alt={c.title} 
+                          />
+                        </div>
+                      )}
+                      {c.content && (
+                        <div className="bg-white p-6 rounded-xl shadow">
+                          {renderContent(c.content || "")}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+              </motion.div>
+            </motion.div>
+          )}
+        </div>
+      );
+    }
+
+    if (selectedChapter && (selectedAction === "Résumé" || selectedAction === "Fiches ou résumés")) {
+      return (
+        <div className="p-6 relative max-w-7xl mx-auto">
+          <div className="text-center mb-10">
+            <h2 className="text-3xl md:text-4xl font-extrabold text-indigo-900 mb-4">
+              🧠 Flashcards de Révision
+            </h2>
+            <p className="text-gray-600 text-lg">
+              Chapitre : <span className="font-bold text-indigo-600">{selectedChapter}</span>
+            </p>
+          </div>
+          
+          {(!resumes || resumes.length === 0) ? (
+             <div className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-indigo-400 text-center max-w-lg mx-auto">
+               <span className="text-5xl block mb-4">📭</span>
+               <p className="text-gray-600 text-lg font-medium">
+                 Aucune fiche n'a encore été générée pour ce chapitre.
+               </p>
+             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-8">
+              {resumes.map((resume, index) => {
+                if (resume.pdfUrl) {
+                  return (
+                    <button
+                      key={resume._id || index}
+                      onClick={() => setSelectedResume(resume)}
+                      className="h-80 w-full bg-gradient-to-br from-red-500 to-red-700 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center text-white hover:scale-105 transition-transform"
+                    >
+                      <span className="text-5xl mb-4 block">📄</span>
+                      <h3 className="text-2xl font-bold">Ouvrir le PDF</h3>
+                      <p className="mt-2 text-red-100">{resume.title || "Fiche de cours"}</p>
+                    </button>
+                  );
+                }
+
+                const cardTitle = resume.texte || resume.title || `Concept ${index + 1}`;
+                const cardContent = resume.explication || "Aucune explication détaillée disponible.";
+
+                return (
+                  <div key={resume._id || index} onClick={async () => {
+                    try {
+                      const token = localStorage.getItem("token");
+                      if (token) {
+                        await axios.post(`${API_BASE_URL}/api/student-activity`, {
+                          type: "RESUME",
+                          subject: selectedMatiere,
+                          chapter: selectedChapter,
+                          referenceId: resume._id,
+                        }, { headers: { Authorization: `Bearer ${token}` } });
+                      }
+                    } catch (err) { console.error(err); }
+                  }}>
+                    <Flashcard title={cardTitle} content={cardContent} />
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {selectedResume && selectedResume.pdfUrl && (
+            <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={() => setSelectedResume(null)}>
+              <div onClick={(e) => e.stopPropagation()} className="bg-white rounded-2xl shadow-2xl w-full max-w-4xl h-[85vh] flex flex-col overflow-hidden">
+                <div className="flex justify-between items-center p-4 border-b bg-gray-50">
+                  <h2 className="text-xl font-bold text-red-900">{selectedResume.title || "Document PDF"}</h2>
+                  <button onClick={() => setSelectedResume(null)} className="text-gray-500 hover:text-black font-bold text-2xl px-2">✖</button>
+                </div>
+                <iframe src={selectedResume.pdfUrl + "#toolbar=0"} className="w-full h-full" title="Résumé PDF" />
+              </div>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // =========================================================================
+    // 🌟 SECTION ADAPTÉE : QCM & EXERCICES COMPLEXES 🌟
+    // =========================================================================
+    if (selectedChapter && (selectedAction === "Exercises" || selectedAction === "Exercices" || selectedAction === "QCM")) {
+      const currentEx = exercises[exerciseIndex];
+      if (!exercises || exercises.length === 0) {
+        return <p className="text-center mt-10 text-gray-500 font-semibold">Aucun exercice ou QCM trouvé pour ce chapitre.</p>;
+      }
+
+      const totalQuestionsCount = exercises.reduce((acc, ex) => acc + (ex.subQuestions?.length || 0), 0);
+
+      return (
+        <div className="p-6 exercice-view-container max-w-5xl mx-auto">
+          <style>{`
+            .exercice-view-container img, .ql-editor img {
+              max-height: 260px !important;
+              width: auto !important;
+              max-width: 100% !important;
+              margin: 0 auto;
+              display: block;
+              object-fit: contain;
+              border-radius: 8px;
+            }
+          `}</style>
+          
+          {/* Entête de l'exercice */}
+          <div className="mb-6 text-center">
+            <h2 className="text-3xl font-extrabold text-blue-900 tracking-wide uppercase">
+              EXERCICE {exercises.length > 1 ? `${exerciseIndex + 1} / ${exercises.length}` : ""}
+            </h2>
+            <p className="font-semibold text-gray-500 text-sm mt-1">
+              (Total : {totalQuestionsCount} question{totalQuestionsCount > 1 ? "s" : ""})
+            </p>
+          </div>
+          
+          <div className="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-blue-600">
+            
+            {/* 1. ÉNONCÉ GLOBAL DE L'EXERCICE */}
+            {(currentEx.contextText || currentEx.enonce || currentEx.texte) && (
+              <div className="mb-6 border-b pb-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
+                <h3 className="text-sm font-bold text-blue-800 mb-2 uppercase tracking-wide">Énoncé</h3>
+                <div className="text-base font-medium text-gray-800 leading-relaxed">
+                  <MixedContentRenderer text={currentEx.contextText || currentEx.enonce || currentEx.texte || ""} />
+                </div>
+                
+                {currentEx.contextImage && (
+                  <img 
+                    src={`/images/${currentEx.contextImage.replace(/^\/images\//, '')}`} 
+                    alt="Illustration de l'énoncé" 
+                    className="max-h-56 block mx-auto my-4 rounded-lg shadow-sm border border-gray-200" 
+                  />
+                )}
+              </div>
+            )}
+            
+            {/* 2. LISTE DES QUESTIONS (1, 2, 3...) */}
+            <div className="space-y-6">
+              {currentEx.subQuestions?.map((subQ: any, index: number) => {
+                const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+
+                return (
+                  <div key={subQ._id || index} className="pl-4 border-l-4 border-blue-500 py-2 bg-blue-50/20 rounded-r-xl">
+                    
+                    {/* Intitulé de la question */}
+                    <div className="font-medium mb-3 flex flex-col items-start text-lg leading-relaxed">
+                      <div className="flex items-start w-full gap-2">
+                        <span className="bg-blue-800 text-white px-2.5 py-0.5 rounded-md text-sm font-bold shrink-0 mt-0.5">
+                          Question {index + 1}
+                        </span>
+                        <div className="flex-1 text-lg font-medium text-gray-900">
+                          <MixedContentRenderer text={subQ.questionText || subQ.question || subQ.texte || ""} />
+                        </div>
+                      </div>
+
+                      {/* Image spécifique de la sous-question */}
+                      {subQ.image && (
+                        !currentEx.contextImage || 
+                        subQ.image.replace(/^\/images\//, '').trim() !== currentEx.contextImage.replace(/^\/images\//, '').trim()
+                      ) && (
+                        <div className="mt-3 w-full">
+                          <img 
+                            src={subQ.image.startsWith('/') ? subQ.image : `/images/${subQ.image.replace(/^\/images\//, '').trim()}`} 
+                            alt="Illustration de question" 
+                            className="max-h-[200px] object-contain mx-auto block rounded-lg shadow-sm border border-gray-100"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* CHOIX MULTIPLES (QCM) OU RÉPONSE OUVERTE (EXERCICE) */}
+                    {hasOptions ? (
+                      <div className="ml-2 md:ml-6 grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-2">
+                        {subQ.options.map((opt: string, i: number) => {
+                          const isSelected = exerciseAnswers[subQ._id] === opt;
+                          const isCorrect = opt === subQ.correctAnswer;
+                          
+                          let labelStyle = "hover:bg-blue-50 border-gray-200 bg-white";
+                          if (exerciseSubmitted) {
+                            if (isSelected && isCorrect) labelStyle = "bg-green-100 border-green-500 font-medium shadow-sm";
+                            else if (isSelected && !isCorrect) labelStyle = "bg-red-100 border-red-500 font-medium shadow-sm";
+                            else if (isCorrect) labelStyle = "bg-green-50 border-green-300 font-medium";
+                            else labelStyle = "bg-gray-50 opacity-50";
+                          }
+
+                          return (
+                            <label key={i} className={`flex items-start px-3.5 py-2.5 border rounded-lg cursor-pointer text-base transition-all leading-snug ${labelStyle}`}>
+                              <input 
+                                type="radio" 
+                                name={`subQ-${subQ._id}`}
+                                checked={isSelected} 
+                                disabled={exerciseSubmitted} 
+                                onChange={() => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: opt }))} 
+                                className="mt-1 mr-3 shrink-0 accent-blue-800" 
+                              />
+                              <div className="flex-1 w-full">
+                                <MixedContentRenderer text={opt} />
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="ml-2 md:ml-6 mt-2">
+                        <textarea
+                          disabled={exerciseSubmitted}
+                          value={exerciseAnswers[subQ._id] || ""}
+                          onChange={(e) => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: e.target.value }))}
+                          placeholder="Saisissez votre réponse ici..."
+                          className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 disabled:bg-gray-100 resize-y min-h-[90px]"
+                        />
+                      </div>
+                    )}
+                    
+                    {/* EXPLICATION ET CORRECTION */}
+                    {exerciseSubmitted && (
+                      <div className="ml-2 md:ml-6 mt-3 px-4 py-3 bg-blue-50 text-blue-900 rounded-xl border border-blue-200 text-sm">  
+                        <span className="font-bold flex items-center mb-1 text-blue-900">💡 Solution & Correction :</span>
+                        {subQ.correctAnswer && !hasOptions && (
+                          <div className="mb-2 font-semibold text-green-700">
+                            Réponse attendue : <MixedContentRenderer text={subQ.correctAnswer} />
+                          </div>
+                        )}
+                        <div className="prose max-w-none text-gray-800">
+                          <MixedContentRenderer text={subQ.explanation || subQ.explication || "Aucune explication supplémentaire fournie."} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+          
+          {/* Navigation inter-exercices */}
+          <div className="flex justify-between items-center mt-6">
+            <button 
+              onClick={() => setExerciseIndex((i) => i - 1)} 
+              disabled={exerciseIndex === 0} 
+              className="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl disabled:opacity-40 font-semibold transition"
+            >
+              ⬅️ Exercice Précédent
+            </button>
+            <button 
+              onClick={() => setExerciseIndex((i) => i + 1)} 
+              disabled={exerciseIndex === Math.max(0, exercises.length - 1)} 
+              className="px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl disabled:opacity-40 font-semibold transition"
+            >
+              Exercice Suivant ➡️
+            </button>
+          </div>
+          
+          {/* BOUTON ADAPTATIF "VALIDER CE CHAPITRE" */}
+          {!exerciseSubmitted && (
+            <div className="mt-8 text-center">
+              <button
+                onClick={async () => {
+                  let score = 0;
+                  let totalQ = 0;
+
+                  exercises.forEach((ex) => {
+                    ex.subQuestions?.forEach((subQ: any) => {
+                      totalQ++;
+                      const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+                      
+                      if (hasOptions) {
+                        if (exerciseAnswers[subQ._id] === subQ.correctAnswer) {
+                          score++;
+                        }
+                      } else {
+                        if (exerciseAnswers[subQ._id] && exerciseAnswers[subQ._id].trim().length > 0) {
+                          score++;
+                        }
+                      }
+                    });
+                  });
+
+                  const wrong = exercises.filter((ex) => 
+                    ex.subQuestions?.some((subQ: any) => {
+                      const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+                      if (hasOptions) {
+                        return exerciseAnswers[subQ._id] !== subQ.correctAnswer;
+                      }
+                      return !exerciseAnswers[subQ._id] || exerciseAnswers[subQ._id].trim().length === 0;
+                    })
+                  );
+
+                  setExerciseScore(score);
+
                   try {
                     const token = localStorage.getItem("token");
                     await axios.post(`${API_BASE_URL}/api/student-activity`, {
@@ -1572,21 +1562,28 @@ if (section === "home" && !selectedAction) {
                       totalQuestions: totalQ,
                       successRate: totalQ > 0 ? Math.round((score / totalQ) * 100) : 0,
                     }, { headers: { Authorization: `Bearer ${token}` } });
-                  } catch (err) { console.error(err); }
-                  setExerciseSubmitted(true); setWrongExercises(wrong);
+                  } catch (err) { 
+                    console.error("Erreur enregistrement activité exercice:", err); 
+                  }
+
+                  setExerciseSubmitted(true);
+                  setWrongExercises(wrong);
                 }}
-                className="mt-6 px-6 py-2 bg-green-600 text-white rounded font-bold w-full md:w-auto shadow"
+                className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 w-full md:w-auto"
               >
                 ✅ Valider ce chapitre
               </button>
-            )}
+            </div>
+          )}
 
-            {exerciseSubmitted && (
-              <div className="mt-4 text-center font-bold text-blue-700 bg-blue-50 py-3 rounded-lg border border-blue-200">
-                Score : {exerciseScore} / {totalQuestionsCount} ({exerciseAttempt === 1 ? "1er essai" : `${exerciseAttempt}ème essai`})
-              </div>
-            )}
-            {exerciseSubmitted && wrongExercises.length > 0 && (
+          {exerciseSubmitted && (
+            <div className="mt-6 text-center font-bold text-lg text-blue-900 bg-blue-50 py-3 px-6 rounded-xl border border-blue-200 shadow-sm max-w-xl mx-auto">
+              Score du chapitre : {exerciseScore} / {totalQuestionsCount} ({exerciseAttempt === 1 ? "1er essai" : `${exerciseAttempt}ème essai`})
+            </div>
+          )}
+
+          {exerciseSubmitted && wrongExercises.length > 0 && (
+            <div className="mt-4 text-center">
               <button
                 onClick={() => {
                   setExerciseAttempt((prev) => prev + 1);
@@ -1596,70 +1593,65 @@ if (section === "home" && !selectedAction) {
                   setExerciseSubmitted(false); 
                   setExerciseScore(null);
                 }}
-                className="mt-4 px-6 py-2 bg-orange-500 text-white rounded w-full md:w-auto font-bold shadow"
+                className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
               >
-                🔁 Refaire uniquement les énoncés avec erreurs
+                🔁 Refaire uniquement les exercices avec erreurs
               </button>
-            )}
-          </div>
-        );
-      }
+            </div>
+          )}
+        </div>
+      );
+    }
 
-      if (selectedChapter && selectedAction === "Controles") {
-        return (
-          <div className="p-6 relative text-center">
-            <h2 className="text-3xl font-bold mb-8 text-purple-800">✍️ {selectedChapter} — Contrôles</h2>
-            
-            {controles.length === 0 ? (
-              <div className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-purple-500 inline-block">
-                <span className="text-4xl block mb-4">🚧</span>
-                <p className="text-gray-600 text-lg font-medium">
-                  Aucun contrôle n'est encore disponible pour ce chapitre.
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-6 text-left">
-                {controles.map((controle, index) => (
-                  <div key={controle._id || index} className="bg-white p-6 rounded-xl shadow-md border-l-4 border-purple-500">
-                    <div className="flex items-center gap-3 mb-4 border-b pb-2">
-                      <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
-                        Question {index + 1}
-                      </span>
-                      {controle.note && (
-                        <span className="text-gray-500 text-sm font-medium">({controle.note} points)</span>
-                      )}
-                    </div>
-                    
-                    {/* Affichage de l'énoncé du contrôle avec prise en charge du LaTeX et des images */}
-                    <div className="text-lg text-gray-800 font-medium">
-                      <MixedContentRenderer text={controle.texte || controle.question || "Contenu indisponible."} />
-                    </div>
-
-                    {/* Affichage conditionnel des options si le contrôle est un format QCM */}
-                    {controle.options && controle.options.length > 0 && (
-                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 pl-4">
-                        {controle.options.map((opt: string, i: number) => (
-                          <div key={i} className="p-3 border border-gray-200 rounded-lg bg-gray-50">
-                            <MixedContentRenderer text={opt} />
-                          </div>
-                        ))}
-                      </div>
+    if (selectedChapter && selectedAction === "Controles") {
+      return (
+        <div className="p-6 relative text-center">
+          <h2 className="text-3xl font-bold mb-8 text-purple-800">✍️ {selectedChapter} — Contrôles</h2>
+          
+          {controles.length === 0 ? (
+            <div className="bg-white p-8 rounded-2xl shadow-lg border-t-4 border-purple-500 inline-block">
+              <span className="text-4xl block mb-4">🚧</span>
+              <p className="text-gray-600 text-lg font-medium">
+                Aucun contrôle n'est encore disponible pour ce chapitre.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-6 text-left">
+              {controles.map((controle, index) => (
+                <div key={controle._id || index} className="bg-white p-6 rounded-xl shadow-md border-l-4 border-purple-500">
+                  <div className="flex items-center gap-3 mb-4 border-b pb-2">
+                    <span className="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-bold">
+                      Question {index + 1}
+                    </span>
+                    {controle.note && (
+                      <span className="text-gray-500 text-sm font-medium">({controle.note} points)</span>
                     )}
                   </div>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      }
+                  
+                  <div className="text-lg text-gray-800 font-medium">
+                    <MixedContentRenderer text={controle.texte || controle.question || "Contenu indisponible."} />
+                  </div>
 
-    // 🎯 Rendu par défaut si aucune condition n'est remplie
-      return <StudentDashboardStats />;
-      
-  }; // 👈 L'ACCOLADE EST ICI : Elle ferme PROPREMENT renderCenterContent !
+                  {controle.options && controle.options.length > 0 && (
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 pl-4">
+                      {controle.options.map((opt: string, i: number) => (
+                        <div key={i} className="p-3 border border-gray-200 rounded-lg bg-gray-50">
+                          <MixedContentRenderer text={opt} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
 
+    return <StudentDashboardStats />;
+  };
 
-  // 1️⃣ NOUVELLE FONCTION DE NAVIGATION PAR ÉTAPES
   const handleRetourArriere = () => {
     if (selectedTipId) {
       setSelectedTipId(null);
@@ -1671,7 +1663,7 @@ if (section === "home" && !selectedAction) {
     }
     if (selectedChapter) {
       setSelectedChapter(null);
-      setSelectedMatiere(null); // Retourne à l'accueil global
+      setSelectedMatiere(null);
       setSection("home");
       return;
     }
@@ -1687,7 +1679,6 @@ if (section === "home" && !selectedAction) {
     }
   };
 
-  // 2️⃣ LE RENDU PRINCIPAL DU COMPOSANT (Celui qui englobe toute la page)
   return (
     <div
       className="h-screen w-screen flex text-black overflow-hidden"
@@ -1715,4 +1706,4 @@ if (section === "home" && !selectedAction) {
       </motion.div>
     </div>
   );
-} 
+}
