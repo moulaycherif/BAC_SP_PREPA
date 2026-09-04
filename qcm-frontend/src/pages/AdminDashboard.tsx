@@ -235,25 +235,25 @@ function AdminAIGenerator() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <select
-              value={contentType}
-              onChange={(e) => setContentType(e.target.value)}
-              className="p-3 border rounded-xl w-full !bg-indigo-900 text-white font-medium"
-            >
-              <option value="qcm">QCM</option>
-              <option value="exercise">Exercice Complexe</option>
-              <option value="astuce">Astuce / Flashcard</option>
-              <option value="resume">Résumé de cours</option>
-              <option value="controle">Contrôle</option>
-            </select>
-            <input
-              type="file"
-              accept=".pdf"
-              onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
-              className="p-2 border rounded-xl w-full !bg-blue-600 text-white"
-              required
-            />
-          </div>
+  <select
+    value={contentType}
+    onChange={(e) => setContentType(e.target.value)}
+    className="p-3 border rounded-xl w-full !bg-indigo-900 text-white font-medium"
+  >
+    <option value="qcm">QCM (Questions avec choix multiples)</option>
+    <option value="exercise">Exercice (Énoncé global + questions ouvertes)</option>
+    <option value="astuce">Astuce / Flashcard</option>
+    <option value="resume">Résumé de cours</option>
+    <option value="controle">Contrôle</option>
+  </select>
+  <input
+    type="file"
+    accept=".pdf"
+    onChange={(e) => setPdfFile(e.target.files?.[0] || null)}
+    className="p-2 border rounded-xl w-full !bg-blue-600 text-white"
+    required
+  />
+</div>
           <button
             type="submit"
             disabled={isGenerating}
