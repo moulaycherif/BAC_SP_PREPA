@@ -8,6 +8,7 @@ import * as xlsx from 'xlsx';
 
 interface IAItemResponse {
   // Propriétés existantes (QCM, Exercices)
+  enonce?: string;
   question?: string;
   options?: string[];
   correctAnswerIndex?: number;
@@ -112,8 +113,10 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       systemPrompt = `Tu es un professeur expert de Physique-Chimie. Génère 5 QCM (PAS PLUS) de HAUT NIVEAU (type Bac Sciences Physiques) basés sur ce texte. L'étudiant doit raisonner et faire des calculs.
       Réponds avec JSON strict : { "items": [ { "question": "...", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 0, "explication": "..." } ] } \n${baseMathInstruction}`;
     } else if (contentType === "exercise") {
-      systemPrompt = `Tu es un professeur expert de Physique-Chimie. Génère 1 seul Exercice Complexe (type problème de l'épreuve du Bac Sciences Physiques) basé sur ce texte.
-      Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
+  systemPrompt = `Tu es un professeur expert de Physique-Chimie. Génère 1 seul Exercice Complexe (type problème du Bac Sciences Physiques) découpé en 3 à 5 sous-questions.
+  Chaque sous-question doit être un objet distinct dans le tableau "items". 
+  IMPORTANT : Toutes les sous-questions de cet exercice doivent partager EXACTEMENT le même champ "enonce" (qui contient le contexte global de l'exercice, les données initiales, etc.).
+  Réponds avec JSON strict : { "items": [ { "enonce": "Contexte global de l'exercice...", "question": "Sous-question 1...", "explication": "...", "options": [] }, { "enonce": "Contexte global de l'exercice...", "question": "Sous-question 2...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
     } else if (contentType === "flashcard" || contentType === "astuce") {
       systemPrompt = `Génère 5 flashcards ou astuces de niveau avancé, indispensables pour préparer l'épreuve du Bac Sciences Physiques.
       Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
@@ -342,6 +345,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       }
 
       return {
+        Enonce: item.enonce || "",
         Question: item.question || "",
         Options: cleanOptions.join(" || "),
         ReponseCorrecte: cleanReponseCorrecte,
@@ -399,16 +403,18 @@ export const importCorrectedExcel = async (req: Request, res: Response): Promise
       }
   
       const itemsToInsert = rawData.map(row => {
-        const optionsArray = row.Options 
-          ? String(row.Options).split(" || ").map(opt => opt.trim()).filter(opt => opt !== "") 
-          : [];
+        const type = (row.Type || "qcm").toLowerCase();
+       const optionsArray = type === 'exercise' 
+          ? [] 
+          : (row.Options ? String(row.Options).split(" || ").map(opt => opt.trim()).filter(opt => opt !== "") : []);
   
         return {
+          enonce: row.Enonce || null, // <-- RÉCUPÉRATION DE L'ÉNONCÉ
           texte: row.Question,
-          options: optionsArray,
+          options: optionsArray,      // <-- TABLEAU SÉCURISÉ
           reponseCorrecte: row.ReponseCorrecte ? String(row.ReponseCorrecte) : null,
           explication: row.Explication || "",
-          type: row.Type || "qcm",
+          type: type,
           subject: row.Sujet || null,
           chapter: row.Chapitre || null,
           exam: row.Examen || "Support de cours IA",

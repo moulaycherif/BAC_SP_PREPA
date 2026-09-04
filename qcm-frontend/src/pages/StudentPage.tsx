@@ -337,32 +337,65 @@ export default function StudentPage() {
           manualExercises = groupedExercises;
         } catch (err) { console.error("Erreur Exercices Manuels", err); }
 
-        try {
-          const [resAiQcm, resAiExo] = await Promise.all([
-            axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers }),
-            axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=exercise`, { headers })
-          ]);
-          
-          const aiData = [...(resAiQcm.data || []), ...(resAiExo.data || [])];
-          
-          if (aiData.length > 0) {
-            const aiSubQuestions = aiData.map((q: any) => ({
-              _id: q._id,
-              questionText: q.texte || q.questionText || q.question,
-              qType: q.type === 'exercise' ? 'open' : 'qcm', 
-              options: q.options || [],
-              correctAnswer: q.reponseCorrecte,
-              explanation: q.explication,
-              image: q.image
-            }));
+       try {
+  const [resAiQcm, resAiExo] = await Promise.all([
+    axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers }),
+    axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=exercise`, { headers })
+  ]);
+  
+  const aiData = [...(resAiQcm.data || []), ...(resAiExo.data || [])];
+  
+  if (aiData.length > 0) {
+    const aiQcmQuestions: any[] = [];
+    const groupedAiExos: any[] = [];
 
-            aiExercises = [{
-              _id: "ia-group-" + Date.now(),
-              contextText: "🧠 Questions d'entraînement (QCM & Exercices générés par l'IA)", 
-              subQuestions: aiSubQuestions
-            }];
-          }
-        } catch (err) { console.error("Erreur Exercices IA", err); }
+    aiData.forEach((q: any) => {
+      const isExo = q.type === 'exercise';
+      // On récupère l'énoncé s'il existe (adapté selon le mapping de votre backend)
+      const enonceText = q.enonce || q.contextText || ""; 
+
+      const subQ = {
+        _id: q._id,
+        questionText: q.texte || q.questionText || q.question,
+        qType: isExo ? 'open' : 'qcm', 
+        options: q.options || [],
+        correctAnswer: q.reponseCorrecte,
+        explanation: q.explication,
+        image: q.image
+      };
+
+      if (isExo && enonceText) {
+        // Si c'est un exercice, on le groupe par son Enoncé global
+        const existingGroup = groupedAiExos.find(g => g.contextText === enonceText);
+        if (existingGroup) {
+          existingGroup.subQuestions.push(subQ);
+        } else {
+          groupedAiExos.push({
+            _id: "ia-exo-" + q._id,
+            contextText: enonceText,
+            subQuestions: [subQ]
+          });
+        }
+      } else {
+        // Si c'est un QCM ou s'il n'y a pas d'énoncé global
+        aiQcmQuestions.push(subQ);
+      }
+    });
+
+    // On reconstitue la liste : d'abord le bloc global de QCM, puis les Exercices distincts
+    if (aiQcmQuestions.length > 0) {
+      aiExercises.push({
+        _id: "ia-qcm-group-" + Date.now(),
+        contextText: "🧠 Questions à Choix Multiples (Générées par l'IA)",
+        subQuestions: aiQcmQuestions
+      });
+    }
+    
+    aiExercises = [...aiExercises, ...groupedAiExos];
+  }
+} catch (err) { 
+  console.error("Erreur Exercices IA", err); 
+}
 
         setExercises([...manualExercises, ...aiExercises]);
         setExerciseIndex(0);
