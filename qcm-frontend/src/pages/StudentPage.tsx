@@ -1353,106 +1353,162 @@ export default function StudentPage() {
         return <p className="text-center mt-10 text-gray-500 font-semibold">Aucun exercice ou QCM trouvé pour ce chapitre.</p>;
       }
 
-      // 1. DÉTECTION DIRECTE VIA LA BASE DE DONNÉES
-// On sécurise avec toLowerCase() au cas où la BDD contiendrait "EXERCICE" ou "exercice"
-const isExercice = currentEx.type?.toLowerCase() === "exercice";
+      const totalQuestionsCount = exercises.reduce((acc, ex) => acc + (ex.subQuestions?.length || 0), 0);
 
-// On peut aussi vérifier si des sous-questions existent pour le décompte
-const totalQuestionsCount = exercises.reduce((acc, ex) => acc + (ex.subQuestions?.length || 1), 0);
+      // 1. DÉTECTION DYNAMIQUE : QCM vs EXERCICE
+      const hasGlobalContext = Boolean(
+        currentEx?.contextText || 
+        currentEx?.enonce || 
+        (currentEx?.texte && currentEx?.texte !== "🧠 Questions d'entraînement (QCM & Exercices générés par l'IA)")
+      );
 
-return (
-  <div className="p-6 exercice-view-container max-w-5xl mx-auto">
-    
-    {/* 2. ENTÊTE PILOTÉ PAR LE TYPE */}
-    <div className="mb-6 text-center">
-      <h2 className="text-3xl font-extrabold text-blue-900 tracking-wide uppercase">
-        {isExercice 
-          ? `EXERCICE ${exercises.length > 1 ? exerciseIndex + 1 : "1"}` 
-          : "QUESTIONS À CHOIX MULTIPLES (QCM)"}
-      </h2>
-      <p className="font-semibold text-gray-500 text-sm mt-1">
-        (Total : {totalQuestionsCount} question{totalQuestionsCount > 1 ? "s" : ""})
-      </p>
-    </div>
-    
-    <div className="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-blue-600">
-      
-      {/* 3. ÉNONCÉ GLOBAL (si la clé enonce existe et que c'est un exercice) */}
-      {isExercice && currentEx.enonce && (
-        <div className="mb-6 border-b pb-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
-          <h3 className="text-sm font-bold text-blue-800 mb-2 uppercase tracking-wide">Énoncé</h3>
-          <div className="text-base font-medium text-gray-800 leading-relaxed">
-            <MixedContentRenderer text={currentEx.enonce} />
+      const allQuestionsHaveOptions = currentEx?.subQuestions?.every(
+        (q: any) => Array.isArray(q.options) && q.options.length > 0
+      );
+
+      const isExercice = hasGlobalContext || !allQuestionsHaveOptions;
+
+      return (
+        <div className="p-6 exercice-view-container max-w-5xl mx-auto">
+          <style>{`
+            .exercice-view-container img, .ql-editor img {
+              max-height: 260px !important;
+              width: auto !important;
+              max-width: 100% !important;
+              margin: 0 auto;
+              display: block;
+              object-fit: contain;
+              border-radius: 8px;
+            }
+          `}</style>
+          
+          {/* 2. ENTÊTE DYNAMIQUE */}
+          <div className="mb-6 text-center">
+            <h2 className="text-3xl font-extrabold text-blue-900 tracking-wide uppercase">
+              {isExercice 
+                ? `EXERCICE ${exercises.length > 1 ? exerciseIndex + 1 : "1"}` 
+                : "QUESTIONS À CHOIX MULTIPLES (QCM)"}
+            </h2>
+            <p className="font-semibold text-gray-500 text-sm mt-1">
+              (Total : {totalQuestionsCount} question{totalQuestionsCount > 1 ? "s" : ""})
+            </p>
           </div>
-        </div>
-      )}
-      
-      {/* 4. CHOIX DU RENDU DE LA QUESTION */}
-      <div className="space-y-6">
-        {/* On gère ici le cas où la question est directe (pas de subQuestions) ou imbriquée */}
-        {(currentEx.subQuestions || [currentEx]).map((q: any, index: number) => (
-          <div key={q._id || index} className="pl-4 border-l-4 border-blue-500 py-2 bg-blue-50/20 rounded-r-xl">
+          
+          <div className="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-blue-600">
             
-            <div className="flex items-start w-full gap-2 mb-3">
-              <span className="bg-blue-800 text-white px-2.5 py-0.5 rounded-md text-sm font-bold shrink-0 mt-0.5">
-                {isExercice ? `${index + 1})` : `Question ${index + 1}`}
-              </span>
-              <div className="flex-1 text-lg font-medium text-gray-900">
-                <MixedContentRenderer text={q.texte || q.questionText || ""} />
-              </div>
-            </div>
-
-            {/* SI C'EST UN QCM (ET QU'IL Y A DES OPTIONS) */}
-            {!isExercice && Array.isArray(q.options) && q.options.length > 0 ? (
-              <div className="ml-2 md:ml-6 grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-2">
-                {q.options.map((opt: string, i: number) => {
-                  const isSelected = exerciseAnswers[q._id] === opt;
-                  const isCorrect = opt === q.reponseCorrecte; // Basé sur votre BDD
-                  
-                  // Logique de couleurs après soumission...
-                  let labelStyle = "hover:bg-blue-50 border-gray-200 bg-white";
-                  if (exerciseSubmitted) {
-                    if (isSelected && isCorrect) labelStyle = "bg-green-100 border-green-500 font-medium shadow-sm";
-                    else if (isSelected && !isCorrect) labelStyle = "bg-red-100 border-red-500 font-medium shadow-sm";
-                    else if (isCorrect) labelStyle = "bg-green-50 border-green-300 font-medium";
-                    else labelStyle = "bg-gray-50 opacity-50";
-                  }
-
-                  return (
-                    <label key={i} className={`flex items-start px-3.5 py-2.5 border rounded-lg cursor-pointer text-base transition-all leading-snug ${labelStyle}`}>
-                      <input 
-                        type="radio" 
-                        name={`q-${q._id}`}
-                        checked={isSelected} 
-                        disabled={exerciseSubmitted} 
-                        onChange={() => setExerciseAnswers((prev) => ({ ...prev, [q._id]: opt }))} 
-                        className="mt-1 mr-3 shrink-0 accent-blue-800" 
-                      />
-                      <div className="flex-1 w-full">
-                        <MixedContentRenderer text={opt} />
-                      </div>
-                    </label>
-                  );
-                })}
-              </div>
-            ) : (
-              /* SI C'EST UN EXERCICE (ZONE DE TEXTE) */
-              <div className="ml-2 md:ml-6 mt-2">
-                <textarea
-                  disabled={exerciseSubmitted}
-                  value={exerciseAnswers[q._id] || ""}
-                  onChange={(e) => setExerciseAnswers((prev) => ({ ...prev, [q._id]: e.target.value }))}
-                  placeholder="Rédigez votre réponse ici..."
-                  className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 disabled:bg-gray-100 resize-y min-h-[120px]"
-                />
+            {/* 3. ÉNONCÉ GLOBAL (Affiché uniquement pour les exercices) */}
+            {isExercice && hasGlobalContext && (
+              <div className="mb-6 border-b pb-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
+                <h3 className="text-sm font-bold text-blue-800 mb-2 uppercase tracking-wide">Énoncé</h3>
+                <div className="text-base font-medium text-gray-800 leading-relaxed">
+                  <MixedContentRenderer text={currentEx.contextText || currentEx.enonce || currentEx.texte || ""} />
+                </div>
+                
+                {currentEx.contextImage && (
+                  <img 
+                    src={`/images/${currentEx.contextImage.replace(/^\/images\//, '')}`} 
+                    alt="Illustration de l'énoncé" 
+                    className="max-h-56 block mx-auto my-4 rounded-lg shadow-sm border border-gray-200" 
+                  />
+                )}
               </div>
             )}
+            
+            {/* 4. LISTE DES QUESTIONS DYNAMIQUES */}
+            <div className="space-y-6">
+              {currentEx.subQuestions?.map((subQ: any, index: number) => {
+                const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+
+                return (
+                  <div key={subQ._id || index} className="pl-4 border-l-4 border-blue-500 py-2 bg-blue-50/20 rounded-r-xl">
+                    
+                    <div className="font-medium mb-3 flex flex-col items-start text-lg leading-relaxed">
+                      <div className="flex items-start w-full gap-2">
+                        <span className="bg-blue-800 text-white px-2.5 py-0.5 rounded-md text-sm font-bold shrink-0 mt-0.5">
+                          {isExercice ? `${index + 1})` : `Question ${index + 1}`}
+                        </span>
+                        <div className="flex-1 text-lg font-medium text-gray-900">
+                          <MixedContentRenderer text={subQ.questionText || subQ.question || subQ.texte || ""} />
+                        </div>
+                      </div>
+
+                      {subQ.image && (
+                        !currentEx.contextImage || 
+                        subQ.image.replace(/^\/images\//, '').trim() !== currentEx.contextImage.replace(/^\/images\//, '').trim()
+                      ) && (
+                        <div className="mt-3 w-full">
+                          <img 
+                            src={subQ.image.startsWith('/') ? subQ.image : `/images/${subQ.image.replace(/^\/images\//, '').trim()}`} 
+                            alt="Illustration de question" 
+                            className="max-h-[200px] object-contain mx-auto block rounded-lg shadow-sm border border-gray-100"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* CHOIX MULTIPLES (QCM) OU ZONE DE TEXTE (EXERCICE) */}
+                    {hasOptions ? (
+                      <div className="ml-2 md:ml-6 grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-2">
+                        {subQ.options.map((opt: string, i: number) => {
+                          const isSelected = exerciseAnswers[subQ._id] === opt;
+                          const isCorrect = opt === subQ.correctAnswer;
+                          
+                          let labelStyle = "hover:bg-blue-50 border-gray-200 bg-white";
+                          if (exerciseSubmitted) {
+                            if (isSelected && isCorrect) labelStyle = "bg-green-100 border-green-500 font-medium shadow-sm";
+                            else if (isSelected && !isCorrect) labelStyle = "bg-red-100 border-red-500 font-medium shadow-sm";
+                            else if (isCorrect) labelStyle = "bg-green-50 border-green-300 font-medium";
+                            else labelStyle = "bg-gray-50 opacity-50";
+                          }
+
+                          return (
+                            <label key={i} className={`flex items-start px-3.5 py-2.5 border rounded-lg cursor-pointer text-base transition-all leading-snug ${labelStyle}`}>
+                              <input 
+                                type="radio" 
+                                name={`subQ-${subQ._id}`}
+                                checked={isSelected} 
+                                disabled={exerciseSubmitted} 
+                                onChange={() => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: opt }))} 
+                                className="mt-1 mr-3 shrink-0 accent-blue-800" 
+                              />
+                              <div className="flex-1 w-full">
+                                <MixedContentRenderer text={opt} />
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    ) : (
+                      <div className="ml-2 md:ml-6 mt-2">
+                        <textarea
+                          disabled={exerciseSubmitted}
+                          value={exerciseAnswers[subQ._id] || ""}
+                          onChange={(e) => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: e.target.value }))}
+                          placeholder="Espace réservé pour votre réponse..."
+                          className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 disabled:bg-gray-100 resize-y min-h-[90px]"
+                        />
+                      </div>
+                    )}
+                          
+                    {/* EXPLICATION ET CORRECTION */}
+                    {exerciseSubmitted && (
+                      <div className="ml-2 md:ml-6 mt-3 px-4 py-3 bg-blue-50 text-blue-900 rounded-xl border border-blue-200 text-sm">  
+                        <span className="font-bold flex items-center mb-1 text-blue-900">💡 Solution & Correction :</span>
+                        {subQ.correctAnswer && !hasOptions && (
+                          <div className="mb-2 font-semibold text-green-700">
+                            Réponse attendue : <MixedContentRenderer text={subQ.correctAnswer} />
+                          </div>
+                        )}
+                        <div className="prose max-w-none text-gray-800">
+                          <MixedContentRenderer text={subQ.explanation || subQ.explication || "Aucune explication supplémentaire fournie."} />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
           </div>
-        ))}
-      </div>
-    </div>
-  </div>
-);
           
           {/* Navigation inter-exercices */}
           <div className="flex justify-between items-center mt-6">
