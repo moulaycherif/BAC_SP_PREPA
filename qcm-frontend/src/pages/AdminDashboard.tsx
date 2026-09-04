@@ -110,14 +110,74 @@ function AdminAIGenerator() {
     setChapter(''); 
   };
 
-  // 1. GÉNÉRATION : Envoie le PDF et télécharge l'Excel
+  // 📥 1. GÉNÉRATION : Envoie le PDF et télécharge l'Excel
   const handleGenerateExcel = async (e: React.FormEvent) => {
-    // ... [Le reste de la fonction reste identique au fichier original]
+    e.preventDefault();
+    if (!pdfFile) return alert("Veuillez sélectionner un fichier PDF.");
+
+    setIsGenerating(true);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", pdfFile);
+      formData.append("subject", subject);
+      formData.append("chapter", chapter);
+      formData.append("type", contentType);
+      formData.append("level", level); // 👈 NOUVEAU : On envoie le niveau au backend
+
+      const response = await axios.post(`${API_BASE_URL}/api/questions/generate-from-pdf`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+        responseType: 'blob',
+      });
+      const blob = new Blob([response.data], { 
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+      });
+      const downloadUrl = window.URL.createObjectURL(blob);
+      
+      const link = document.createElement('a');
+      link.href = downloadUrl;
+      link.setAttribute('download', `Generations_IA_${contentType}_${Date.now()}.xlsx`);
+      document.body.appendChild(link);
+      link.click();
+      
+      link.remove();
+      window.URL.revokeObjectURL(downloadUrl);
+
+      alert("Fichier Excel généré avec succès ! Il a été téléchargé sur votre ordinateur. Vous pouvez maintenant le vérifier.");
+    } catch (error) {
+      console.error("Erreur de génération :", error);
+      alert("Une erreur est survenue lors de la génération par l'IA.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
-  // 2. IMPORTATION : Envoie l'Excel corrigé pour sauvegarde MongoDB
+  // 📤 2. IMPORTATION : Envoie l'Excel corrigé pour sauvegarde MongoDB
   const handleImportCorrectedExcel = async (e: React.FormEvent) => {
-    // ... [Le reste de la fonction reste identique au fichier original]
+    e.preventDefault();
+    if (!excelFile) return alert("Veuillez sélectionner le fichier Excel corrigé.");
+    setIsImporting(true);
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      formData.append("file", excelFile);
+      const response = await axios.post(`${API_BASE_URL}/api/questions/import-ai-excel`, formData, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      alert(`Succès ! ${response.data.count} éléments corrigés ont été enregistrés dans la base de données.`);
+      setExcelFile(null);
+    } catch (error) {
+      console.error("Erreur d'importation :", error);
+      alert("Erreur lors de l'importation du fichier Excel corrigé.");
+    } finally {
+      setIsImporting(false);
+    }
   };
 
   return (
