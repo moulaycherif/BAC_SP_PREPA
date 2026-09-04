@@ -7,11 +7,19 @@ import { jsonrepair } from 'jsonrepair';
 import * as xlsx from 'xlsx';
 
 interface IAItemResponse {
+  // Propriétés existantes (QCM, Exercices)
   question?: string;
   options?: string[];
   correctAnswerIndex?: number;
   reponseCorrecte?: string | number;
   explication?: string;
+  
+  // Nouvelles propriétés pour l'architecture "Cours Plat"
+  id?: string;
+  parent_id?: string | null;
+  type?: string;
+  title?: string;
+  content?: string;
 }
 
 interface IAGeneratedData {
@@ -115,6 +123,24 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     } else if (contentType === "controle") {
       systemPrompt = `Conçois un contrôle d'évaluation exigeant type Baccalauréat Sciences Physiques basé sur ce texte. L'étudiant doit transpirer et mobiliser plusieurs concepts.
       Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
+    } else if (contentType === "cours_complet") {
+      systemPrompt = `Agis en tant qu'expert pédagogique. Génère le contenu d'un cours complet et structuré basé sur ce texte.
+      Tu dois formater ta réponse STRICTEMENT selon ce format JSON plat, englobé dans une clé "items".
+      
+      Règles :
+      1. Chaque objet représente une unité (Chapitre, Leçon, ou Question de Quiz).
+      2. Utilise la clé "type" pour différencier ("chapter", "lesson", "quiz_question").
+      3. Utilise "parent_id" pour lier une leçon ou une question à un chapitre. L'ID du parent doit exister.
+
+      Réponds avec un JSON strict :
+      {
+        "items": [
+          { "id": "chap_1", "parent_id": null, "type": "chapter", "title": "Titre du chapitre", "content": "" },
+          { "id": "les_1", "parent_id": "chap_1", "type": "lesson", "title": "Titre de la leçon", "content": "Contenu détaillé de la leçon..." },
+          { "id": "q_1", "parent_id": "chap_1", "type": "quiz_question", "title": "Question du quiz ?", "content": "{\\"options\\": [\\"A\\", \\"B\\"], \\"correct_index\\": 0}" }
+        ]
+      }
+      \n${baseMathInstruction}`;
     }
 
     const { client: aiClient, model: defaultModel, provider } = getAIConfig();
@@ -292,6 +318,18 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     const finalTypeEpreuve = isControle ? "blanc" : "ia"; 
 
     const excelRows = generatedData.items.map((item: IAItemResponse) => {
+      // 1. Logique pour le nouveau format plat (Chapitres, Leçons)
+      if (contentType === "cours_complet") {
+        return {
+          ID: item.id || "",
+          Parent_ID: item.parent_id || "",
+          Type: item.type || "",
+          Titre: item.title || "",
+          Contenu: item.content || ""
+        };
+      }
+
+      // 2. Logique existante pour les QCM et autres formats
       let rawOptions = item.options || [];
       let cleanOptions = Array.isArray(rawOptions) ? rawOptions.map(String) : [];
       
