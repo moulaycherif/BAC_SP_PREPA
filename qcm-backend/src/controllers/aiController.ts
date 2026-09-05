@@ -404,17 +404,26 @@ export const importCorrectedExcel = async (req: Request, res: Response): Promise
   
       const itemsToInsert = rawData.map(row => {
         const type = (row.Type || "qcm").toLowerCase();
-       const optionsArray = type === 'exercise' 
+        const optionsArray = type === 'exercise' 
           ? [] 
           : (row.Options ? String(row.Options).split(" || ").map(opt => opt.trim()).filter(opt => opt !== "") : []);
   
         return {
-          enonce: row.Enonce || null, // <-- RÉCUPÉRATION DE L'ÉNONCÉ
-          texte: row.Question,
-          options: optionsArray,      // <-- TABLEAU SÉCURISÉ
+          // Champs classiques QCM/Exercices
+          enonce: row.Enonce || null, 
+          texte: row.Question || null,
+          options: optionsArray,      
           reponseCorrecte: row.ReponseCorrecte ? String(row.ReponseCorrecte) : null,
           explication: row.Explication || "",
-          type: type,
+          
+          // Nouveaux champs pour "Cours Plat"
+          course_id: row.ID || null,
+          parent_id: row.Parent_ID || null,
+          title: row.Titre || null,
+          content: row.Contenu || null,
+          
+          // Métadonnées
+          type: type, // "chapter", "lesson", "quiz_question", "qcm", "exercise"...
           subject: row.Sujet || null,
           chapter: row.Chapitre || null,
           exam: row.Examen || "Support de cours IA",

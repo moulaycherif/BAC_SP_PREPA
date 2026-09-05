@@ -147,6 +147,7 @@ export default function StudentPage() {
   const [focusMode, setFocusMode] = useState(false);
 
   const [controles, setControles] = useState<any[]>([]);
+  const [courseItems, setCourseItems] = useState<any[]>([]);
 
   const subjectImages: Record<string, string> = {
     Mathématique: mathsImg,
@@ -412,6 +413,22 @@ export default function StudentPage() {
           setControles([]);
         }
       }
+      else if (selectedAction === "Cours") {
+        try {
+          // On récupère tous les éléments liés à ce chapitre
+          const res = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}`, { headers });
+          const allItems = res.data || [];
+          
+          // On filtre uniquement les types d'architecture "Cours Plat"
+          const coursPlat = allItems.filter((item: any) => 
+            ['chapter', 'lesson', 'quiz_question'].includes(item.type)
+          );
+          setCourseItems(coursPlat);
+        } catch (err) {
+          console.error("Erreur lors de la récupération du cours complet", err);
+          setCourseItems([]);
+        }
+      }
     };
 
     loadHybridContent();
@@ -655,6 +672,9 @@ export default function StudentPage() {
                 {chapter === "Toute l'épreuve" && "🏆 "} {chapter}
               </span>
               <span className="text-xl">{isExpanded ? "🔽" : "▶️"}</span>
+            </button>
+            <button onClick={() => setSelectedAction("Cours")} className="flex-1 min-w-[200px] bg-white border border-teal-200 text-teal-700 px-4 py-3 rounded-xl shadow hover:bg-teal-50 hover:border-teal-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">📖</span> Cours Complet
             </button>
 
             {isExpanded && (
@@ -1694,7 +1714,58 @@ export default function StudentPage() {
         </div>
       );
     }
-
+if (selectedChapter && selectedAction === "Cours") {
+      const parentChapters = courseItems.filter(item => item.type === "chapter" || item.parent_id === null);
+      
+      return (
+        <div className="p-6 max-w-5xl mx-auto">
+          <h2 className="text-3xl font-extrabold text-teal-800 mb-8 text-center border-b-4 border-teal-200 pb-4">
+            📖 Cours Complet : {selectedChapter}
+          </h2>
+          
+          {courseItems.length === 0 ? (
+            <div className="text-center bg-white p-8 rounded-2xl shadow-lg">
+              <span className="text-5xl block mb-4">📭</span>
+              <p className="text-gray-600 text-lg font-medium">Aucun cours généré pour ce chapitre.</p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {parentChapters.map(chapter => {
+                // Trouver les leçons/quiz enfants
+                const children = courseItems.filter(item => item.parent_id === chapter.course_id || item.parent_id === chapter._id);
+                
+                return (
+                  <div key={chapter._id} className="bg-white rounded-2xl shadow-lg border border-teal-100 overflow-hidden">
+                    <div className="bg-teal-700 text-white p-5">
+                      <h3 className="text-2xl font-bold">{chapter.title || chapter.texte}</h3>
+                    </div>
+                    
+                    <div className="p-6 space-y-6 bg-teal-50/30">
+                      {children.map(child => (
+                        <div key={child._id} className="bg-white p-5 rounded-xl border-l-4 border-teal-500 shadow-sm">
+                          <h4 className="text-xl font-bold text-gray-800 mb-3">{child.title || "Leçon"}</h4>
+                          <div className="prose max-w-none text-gray-700 text-lg">
+                            <MixedContentRenderer text={child.content || child.texte || ""} />
+                          </div>
+                          
+                          {/* Si c'est un quiz_question (avec options JSON) */}
+                          {child.type === "quiz_question" && child.content && child.content.includes("options") && (
+                            <div className="mt-4 p-4 bg-gray-100 rounded-lg">
+                              <span className="font-bold text-teal-800">🎯 Mini-Quiz</span>
+                              <pre className="text-sm mt-2">{child.content}</pre>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
     return <StudentDashboardStats />;
   };
 
