@@ -1539,13 +1539,26 @@ const handleExerciseAnswer = (questionId: string, answer: string) => {
     // Style de sélection avant validation (généralement en bleu ou teal)
     optionClasses = "border-teal-500 bg-teal-50 text-teal-800 font-medium";
   }
+  // --- NOUVELLE LOGIQUE INTÉGRÉE ICI ---
+  const isCorrectOption = option === subQ.correctAnswer;
+  // Utilisation de exerciseAttempt (votre variable d'état) au lieu de attemptsCount
+  const isFrozenCorrect = exerciseAttempt === 2 && isCorrectOption && exerciseAnswers[subQ._id] === option;
 
   return (
     <button
       key={i}
-      onClick={() => !exerciseSubmitted && handleExerciseAnswer(subQ._id, option)}
-      disabled={exerciseSubmitted}
-      className={`w-full text-left px-4 py-3 border rounded-xl transition-all ${optionClasses}`}
+      onClick={() => {
+        // Empêche le clic si l'exercice est soumis ou si cette réponse est figée
+        if (!exerciseSubmitted && !isFrozenCorrect) {
+          handleExerciseAnswer(subQ._id, option);
+        }
+      }}
+      disabled={exerciseSubmitted || isFrozenCorrect}
+      className={`w-full text-left px-4 py-3 border rounded-xl transition-all ${
+        isFrozenCorrect 
+          ? "bg-green-100 border-green-500 text-green-700 cursor-not-allowed" // Classes pour figer en vert
+          : optionClasses
+      }`}
     >
       <MixedContentRenderer text={option} />
     </button>
