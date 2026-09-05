@@ -139,6 +139,7 @@ export default function StudentPage() {
   const [wrongExercises, setWrongExercises] = useState<any[]>([]);
   const [exerciseAttempt, setExerciseAttempt] = useState(1);
   const [whiteExams, setWhiteExams] = useState<any[]>([]);
+  const [showSolutions, setShowSolutions] = useState(false);
   
   const [astuces, setAstuces] = useState<Astuce[]>([]);
   const [resumes, setResumes] = useState<any[]>([]);
@@ -404,6 +405,7 @@ export default function StudentPage() {
         setExerciseAnswers({});
         setExerciseSubmitted(false);
         setExerciseScore(null);
+        setShowSolutions(false);
       }
       else if (selectedAction === "Controles") {
         try {
@@ -1550,12 +1552,12 @@ export default function StudentPage() {
                           studentAnswer={exerciseAnswers[subQ._id] || ""}
                           correctAnswer={subQ.correctAnswer || ""}
                           isSubmitted={exerciseSubmitted}
-                          subject={selectedMatiere}
+                          subject={selectedMatiere || ""}
                         />
                       </div>
                     )}                          
                     {/* EXPLICATION ET CORRECTION */}
-                    {exerciseSubmitted && (
+                    {exerciseSubmitted && showSolutions && (
                       <div className="ml-2 md:ml-6 mt-3 px-4 py-3 bg-blue-50 text-blue-900 rounded-xl border border-blue-200 text-sm">  
                         <span className="font-bold flex items-center mb-1 text-blue-900">💡 Solution & Correction :</span>
                         {subQ.correctAnswer && !hasOptions && (
@@ -1659,23 +1661,37 @@ export default function StudentPage() {
             </div>
           )}
 
-          {exerciseSubmitted && wrongExercises.length > 0 && (
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => {
-                  setExerciseAttempt((prev) => prev + 1);
-                  setExercises(wrongExercises); 
-                  setExerciseIndex(0); 
-                  setExerciseAnswers({}); 
-                  setExerciseSubmitted(false); 
-                  setExerciseScore(null);
-                }}
-                className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
-              >
-                🔁 Refaire uniquement les exercices avec erreurs
-              </button>
-            </div>
-          )}
+          {exerciseSubmitted && (
+  <div className="mt-6 flex flex-col md:flex-row justify-center gap-4">
+    {/* Bouton pour afficher la solution (disparaît une fois cliqué) */}
+    {!showSolutions && (
+      <button
+        onClick={() => setShowSolutions(true)}
+        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow transition"
+      >
+        📖 Afficher la solution
+      </button>
+    )}
+    
+    {/* Bouton pour refaire les erreurs */}
+    {wrongExercises.length > 0 && (
+      <button
+        onClick={() => {
+          setExerciseAttempt((prev) => prev + 1);
+          setExercises(wrongExercises); 
+          setExerciseIndex(0); 
+          setExerciseAnswers({}); 
+          setExerciseSubmitted(false); 
+          setShowSolutions(false); // 👈 Réinitialise l'affichage des solutions
+          setExerciseScore(null);
+        }}
+        className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
+      >
+        🔁 Refaire uniquement les exercices avec erreurs
+      </button>
+    )}
+  </div>
+)}
         </div>
       );
     }
