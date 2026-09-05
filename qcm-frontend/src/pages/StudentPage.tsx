@@ -589,7 +589,10 @@ export default function StudentPage() {
   const handleAnswerChange = (id: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [id]: value }));
   };
-
+  
+const handleExerciseAnswer = (questionId: string, answer: string) => {
+  setExerciseAnswers((prev) => ({ ...prev, [questionId]: answer }));
+};
   const handleFinish = async () => {
     if (!currentExamId) return;
 
@@ -1506,34 +1509,48 @@ export default function StudentPage() {
                     
                     {hasOptions ? (
                       <div className="ml-2 md:ml-6 grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-2">
-                        {subQ.options.map((opt: string, i: number) => {
-                          const isSelected = exerciseAnswers[subQ._id] === opt;
-                          const isCorrect = opt === subQ.correctAnswer;
-                          
-                          let labelStyle = "hover:bg-blue-50 border-gray-200 bg-white";
-                          if (exerciseSubmitted) {
-                            if (isSelected && isCorrect) labelStyle = "bg-green-100 border-green-500 font-medium shadow-sm";
-                            else if (isSelected && !isCorrect) labelStyle = "bg-red-100 border-red-500 font-medium shadow-sm";
-                            else if (isCorrect) labelStyle = "bg-green-50 border-green-300 font-medium";
-                            else labelStyle = "bg-gray-50 opacity-50";
-                          }
+                        
+                          {subQ.options.map((option: string, i: number) => {
+  const isSelected = exerciseAnswers[subQ._id] === option;
+  const isCorrect = option === subQ.correctAnswer;
 
-                          return (
-                            <label key={i} className={`flex items-start px-3.5 py-2.5 border rounded-lg cursor-pointer text-base transition-all leading-snug ${labelStyle}`}>
-                              <input 
-                                type="radio" 
-                                name={`subQ-${subQ._id}`}
-                                checked={isSelected} 
-                                disabled={exerciseSubmitted} 
-                                onChange={() => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: opt }))} 
-                                className="mt-1 mr-3 shrink-0 accent-blue-800" 
-                              />
-                              <div className="flex-1 w-full">
-                                <MixedContentRenderer text={opt} />
-                              </div>
-                            </label>
-                          );
-                        })}
+  // Définition de base (avant validation)
+  let optionClasses = "border-gray-200 bg-white hover:bg-gray-50 text-gray-700";
+
+  if (exerciseSubmitted) {
+    if (isSelected && !isCorrect) {
+      // 1. L'étudiant a choisi cette option et elle est FAUSSE -> ROUGE
+      optionClasses = "border-red-500 bg-red-50 text-red-700 font-medium";
+    } 
+    else if (isSelected && isCorrect) {
+      // 2. L'étudiant a choisi cette option et elle est BONNE -> VERT
+      optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium";
+    } 
+    else if (isCorrect && showSolutions) {
+      // 3. L'option est bonne (mais non choisie), ET l'étudiant a cliqué sur "Afficher la solution" -> VERT
+      optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium";
+    } 
+    else {
+      // 4. Les autres options (neutres) une fois l'exercice validé
+      optionClasses = "border-gray-200 bg-gray-50 opacity-70";
+    }
+  } 
+  else if (isSelected) {
+    // Style de sélection avant validation (généralement en bleu ou teal)
+    optionClasses = "border-teal-500 bg-teal-50 text-teal-800 font-medium";
+  }
+
+  return (
+    <button
+      key={i}
+      onClick={() => !exerciseSubmitted && handleExerciseAnswer(subQ._id, option)}
+      disabled={exerciseSubmitted}
+      className={`w-full text-left px-4 py-3 border rounded-xl transition-all ${optionClasses}`}
+    >
+      <MixedContentRenderer text={option} />
+    </button>
+  );
+})}
                       </div>
                     ) : (
                       <div className="ml-2 md:ml-6 mt-3 space-y-4">
