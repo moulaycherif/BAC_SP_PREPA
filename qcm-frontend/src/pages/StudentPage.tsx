@@ -17,6 +17,7 @@ import StudentDashboardStats from "../components/stats/StudentDashboardStats";
 import StudentAstuceDetail from "./StudentAstuceDetail";
 import PdfViewer from "../components/PdfViewer";
 import React from 'react';
+import ExerciseAiFeedback from "../components/ExerciseAiFeedback";
 
 // Indispensable pour l'interprétation globale
 (window as any).katex = katex;
@@ -1500,6 +1501,7 @@ export default function StudentPage() {
                     </div>
                     
                     {/* CHOIX MULTIPLES (QCM) OU ZONE DE TEXTE (EXERCICE) */}
+                    
                     {hasOptions ? (
                       <div className="ml-2 md:ml-6 grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-2">
                         {subQ.options.map((opt: string, i: number) => {
@@ -1532,17 +1534,26 @@ export default function StudentPage() {
                         })}
                       </div>
                     ) : (
-                      <div className="ml-2 md:ml-6 mt-2">
+                      <div className="ml-2 md:ml-6 mt-3 space-y-4">
                         <textarea
                           disabled={exerciseSubmitted}
                           value={exerciseAnswers[subQ._id] || ""}
                           onChange={(e) => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: e.target.value }))}
-                          placeholder="Espace réservé pour votre réponse..."
-                          className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 disabled:bg-gray-100 resize-y min-h-[90px]"
+                          placeholder="Rédigez votre réponse détaillée ici..."
+                          className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 disabled:bg-gray-100 resize-y min-h-[100px]"
+                        />
+                        
+                        {/* Intégration du module IA pour corriger et guider l'étudiant */}
+                        <ExerciseAiFeedback 
+                          questionId={subQ._id}
+                          questionText={subQ.questionText || subQ.question || subQ.texte || ""}
+                          studentAnswer={exerciseAnswers[subQ._id] || ""}
+                          correctAnswer={subQ.correctAnswer || ""}
+                          isSubmitted={exerciseSubmitted}
+                          subject={selectedMatiere}
                         />
                       </div>
-                    )}
-                          
+                    )}                          
                     {/* EXPLICATION ET CORRECTION */}
                     {exerciseSubmitted && (
                       <div className="ml-2 md:ml-6 mt-3 px-4 py-3 bg-blue-50 text-blue-900 rounded-xl border border-blue-200 text-sm">  

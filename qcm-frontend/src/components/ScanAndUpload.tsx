@@ -1,8 +1,5 @@
 import React, { useState } from "react";
-import axios from "axios";
-
-// Ajustez l'URL de base selon votre configuration
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+import api from "../api/axios";
 
 const ScanAndUpload: React.FC = () => {
   const [file, setFile] = useState<File | null>(null);
@@ -31,8 +28,8 @@ const ScanAndUpload: React.FC = () => {
     setMessage("");
 
     try {
-      // Appel à la route définie dans aiRoutes.ts
-      const response = await axios.post(`${API_BASE_URL}/api/ai/generate`, formData, {
+      // Utilisation de 'api' sans spécifier l'URL de base complète
+      const response = await api.post(`/api/ai/generate`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       

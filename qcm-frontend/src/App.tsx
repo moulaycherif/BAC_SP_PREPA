@@ -23,6 +23,8 @@ import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import SessionGuard from "./components/SessionGuard"; // 👈 On importe proprement le gardien séparé
 import AdminExamUpload from "./pages/AdminExamUpload";
+import ProtectedRoute from "./components/ProtectedRoute";
+import ScanAndUpload from "./components/ScanAndUpload";
 
 export default function App() {
   return (
@@ -55,6 +57,18 @@ export default function App() {
           <Route path="/admin/exercises" element={<AdminExercises />} />
           <Route path="/admin/astuces" element={<AdminAstuces />} />
           <Route path="/admin/upload" element={<AdminExamUpload />} />
+
+          {/* Nouvelle route isolée pour l'outil de création par IA */}
+        <Route 
+          path="/admin/generation-ia" 
+          element={
+            <ProtectedRoute requireAdmin={true}>
+              <div className="min-h-screen bg-gray-50 p-8">
+                <ScanAndUpload />
+              </div>
+            </ProtectedRoute>
+          } 
+        />
 
           {/* ❌ Page introuvable (404) */}
           <Route path="/*" element={<div className="p-10 text-center text-red-600 font-semibold text-xl">Page non trouvée</div>} />

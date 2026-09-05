@@ -1,14 +1,17 @@
 import React, { useState } from "react";
-import axios from "axios";
-
-const API_BASE_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
+import api from "../api/axios";
 
 interface ExerciseAiFeedbackProps {
-  exerciseId: string;
+  questionId: string; // <-- Correspond bien à ce qui est envoyé depuis StudentPage.tsx
   questionText: string;
+  studentAnswer: string;
+  correctAnswer: string;
+  isSubmitted: boolean;
+  subject: string;
 }
 
-const ExerciseAiFeedback: React.FC<ExerciseAiFeedbackProps> = ({ exerciseId, questionText }) => {
+// 1. Remplacer 'exerciseId' par 'questionId' ici, et ajouter les autres props si vous en avez besoin plus tard
+const ExerciseAiFeedback: React.FC<ExerciseAiFeedbackProps> = ({ questionId, questionText }) => {
   const [studentAnswer, setStudentAnswer] = useState<string>("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -20,9 +23,8 @@ const ExerciseAiFeedback: React.FC<ExerciseAiFeedbackProps> = ({ exerciseId, que
     setFeedback(null);
 
     try {
-      // Vous devrez créer cette route côté backend pour analyser la réponse
-      const response = await axios.post(`${API_BASE_URL}/api/ai/feedback`, {
-        exerciseId,
+      const response = await api.post(`/api/ai/feedback`, {
+        questionId, // 2. Remplacer 'exerciseId' par 'questionId' ici
         questionText,
         studentAnswer
       });
