@@ -1513,52 +1513,38 @@ const handleExerciseAnswer = (questionId: string, answer: string) => {
                           {subQ.options.map((option: string, i: number) => {
   const isSelected = exerciseAnswers[subQ._id] === option;
   const isCorrect = option === subQ.correctAnswer;
+  // Détecte si la réponse est correcte et provient d'une tentative précédente
+  const isFrozenCorrect = exerciseAttempt > 1 && isSelected && isCorrect;
 
-  // Définition de base (avant validation)
   let optionClasses = "border-gray-200 bg-white hover:bg-gray-50 text-gray-700";
 
   if (exerciseSubmitted) {
     if (isSelected && !isCorrect) {
-      // 1. L'étudiant a choisi cette option et elle est FAUSSE -> ROUGE
       optionClasses = "border-red-500 bg-red-50 text-red-700 font-medium";
-    } 
-    else if (isSelected && isCorrect) {
-      // 2. L'étudiant a choisi cette option et elle est BONNE -> VERT
+    } else if (isSelected && isCorrect) {
       optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium";
-    } 
-    else if (isCorrect && showSolutions) {
-      // 3. L'option est bonne (mais non choisie), ET l'étudiant a cliqué sur "Afficher la solution" -> VERT
+    } else if (isCorrect && showSolutions) {
       optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium";
-    } 
-    else {
-      // 4. Les autres options (neutres) une fois l'exercice validé
+    } else {
       optionClasses = "border-gray-200 bg-gray-50 opacity-70";
     }
-  } 
-  else if (isSelected) {
-    // Style de sélection avant validation (généralement en bleu ou teal)
+  } else if (isFrozenCorrect) {
+    // Style appliqué quand on refait l'exercice et que cette option était déjà correcte
+    optionClasses = "border-green-500 bg-green-100 text-green-800 font-medium cursor-not-allowed";
+  } else if (isSelected) {
     optionClasses = "border-teal-500 bg-teal-50 text-teal-800 font-medium";
   }
-  // --- NOUVELLE LOGIQUE INTÉGRÉE ICI ---
-  const isCorrectOption = option === subQ.correctAnswer;
-  // Utilisation de exerciseAttempt (votre variable d'état) au lieu de attemptsCount
-  const isFrozenCorrect = exerciseAttempt === 2 && isCorrectOption && exerciseAnswers[subQ._id] === option;
 
   return (
     <button
       key={i}
       onClick={() => {
-        // Empêche le clic si l'exercice est soumis ou si cette réponse est figée
         if (!exerciseSubmitted && !isFrozenCorrect) {
           handleExerciseAnswer(subQ._id, option);
         }
       }}
       disabled={exerciseSubmitted || isFrozenCorrect}
-      className={`w-full text-left px-4 py-3 border rounded-xl transition-all ${
-        isFrozenCorrect 
-          ? "bg-green-100 border-green-500 text-green-700 cursor-not-allowed" // Classes pour figer en vert
-          : optionClasses
-      }`}
+      className={`w-full text-left px-4 py-3 border rounded-xl transition-all ${optionClasses}`}
     >
       <MixedContentRenderer text={option} />
     </button>
@@ -1707,14 +1693,33 @@ const handleExerciseAnswer = (questionId: string, answer: string) => {
     {wrongExercises.length > 0 && (
       <button
         onClick={() => {
-          setExerciseAttempt((prev) => prev + 1);
-          setExercises(wrongExercises); 
-          setExerciseIndex(0); 
-          setExerciseAnswers({}); 
-          setExerciseSubmitted(false); 
-          setShowSolutions(false); // 👈 Réinitialise l'affichage des solutions
-          setExerciseScore(null);
-        }}
+  setExerciseAttempt((prev) => prev + 1);
+  setExercises(wrongExercises); 
+  setExerciseIndex(0); 
+  
+  // Au lieu de setExerciseAnswers({}), on conserve les réponses justes
+  setExerciseAnswers((prevAnswers) => {
+    const newAnswers = { ...prevAnswers };
+    wrongExercises.forEach((ex) => {
+      ex.subQuestions?.forEach((subQ: any) => {
+        const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+        if (hasOptions) {
+          if (prevAnswers[subQ._id] !== subQ.correctAnswer) {
+            delete newAnswers[subQ._id]; // Efface la mauvaise réponse
+          }
+        } else {
+           // Pour les champs textes (questions ouvertes)
+           delete newAnswers[subQ._id]; 
+        }
+      });
+    });
+    return newAnswers;
+  });
+
+  setExerciseSubmitted(false); 
+  setShowSolutions(false);
+  setExerciseScore(null);
+}}
         className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
       >
         🔁 Refaire uniquement les exercices avec erreurs
