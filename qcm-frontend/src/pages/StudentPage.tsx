@@ -16,6 +16,7 @@ import StudentAstuceDetail from "./StudentAstuceDetail";
 import PdfViewer from "../components/PdfViewer";
 import React from 'react';
 import ExerciseAiFeedback from "../components/ExerciseAiFeedback";
+import ExerciseScanCorrect from "../components/ExerciseScanCorrect";
 
 // Indispensable pour l'interprétation globale
 (window as any).katex = katex;
@@ -112,6 +113,70 @@ const chaptersBySubject: Record<string, string[]> = {
     "Chapitre 7 : L'immunité"
   ],
 };
+
+// Déclarez le sous-composant en dehors de StudentPage
+interface ExerciseSubmissionTabsProps {
+  subQ: any;
+  selectedMatiere: string | null;
+  exerciseSubmitted: boolean;
+  exerciseAnswers: { [id: string]: string };
+}
+
+function ExerciseSubmissionTabs({
+  subQ,
+  selectedMatiere,
+  exerciseSubmitted,
+  exerciseAnswers,
+}: ExerciseSubmissionTabsProps) {
+  const [activeTab, setActiveTab] = useState<"text" | "scan">("text");
+
+  return (
+    <div className="mt-4 border-t pt-4">
+      <div className="flex gap-2 mb-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab("text")}
+          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
+            activeTab === "text"
+              ? "bg-teal-600 text-white"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          ⌨️ Saisie au clavier
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("scan")}
+          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
+            activeTab === "scan"
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          📸 Photo / PDF (Scan & Correct)
+        </button>
+      </div>
+
+      {activeTab === "text" ? (
+        <ExerciseAiFeedback
+          questionId={subQ._id}
+          questionText={subQ.questionText || subQ.question || subQ.texte || ""}
+          studentAnswer={exerciseAnswers[subQ._id] || ""}
+          correctAnswer={subQ.correctAnswer || ""}
+          isSubmitted={exerciseSubmitted}
+          subject={selectedMatiere || ""}
+        />
+      ) : (
+        <ExerciseScanCorrect
+          questionId={subQ._id}
+          questionText={subQ.questionText || subQ.question || subQ.texte || ""}
+          correctAnswer={subQ.correctAnswer || ""}
+          subject={selectedMatiere || ""}
+        />
+      )}
+    </div>
+  );
+}
 
 export default function StudentPage() {
   const navigate = useNavigate();
@@ -1604,15 +1669,13 @@ export default function StudentPage() {
                           }`}
                         />
                         
-                        {/* Intégration du module IA pour corriger et guider l'étudiant */}
-                        <ExerciseAiFeedback 
-                          questionId={subQ._id}
-                          questionText={subQ.questionText || subQ.question || subQ.texte || ""}
-                          studentAnswer={exerciseAnswers[subQ._id] || ""}
-                          correctAnswer={subQ.correctAnswer || ""}
-                          isSubmitted={exerciseSubmitted}
-                          subject={selectedMatiere || ""}
-                        />
+                        {/* Appel correct du composant d'onglets IA */}
+    <ExerciseSubmissionTabs
+      subQ={subQ}
+      selectedMatiere={selectedMatiere}
+      exerciseSubmitted={exerciseSubmitted}
+      exerciseAnswers={exerciseAnswers}
+    />
                       </div>
                     )}                          
                     {/* EXPLICATION ET CORRECTION */}
