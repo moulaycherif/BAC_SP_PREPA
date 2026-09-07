@@ -15,7 +15,6 @@ import StudentDashboardStats from "../components/stats/StudentDashboardStats";
 import StudentAstuceDetail from "./StudentAstuceDetail";
 import PdfViewer from "../components/PdfViewer";
 import React from 'react';
-import ExerciseAiFeedback from "../components/ExerciseAiFeedback";
 import ExerciseScanCorrect from "../components/ExerciseScanCorrect";
 
 // Indispensable pour l'interprétation globale
@@ -114,65 +113,91 @@ const chaptersBySubject: Record<string, string[]> = {
   ],
 };
 
-// Déclarez le sous-composant en dehors de StudentPage
-interface ExerciseSubmissionTabsProps {
+// Sous-composant de gestion de réponse par question ouverte
+interface OpenQuestionInputProps {
   subQ: any;
   selectedMatiere: string | null;
   exerciseSubmitted: boolean;
   exerciseAnswers: { [id: string]: string };
+  onAnswerChange: (questionId: string, value: string) => void;
+  isSubQCorrectAndFrozen: boolean;
 }
 
-function ExerciseSubmissionTabs({
+function OpenQuestionInput({
   subQ,
   selectedMatiere,
   exerciseSubmitted,
   exerciseAnswers,
-}: ExerciseSubmissionTabsProps) {
-  const [activeTab, setActiveTab] = useState<"text" | "scan">("text");
+  onAnswerChange,
+  isSubQCorrectAndFrozen,
+}: OpenQuestionInputProps) {
+  const [isKeyboardActive, setIsKeyboardActive] = useState(false);
+  const [showScan, setShowScan] = useState(false);
 
   return (
-    <div className="mt-4 border-t pt-4">
-      <div className="flex gap-2 mb-3">
+    <div className="ml-2 md:ml-6 mt-3 space-y-3">
+      {/* Boutons d'action pour la question */}
+      <div className="flex flex-wrap gap-2 mb-2">
         <button
           type="button"
-          onClick={() => setActiveTab("text")}
+          onClick={() => {
+            setIsKeyboardActive(true);
+            setShowScan(false);
+          }}
+          disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
           className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
-            activeTab === "text"
-              ? "bg-teal-600 text-white"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          }`}
+            isKeyboardActive
+              ? "bg-teal-600 text-white shadow"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+          } disabled:opacity-50`}
         >
           ⌨️ Saisie au clavier
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab("scan")}
+          onClick={() => setShowScan(!showScan)}
+          disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
           className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
-            activeTab === "scan"
-              ? "bg-indigo-600 text-white"
-              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-          }`}
+            showScan
+              ? "bg-indigo-600 text-white shadow"
+              : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
+          } disabled:opacity-50`}
         >
           📸 Photo / PDF (Scan & Correct)
         </button>
       </div>
 
-      {activeTab === "text" ? (
-        <ExerciseAiFeedback
-          questionId={subQ._id}
-          questionText={subQ.questionText || subQ.question || subQ.texte || ""}
-          studentAnswer={exerciseAnswers[subQ._id] || ""}
-          correctAnswer={subQ.correctAnswer || ""}
-          isSubmitted={exerciseSubmitted}
-          subject={selectedMatiere || ""}
-        />
-      ) : (
-        <ExerciseScanCorrect
-          questionId={subQ._id}
-          questionText={subQ.questionText || subQ.question || subQ.texte || ""}
-          correctAnswer={subQ.correctAnswer || ""}
-          subject={selectedMatiere || ""}
-        />
+      {/* Zone claire : Saisie au clavier (Activée uniquement au clic sur le bouton) */}
+      <textarea
+        disabled={!isKeyboardActive || exerciseSubmitted || isSubQCorrectAndFrozen}
+        value={exerciseAnswers[subQ._id] || ""}
+        onChange={(e) => onAnswerChange(subQ._id, e.target.value)}
+        placeholder={
+          isSubQCorrectAndFrozen
+            ? "Réponse valide enregistrée."
+            : !isKeyboardActive
+            ? "Cliquez sur 'Saisie au clavier' pour activer la rédaction de votre réponse..."
+            : "Rédigez votre réponse détaillée ici..."
+        }
+        className={`w-full p-3 border rounded-xl text-gray-800 resize-y min-h-[110px] transition ${
+          isSubQCorrectAndFrozen
+            ? "border-green-500 bg-green-50 text-green-900 cursor-not-allowed font-medium"
+            : !isKeyboardActive
+            ? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed"
+            : "bg-white border-teal-500 ring-2 ring-teal-100 text-gray-900 focus:outline-none"
+        }`}
+      />
+
+      {/* Zone d'import Scan / PDF si activée */}
+      {showScan && (
+        <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl mt-2">
+          <ExerciseScanCorrect
+            questionId={subQ._id}
+            questionText={subQ.questionText || subQ.question || subQ.texte || ""}
+            correctAnswer={subQ.correctAnswer || ""}
+            subject={selectedMatiere || ""}
+          />
+        </div>
       )}
     </div>
   );
@@ -695,6 +720,57 @@ export default function StudentPage() {
     } catch (err) {
       console.error("❌ Erreur enregistrement QCM", err);
     }
+  };
+
+  const handleExerciseSubmitAi = async () => {
+    let score = 0;
+    let totalQ = 0;
+
+    exercises.forEach((ex) => {
+      ex.subQuestions?.forEach((subQ: any) => {
+        totalQ++;
+        const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+        
+        if (hasOptions) {
+          if (exerciseAnswers[subQ._id] === subQ.correctAnswer) {
+            score++;
+          }
+        } else {
+          if (exerciseAnswers[subQ._id] && exerciseAnswers[subQ._id].trim().length > 0) {
+            score++;
+          }
+        }
+      });
+    });
+
+    const wrong = exercises.filter((ex) => 
+      ex.subQuestions?.some((subQ: any) => {
+        const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+        if (hasOptions) {
+          return exerciseAnswers[subQ._id] !== subQ.correctAnswer;
+        }
+        return !exerciseAnswers[subQ._id] || exerciseAnswers[subQ._id].trim().length === 0;
+      })
+    );
+
+    setExerciseScore(score);
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(`${API_BASE_URL}/api/student-activity`, {
+        type: "EXERCISE",
+        subject: selectedMatiere,
+        chapter: selectedChapter,
+        score,
+        totalQuestions: totalQ,
+        successRate: totalQ > 0 ? Math.round((score / totalQ) * 100) : 0,
+      }, { headers: { Authorization: `Bearer ${token}` } });
+    } catch (err) { 
+      console.error("Erreur enregistrement activité exercice:", err); 
+    }
+
+    setExerciseSubmitted(true);
+    setWrongExercises(wrong);
   };
 
   const renderCenterContent = () => {
@@ -1502,7 +1578,6 @@ export default function StudentPage() {
 
       const totalQuestionsCount = exercises.reduce((acc, ex) => acc + (ex.subQuestions?.length || 0), 0);
 
-      // 1. DÉTECTION DYNAMIQUE : QCM vs EXERCICE
       const hasGlobalContext = Boolean(
         currentEx?.contextText || 
         currentEx?.enonce || 
@@ -1529,7 +1604,7 @@ export default function StudentPage() {
             }
           `}</style>
           
-          {/* 2. ENTÊTE DYNAMIQUE */}
+          {/* Entête */}
           <div className="mb-6 text-center">
             <h2 className="text-3xl font-extrabold text-blue-900 tracking-wide uppercase">
               {isExercice 
@@ -1543,7 +1618,7 @@ export default function StudentPage() {
           
           <div className="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-blue-600">
             
-            {/* 3. ÉNONCÉ GLOBAL (Affiché uniquement pour les exercices) */}
+            {/* Énoncé Global */}
             {isExercice && hasGlobalContext && (
               <div className="mb-6 border-b pb-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
                 <h3 className="text-sm font-bold text-blue-800 mb-2 uppercase tracking-wide">Énoncé</h3>
@@ -1561,11 +1636,10 @@ export default function StudentPage() {
               </div>
             )}
             
-            {/* 4. LISTE DES QUESTIONS DYNAMIQUES */}
+            {/* Questions */}
             <div className="space-y-6">
               {currentEx.subQuestions?.map((subQ: any, index: number) => {
                 const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
-                // Détecte si cette question a été résolue correctement dans une tentative précédente
                 const isSubQCorrectAndFrozen = exerciseAttempt > 1 && exerciseAnswers[subQ._id] === subQ.correctAnswer;
 
                 return (
@@ -1582,7 +1656,6 @@ export default function StudentPage() {
                           </div>
                         </div>
 
-                        {/* Badge de verrouillage en cas de réussite préalable */}
                         {isSubQCorrectAndFrozen && (
                           <span className="bg-green-100 text-green-800 border border-green-300 text-xs px-2.5 py-1 rounded-full font-bold shrink-0 flex items-center gap-1">
                             🔒 Correcte (Figée)
@@ -1604,7 +1677,7 @@ export default function StudentPage() {
                       )}
                     </div>
                     
-                    {/* CHOIX MULTIPLES (QCM) OU ZONE DE TEXTE (EXERCICE) */}
+                    {/* Choix Multiple (QCM) OU Zone de Saisie Ouverte */}
                     {hasOptions ? (
                       <div className="ml-2 md:ml-6 grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-2">
                         {subQ.options.map((option: string, i: number) => {
@@ -1624,7 +1697,6 @@ export default function StudentPage() {
                               optionClasses = "border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed";
                             }
                           } else if (isSubQCorrectAndFrozen) {
-                            // Style appliqué lorsque la question était déjà correcte : figée et en vert
                             if (isCorrect) {
                               optionClasses = "border-green-500 bg-green-100 text-green-800 font-bold cursor-not-allowed shadow-sm";
                             } else {
@@ -1656,29 +1728,18 @@ export default function StudentPage() {
                         })}
                       </div>
                     ) : (
-                      <div className="ml-2 md:ml-6 mt-3 space-y-4">
-                        <textarea
-  disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
-  value={exerciseAnswers[subQ._id] || ""}
-  onChange={(e) => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: e.target.value }))}
-  placeholder={isSubQCorrectAndFrozen ? "Réponse valide enregistrée." : "Rédigez votre réponse détaillée ici..."}
-  className={`w-full p-3 border rounded-xl text-gray-800 resize-y min-h-[100px] ${
-    isSubQCorrectAndFrozen 
-      ? "border-green-500 bg-green-50 text-green-900 cursor-not-allowed font-medium" 
-      : "bg-white border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-  }`}
-/>
-                        
-                        {/* Appel correct du composant d'onglets IA */}
-    <ExerciseSubmissionTabs
-      subQ={subQ}
-      selectedMatiere={selectedMatiere}
-      exerciseSubmitted={exerciseSubmitted}
-      exerciseAnswers={exerciseAnswers}
-    />
-                      </div>
-                    )}                          
-                    {/* EXPLICATION ET CORRECTION */}
+                      /* Saisie au clavier + Photo / PDF par question */
+                      <OpenQuestionInput
+                        subQ={subQ}
+                        selectedMatiere={selectedMatiere}
+                        exerciseSubmitted={exerciseSubmitted}
+                        exerciseAnswers={exerciseAnswers}
+                        onAnswerChange={handleExerciseAnswer}
+                        isSubQCorrectAndFrozen={isSubQCorrectAndFrozen}
+                      />
+                    )}
+
+                    {/* Explications & Solution */}
                     {exerciseSubmitted && showSolutions && (
                       <div className="ml-2 md:ml-6 mt-3 px-4 py-3 bg-blue-50 text-blue-900 rounded-xl border border-blue-200 text-sm">  
                         <span className="font-bold flex items-center mb-1 text-blue-900">💡 Solution & Correction :</span>
@@ -1698,7 +1759,7 @@ export default function StudentPage() {
             </div>
           </div>
           
-          {/* Navigation inter-exercices */}
+          {/* Navigation Inter-exercices */}
           <div className="flex justify-between items-center mt-6">
             <button 
               onClick={() => setExerciseIndex((i) => i - 1)} 
@@ -1715,67 +1776,25 @@ export default function StudentPage() {
               Exercice Suivant ➡️
             </button>
           </div>
-          
-          {/* BOUTON ADAPTATIF "VALIDER CE CHAPITRE" */}
-          {!exerciseSubmitted && (
-            <div className="mt-8 text-center">
+
+          {/* BOUTONS UNIQUES À LA FIN DE L'EXERCICE */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            {!exerciseSubmitted && (
               <button
-                onClick={async () => {
-                  let score = 0;
-                  let totalQ = 0;
-
-                  exercises.forEach((ex) => {
-                    ex.subQuestions?.forEach((subQ: any) => {
-                      totalQ++;
-                      const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
-                      
-                      if (hasOptions) {
-                        if (exerciseAnswers[subQ._id] === subQ.correctAnswer) {
-                          score++;
-                        }
-                      } else {
-                        if (exerciseAnswers[subQ._id] && exerciseAnswers[subQ._id].trim().length > 0) {
-                          score++;
-                        }
-                      }
-                    });
-                  });
-
-                  const wrong = exercises.filter((ex) => 
-                    ex.subQuestions?.some((subQ: any) => {
-                      const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
-                      if (hasOptions) {
-                        return exerciseAnswers[subQ._id] !== subQ.correctAnswer;
-                      }
-                      return !exerciseAnswers[subQ._id] || exerciseAnswers[subQ._id].trim().length === 0;
-                    })
-                  );
-
-                  setExerciseScore(score);
-
-                  try {
-                    const token = localStorage.getItem("token");
-                    await axios.post(`${API_BASE_URL}/api/student-activity`, {
-                      type: "EXERCISE",
-                      subject: selectedMatiere,
-                      chapter: selectedChapter,
-                      score,
-                      totalQuestions: totalQ,
-                      successRate: totalQ > 0 ? Math.round((score / totalQ) * 100) : 0,
-                    }, { headers: { Authorization: `Bearer ${token}` } });
-                  } catch (err) { 
-                    console.error("Erreur enregistrement activité exercice:", err); 
-                  }
-
-                  setExerciseSubmitted(true);
-                  setWrongExercises(wrong);
-                }}
-                className="px-8 py-3 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 w-full md:w-auto"
+                onClick={handleExerciseSubmitAi}
+                className="px-8 py-3.5 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
               >
-                ✅ Valider ce chapitre
+                🤖 Soumettre pour correction IA
               </button>
-            </div>
-          )}
+            )}
+
+            <button
+              onClick={() => setShowSolutions(!showSolutions)}
+              className="px-8 py-3.5 bg-slate-800 hover:bg-slate-900 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
+            >
+              📖 {showSolutions ? "Masquer la correction officielle" : "Voir la correction officielle"}
+            </button>
+          </div>
 
           {exerciseSubmitted && (
             <div className="mt-6 text-center font-bold text-lg text-blue-900 bg-blue-50 py-3 px-6 rounded-xl border border-blue-200 shadow-sm max-w-xl mx-auto">
@@ -1783,53 +1802,39 @@ export default function StudentPage() {
             </div>
           )}
 
-          {exerciseSubmitted && (
-            <div className="mt-6 flex flex-col md:flex-row justify-center gap-4">
-              {/* Bouton pour afficher la solution */}
-              {!showSolutions && (
-                <button
-                  onClick={() => setShowSolutions(true)}
-                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow transition"
-                >
-                  📖 Afficher la solution
-                </button>
-              )}
-              
-              {/* Bouton pour refaire les erreurs */}
-              {wrongExercises.length > 0 && !showSolutions && (
-  <button
-    onClick={() => {
-      setExerciseAttempt((prev) => prev + 1);
-      setExercises(wrongExercises); 
-      setExerciseIndex(0); 
-      
-      // On filtre pour ne supprimer QUE les mauvaises réponses
-      setExerciseAnswers((prevAnswers) => {
-        const newAnswers = { ...prevAnswers };
-        wrongExercises.forEach((ex) => {
-          ex.subQuestions?.forEach((subQ: any) => {
-            const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
-            if (hasOptions) {
-              if (prevAnswers[subQ._id] !== subQ.correctAnswer) {
-                delete newAnswers[subQ._id]; // Efface la mauvaise réponse
-              }
-            } else {
-              delete newAnswers[subQ._id]; 
-            }
-          });
-        });
-        return newAnswers;
-      });
+          {exerciseSubmitted && wrongExercises.length > 0 && (
+            <div className="mt-6 flex justify-center">
+              <button
+                onClick={() => {
+                  setExerciseAttempt((prev) => prev + 1);
+                  setExercises(wrongExercises); 
+                  setExerciseIndex(0); 
+                  
+                  setExerciseAnswers((prevAnswers) => {
+                    const newAnswers = { ...prevAnswers };
+                    wrongExercises.forEach((ex) => {
+                      ex.subQuestions?.forEach((subQ: any) => {
+                        const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+                        if (hasOptions) {
+                          if (prevAnswers[subQ._id] !== subQ.correctAnswer) {
+                            delete newAnswers[subQ._id];
+                          }
+                        } else {
+                          delete newAnswers[subQ._id]; 
+                        }
+                      });
+                    });
+                    return newAnswers;
+                  });
 
-      setExerciseSubmitted(false); 
-      setShowSolutions(false);
-      setExerciseScore(null);
-    }}
-    className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
-  >
-    🔁 Refaire uniquement les exercices avec erreurs
-  </button>
-)}
+                  setExerciseSubmitted(false); 
+                  setShowSolutions(false);
+                  setExerciseScore(null);
+                }}
+                className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
+              >
+                🔁 Refaire uniquement les exercices avec erreurs
+              </button>
             </div>
           )}
         </div>
