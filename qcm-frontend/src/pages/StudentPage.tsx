@@ -17,6 +17,7 @@ import StudentDashboardStats from "../components/stats/StudentDashboardStats";
 import StudentAstuceDetail from "./StudentAstuceDetail";
 import PdfViewer from "../components/PdfViewer";
 import React from 'react';
+import ExerciseAiFeedback from "../components/ExerciseAiFeedback";
 
 // Indispensable pour l'interprétation globale
 (window as any).katex = katex;
@@ -138,6 +139,7 @@ export default function StudentPage() {
   const [wrongExercises, setWrongExercises] = useState<any[]>([]);
   const [exerciseAttempt, setExerciseAttempt] = useState(1);
   const [whiteExams, setWhiteExams] = useState<any[]>([]);
+  const [showSolutions, setShowSolutions] = useState(false);
   
   const [astuces, setAstuces] = useState<Astuce[]>([]);
   const [resumes, setResumes] = useState<any[]>([]);
@@ -147,6 +149,7 @@ export default function StudentPage() {
   const [focusMode, setFocusMode] = useState(false);
 
   const [controles, setControles] = useState<any[]>([]);
+  const [courseItems, setCourseItems] = useState<any[]>([]);
 
   const subjectImages: Record<string, string> = {
     Mathématique: mathsImg,
@@ -402,6 +405,7 @@ export default function StudentPage() {
         setExerciseAnswers({});
         setExerciseSubmitted(false);
         setExerciseScore(null);
+        setShowSolutions(false);
       }
       else if (selectedAction === "Controles") {
         try {
@@ -410,6 +414,22 @@ export default function StudentPage() {
         } catch (err) { 
           console.error("Erreur lors de la récupération des contrôles", err); 
           setControles([]);
+        }
+      }
+      else if (selectedAction === "Cours") {
+        try {
+          // On récupère tous les éléments liés à ce chapitre
+          const res = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}`, { headers });
+          const allItems = res.data || [];
+          
+          // On filtre uniquement les types d'architecture "Cours Plat"
+          const coursPlat = allItems.filter((item: any) => 
+            ['chapter', 'lesson', 'quiz_question'].includes(item.type)
+          );
+          setCourseItems(coursPlat);
+        } catch (err) {
+          console.error("Erreur lors de la récupération du cours complet", err);
+          setCourseItems([]);
         }
       }
     };
@@ -569,7 +589,10 @@ export default function StudentPage() {
   const handleAnswerChange = (id: string, value: string) => {
     setAnswers((prev) => ({ ...prev, [id]: value }));
   };
-
+  
+const handleExerciseAnswer = (questionId: string, answer: string) => {
+  setExerciseAnswers((prev) => ({ ...prev, [questionId]: answer }));
+};
   const handleFinish = async () => {
     if (!currentExamId) return;
 
@@ -655,6 +678,9 @@ export default function StudentPage() {
                 {chapter === "Toute l'épreuve" && "🏆 "} {chapter}
               </span>
               <span className="text-xl">{isExpanded ? "🔽" : "▶️"}</span>
+            </button>
+            <button onClick={() => setSelectedAction("Cours")} className="flex-1 min-w-[200px] bg-white border border-teal-200 text-teal-700 px-4 py-3 rounded-xl shadow hover:bg-teal-50 hover:border-teal-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">📖</span> Cours Complet
             </button>
 
             {isExpanded && (
@@ -1480,51 +1506,74 @@ export default function StudentPage() {
                     </div>
                     
                     {/* CHOIX MULTIPLES (QCM) OU ZONE DE TEXTE (EXERCICE) */}
+                    
                     {hasOptions ? (
                       <div className="ml-2 md:ml-6 grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-2">
-                        {subQ.options.map((opt: string, i: number) => {
-                          const isSelected = exerciseAnswers[subQ._id] === opt;
-                          const isCorrect = opt === subQ.correctAnswer;
-                          
-                          let labelStyle = "hover:bg-blue-50 border-gray-200 bg-white";
-                          if (exerciseSubmitted) {
-                            if (isSelected && isCorrect) labelStyle = "bg-green-100 border-green-500 font-medium shadow-sm";
-                            else if (isSelected && !isCorrect) labelStyle = "bg-red-100 border-red-500 font-medium shadow-sm";
-                            else if (isCorrect) labelStyle = "bg-green-50 border-green-300 font-medium";
-                            else labelStyle = "bg-gray-50 opacity-50";
-                          }
+                        
+                          {subQ.options.map((option: string, i: number) => {
+  const isSelected = exerciseAnswers[subQ._id] === option;
+  const isCorrect = option === subQ.correctAnswer;
+  // Détecte si la réponse est correcte et provient d'une tentative précédente
+  const isFrozenCorrect = exerciseAttempt > 1 && isSelected && isCorrect;
 
-                          return (
-                            <label key={i} className={`flex items-start px-3.5 py-2.5 border rounded-lg cursor-pointer text-base transition-all leading-snug ${labelStyle}`}>
-                              <input 
-                                type="radio" 
-                                name={`subQ-${subQ._id}`}
-                                checked={isSelected} 
-                                disabled={exerciseSubmitted} 
-                                onChange={() => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: opt }))} 
-                                className="mt-1 mr-3 shrink-0 accent-blue-800" 
-                              />
-                              <div className="flex-1 w-full">
-                                <MixedContentRenderer text={opt} />
-                              </div>
-                            </label>
-                          );
-                        })}
+  let optionClasses = "border-gray-200 bg-white hover:bg-gray-50 text-gray-700";
+
+  if (exerciseSubmitted) {
+    if (isSelected && !isCorrect) {
+      optionClasses = "border-red-500 bg-red-50 text-red-700 font-medium";
+    } else if (isSelected && isCorrect) {
+      optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium";
+    } else if (isCorrect && showSolutions) {
+      optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium";
+    } else {
+      optionClasses = "border-gray-200 bg-gray-50 opacity-70";
+    }
+  } else if (isFrozenCorrect) {
+    // Style appliqué quand on refait l'exercice et que cette option était déjà correcte
+    optionClasses = "border-green-500 bg-green-100 text-green-800 font-medium cursor-not-allowed";
+  } else if (isSelected) {
+    optionClasses = "border-teal-500 bg-teal-50 text-teal-800 font-medium";
+  }
+
+  return (
+    <button
+      key={i}
+      onClick={() => {
+        if (!exerciseSubmitted && !isFrozenCorrect) {
+          handleExerciseAnswer(subQ._id, option);
+        }
+      }}
+      disabled={exerciseSubmitted || isFrozenCorrect}
+      className={`w-full text-left px-4 py-3 border rounded-xl transition-all ${optionClasses}`}
+    >
+      <MixedContentRenderer text={option} />
+    </button>
+  );
+})}
                       </div>
                     ) : (
-                      <div className="ml-2 md:ml-6 mt-2">
+                      <div className="ml-2 md:ml-6 mt-3 space-y-4">
                         <textarea
                           disabled={exerciseSubmitted}
                           value={exerciseAnswers[subQ._id] || ""}
                           onChange={(e) => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: e.target.value }))}
-                          placeholder="Espace réservé pour votre réponse..."
-                          className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 disabled:bg-gray-100 resize-y min-h-[90px]"
+                          placeholder="Rédigez votre réponse détaillée ici..."
+                          className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 disabled:bg-gray-100 resize-y min-h-[100px]"
+                        />
+                        
+                        {/* Intégration du module IA pour corriger et guider l'étudiant */}
+                        <ExerciseAiFeedback 
+                          questionId={subQ._id}
+                          questionText={subQ.questionText || subQ.question || subQ.texte || ""}
+                          studentAnswer={exerciseAnswers[subQ._id] || ""}
+                          correctAnswer={subQ.correctAnswer || ""}
+                          isSubmitted={exerciseSubmitted}
+                          subject={selectedMatiere || ""}
                         />
                       </div>
-                    )}
-                          
+                    )}                          
                     {/* EXPLICATION ET CORRECTION */}
-                    {exerciseSubmitted && (
+                    {exerciseSubmitted && showSolutions && (
                       <div className="ml-2 md:ml-6 mt-3 px-4 py-3 bg-blue-50 text-blue-900 rounded-xl border border-blue-200 text-sm">  
                         <span className="font-bold flex items-center mb-1 text-blue-900">💡 Solution & Correction :</span>
                         {subQ.correctAnswer && !hasOptions && (
@@ -1628,23 +1677,56 @@ export default function StudentPage() {
             </div>
           )}
 
-          {exerciseSubmitted && wrongExercises.length > 0 && (
-            <div className="mt-4 text-center">
-              <button
-                onClick={() => {
-                  setExerciseAttempt((prev) => prev + 1);
-                  setExercises(wrongExercises); 
-                  setExerciseIndex(0); 
-                  setExerciseAnswers({}); 
-                  setExerciseSubmitted(false); 
-                  setExerciseScore(null);
-                }}
-                className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
-              >
-                🔁 Refaire uniquement les exercices avec erreurs
-              </button>
-            </div>
-          )}
+          {exerciseSubmitted && (
+  <div className="mt-6 flex flex-col md:flex-row justify-center gap-4">
+    {/* Bouton pour afficher la solution (disparaît une fois cliqué) */}
+    {!showSolutions && (
+      <button
+        onClick={() => setShowSolutions(true)}
+        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow transition"
+      >
+        📖 Afficher la solution
+      </button>
+    )}
+    
+    {/* Bouton pour refaire les erreurs */}
+    {wrongExercises.length > 0 && (
+      <button
+        onClick={() => {
+  setExerciseAttempt((prev) => prev + 1);
+  setExercises(wrongExercises); 
+  setExerciseIndex(0); 
+  
+  // Au lieu de setExerciseAnswers({}), on conserve les réponses justes
+  setExerciseAnswers((prevAnswers) => {
+    const newAnswers = { ...prevAnswers };
+    wrongExercises.forEach((ex) => {
+      ex.subQuestions?.forEach((subQ: any) => {
+        const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+        if (hasOptions) {
+          if (prevAnswers[subQ._id] !== subQ.correctAnswer) {
+            delete newAnswers[subQ._id]; // Efface la mauvaise réponse
+          }
+        } else {
+           // Pour les champs textes (questions ouvertes)
+           delete newAnswers[subQ._id]; 
+        }
+      });
+    });
+    return newAnswers;
+  });
+
+  setExerciseSubmitted(false); 
+  setShowSolutions(false);
+  setExerciseScore(null);
+}}
+        className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
+      >
+        🔁 Refaire uniquement les exercices avec erreurs
+      </button>
+    )}
+  </div>
+)}
         </div>
       );
     }
@@ -1694,7 +1776,58 @@ export default function StudentPage() {
         </div>
       );
     }
-
+if (selectedChapter && selectedAction === "Cours") {
+      const parentChapters = courseItems.filter(item => item.type === "chapter" || item.parent_id === null);
+      
+      return (
+        <div className="p-6 max-w-5xl mx-auto">
+          <h2 className="text-3xl font-extrabold text-teal-800 mb-8 text-center border-b-4 border-teal-200 pb-4">
+            📖 Cours Complet : {selectedChapter}
+          </h2>
+          
+          {courseItems.length === 0 ? (
+            <div className="text-center bg-white p-8 rounded-2xl shadow-lg">
+              <span className="text-5xl block mb-4">📭</span>
+              <p className="text-gray-600 text-lg font-medium">Aucun cours généré pour ce chapitre.</p>
+            </div>
+          ) : (
+            <div className="space-y-8">
+              {parentChapters.map(chapter => {
+                // Trouver les leçons/quiz enfants
+                const children = courseItems.filter(item => item.parent_id === chapter.course_id || item.parent_id === chapter._id);
+                
+                return (
+                  <div key={chapter._id} className="bg-white rounded-2xl shadow-lg border border-teal-100 overflow-hidden">
+                    <div className="bg-teal-700 text-white p-5">
+                      <h3 className="text-2xl font-bold">{chapter.title || chapter.texte}</h3>
+                    </div>
+                    
+                    <div className="p-6 space-y-6 bg-teal-50/30">
+                      {children.map(child => (
+                        <div key={child._id} className="bg-white p-5 rounded-xl border-l-4 border-teal-500 shadow-sm">
+                          <h4 className="text-xl font-bold text-gray-800 mb-3">{child.title || "Leçon"}</h4>
+                          <div className="prose max-w-none text-gray-700 text-lg">
+                            <MixedContentRenderer text={child.content || child.texte || ""} />
+                          </div>
+                          
+                          {/* Si c'est un quiz_question (avec options JSON) */}
+                          {child.type === "quiz_question" && child.content && child.content.includes("options") && (
+                            <div className="mt-4 p-4 bg-gray-100 rounded-lg">
+                              <span className="font-bold text-teal-800">🎯 Mini-Quiz</span>
+                              <pre className="text-sm mt-2">{child.content}</pre>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
     return <StudentDashboardStats />;
   };
 

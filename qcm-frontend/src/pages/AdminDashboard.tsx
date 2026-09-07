@@ -3,6 +3,7 @@ import axios from "../api/axios";
 import { API_BASE_URL } from "../config";
 import SummaryList from "./SummaryList";
 import { useNavigate } from "react-router-dom";
+import ScanAndUpload from "../components/ScanAndUpload";
 
 // Déconnexion
 function logout() {
@@ -298,7 +299,7 @@ const AdminDashboard: React.FC = () => {
   const adminToken = localStorage.getItem("adminToken");
   const itemsPerPage = 10;
 
-  const [activeTab, setActiveTab] = useState<"ai" | "students" | "import" | "summary">("ai");
+  const [activeTab, setActiveTab] = useState<"ai" | "students" | "import" | "summary" | "scan">("ai");
   
   // STATE : ÉTUDIANTS
   const [students, setStudents] = useState<Student[]>([]);
@@ -593,6 +594,29 @@ const AdminDashboard: React.FC = () => {
     📝 Gestion résumés
   </button>
 
+  {/* NOUVEL ONGLET : Scan & Génération par IA */}
+        <button 
+          onClick={() => setActiveTab("scan")} 
+          className={`px-4 py-2 rounded transition-colors ${
+            activeTab === "scan" 
+              ? "!bg-teal-600 !text-white font-semibold shadow" 
+              : "!bg-teal-900 !text-white hover:!bg-teal-800"
+          }`}
+        >
+          📷 Génération par IA (Outil de création)
+        </button>
+
+        <button 
+          onClick={() => setActiveTab("summary")} 
+          className={`px-4 py-2 rounded transition-colors ${
+            activeTab === "summary" 
+              ? "!bg-indigo-600 !text-white font-semibold shadow" 
+              : "!bg-indigo-900 !text-white hover:!bg-indigo-800"
+          }`}
+        >
+
+        </button>
+
   <button 
     onClick={() => navigate('/admin/upload')}
     className="!bg-blue-600 !text-white px-4 py-2 rounded shadow hover:!bg-blue-700 transition-colors"
@@ -600,6 +624,16 @@ const AdminDashboard: React.FC = () => {
     📥 Importation Examen (Excel)
   </button>
 </div>
+{/* ----------- NOUVEL ONGLET : ScanAndUpload ----------- */}
+      {activeTab === "scan" && (
+        <div className="bg-white p-6 rounded shadow border border-gray-200">
+          <h2 className="text-2xl font-bold mb-2 text-gray-800">📷 Numérisation & Génération de Contenu</h2>
+          <p className="text-sm text-gray-500 mb-6">
+            Utilisez cet outil pour créer directement du contenu pédagogique grâce à l'IA.
+          </p>
+          <ScanAndUpload />
+        </div>
+      )}
 
       {/* ----------- Onglet Étudiants ----------- */}
       {activeTab === "students" && (
