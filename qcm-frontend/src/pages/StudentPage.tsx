@@ -1777,43 +1777,27 @@ export default function StudentPage() {
             </button>
           </div>
 
-          {/* BOUTONS UNIQUES À LA FIN DE L'EXERCICE OU QCM */}
+         {/* BOUTON UNIQUE À LA FIN DE L'EXERCICE OU QCM */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            {isExercice ? (
-              // --- Cas 1 : EXERCICE (Saisie / Scan) ---
-              <>
-                {!exerciseSubmitted && (
-                  <button
-                    onClick={handleExerciseSubmitAi}
-                    className="px-8 py-3.5 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
-                  >
-                    🤖 Soumettre pour correction IA
-                  </button>
-                )}
-
-                <button
-                  onClick={() => setShowSolutions(!showSolutions)}
-                  className="px-8 py-3.5 bg-slate-800 hover:bg-slate-900 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
-                >
-                  📖 {showSolutions ? "Masquer la correction officielle" : "Voir la correction officielle"}
-                </button>
-              </>
+            {!exerciseSubmitted ? (
+              /* Un seul bouton avant soumission */
+              <button
+                onClick={() => {
+                  handleExerciseSubmitAi();
+                  setShowSolutions(true);
+                }}
+                className="px-8 py-3.5 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
+              >
+                {isExercice ? "🤖 Soumettre pour correction IA" : "✅ Valider ce chapitre"}
+              </button>
             ) : (
-              // --- Cas 2 : QCM PUR ---
-              <>
-                {!exerciseSubmitted && (
-                  <button
-                    onClick={() => {
-                      handleExerciseSubmitAi();
-                      // On affiche automatiquement la correction pour les QCM une fois validés
-                      setShowSolutions(true); 
-                    }}
-                    className="px-8 py-3.5 bg-blue-600 hover:bg-blue-700 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
-                  >
-                    ✅ Valider ce chapitre
-                  </button>
-                )}
-              </>
+              /* Bouton de bascule de correction uniquement après soumission */
+              <button
+                onClick={() => setShowSolutions(!showSolutions)}
+                className="px-8 py-3.5 bg-slate-800 hover:bg-slate-900 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
+              >
+                📖 {showSolutions ? "Masquer la correction officielle" : "Voir la correction officielle"}
+              </button>
             )}
           </div>
 
