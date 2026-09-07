@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import api from "../api/axios";
 
 interface ExerciseAiFeedbackProps {
-  questionId: string; // <-- Correspond bien à ce qui est envoyé depuis StudentPage.tsx
+  questionId: string;
   questionText: string;
   studentAnswer: string;
   correctAnswer: string;
@@ -10,8 +10,12 @@ interface ExerciseAiFeedbackProps {
   subject: string;
 }
 
-// 1. Remplacer 'exerciseId' par 'questionId' ici, et ajouter les autres props si vous en avez besoin plus tard
-const ExerciseAiFeedback: React.FC<ExerciseAiFeedbackProps> = ({ questionId, questionText }) => {
+const ExerciseAiFeedback: React.FC<ExerciseAiFeedbackProps> = ({ 
+  questionId, 
+  questionText, 
+  correctAnswer, 
+  subject 
+}) => {
   const [studentAnswer, setStudentAnswer] = useState<string>("");
   const [feedback, setFeedback] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -24,48 +28,48 @@ const ExerciseAiFeedback: React.FC<ExerciseAiFeedbackProps> = ({ questionId, que
 
     try {
       const response = await api.post(`/api/ai/feedback`, {
-        questionId, // 2. Remplacer 'exerciseId' par 'questionId' ici
+        questionId,
         questionText,
-        studentAnswer
+        studentAnswer,
+        correctAnswer, // Transmis au backend pour une correction précise
+        subject
       });
       
       setFeedback(response.data.feedback);
     } catch (error) {
       console.error("Erreur lors de la récupération du feedback", error);
-      setFeedback("Impossible d'obtenir une correction de l'IA pour le moment. Veuillez réessayer.");
+      setFeedback("Impossible d'obtenir une correction pour le moment.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl border border-teal-200 shadow-sm mt-4">
-      <h3 className="text-lg font-bold text-gray-800 mb-2">Votre réponse</h3>
+    <div className="bg-white p-5 rounded-xl border border-teal-200 shadow-sm mt-4">
+      <h3 className="text-md font-bold text-gray-800 mb-2">💻 Option 1 : Rédiger votre réponse</h3>
       
       <textarea
         value={studentAnswer}
         onChange={(e) => setStudentAnswer(e.target.value)}
-        placeholder="Rédigez votre réponse ici..."
+        placeholder="Saisissez votre démonstration ou calcul ici..."
         rows={4}
-        className="w-full border border-gray-300 rounded-lg p-3 mb-4 focus:ring-teal-500 focus:border-teal-500 resize-y"
+        className="w-full border border-gray-300 rounded-lg p-3 mb-3 focus:ring-teal-500 focus:border-teal-500 text-sm"
       />
       
       <button
         onClick={handleSubmit}
         disabled={loading || !studentAnswer.trim()}
-        className={`px-6 py-2 rounded-lg text-white font-bold transition ${loading || !studentAnswer.trim() ? "bg-teal-300 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700"}`}
+        className={`px-5 py-2 rounded-lg text-white font-bold text-sm transition ${
+          loading || !studentAnswer.trim() ? "bg-teal-300 cursor-not-allowed" : "bg-teal-600 hover:bg-teal-700"
+        }`}
       >
-        {loading ? "Analyse en cours..." : "Demander une correction IA"}
+        {loading ? "Analyse par l'IA..." : "Soumettre pour correction IA"}
       </button>
 
       {feedback && (
-        <div className="mt-6 p-5 bg-teal-50 rounded-lg border-l-4 border-teal-500">
-          <h4 className="font-bold text-teal-800 flex items-center gap-2 mb-2">
-            <span>🤖</span> Retour du tuteur IA
-          </h4>
-          <div className="text-gray-700 whitespace-pre-wrap">
-            {feedback}
-          </div>
+        <div className="mt-4 p-4 bg-teal-50 rounded-lg border-l-4 border-teal-500">
+          <h4 className="font-bold text-teal-800 flex items-center gap-2 mb-1 text-sm">🤖 Correction IA</h4>
+          <div className="text-gray-700 text-sm whitespace-pre-wrap">{feedback}</div>
         </div>
       )}
     </div>

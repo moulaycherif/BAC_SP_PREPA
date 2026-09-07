@@ -6,11 +6,9 @@ import katex from "katex";
 import "katex/dist/katex.min.css";
 import { API_BASE_URL } from "../config";
 import { fetchAstucesByChapter } from "../api/astuces.api";
-import concoursImg from "../assets/CONCOURS.jfif";
 import mathsImg from "../assets/MATHS.jfif";
 import physiqueImg from "../assets/PHYSIQUE.jfif";
 import chimieImg from "../assets/CHIMIE.jfif";
-import physique_chimieImg from "../assets/PHYSIQUE-CHIMIE.jpg";
 import svtImg from "../assets/SVT.jfif";
 import bgImage from "/Image3.jfif";
 import StudentDashboardStats from "../components/stats/StudentDashboardStats";
@@ -18,6 +16,7 @@ import StudentAstuceDetail from "./StudentAstuceDetail";
 import PdfViewer from "../components/PdfViewer";
 import React from 'react';
 import ExerciseAiFeedback from "../components/ExerciseAiFeedback";
+import ExerciseScanCorrect from "../components/ExerciseScanCorrect";
 
 // Indispensable pour l'interprétation globale
 (window as any).katex = katex;
@@ -114,6 +113,70 @@ const chaptersBySubject: Record<string, string[]> = {
     "Chapitre 7 : L'immunité"
   ],
 };
+
+// Déclarez le sous-composant en dehors de StudentPage
+interface ExerciseSubmissionTabsProps {
+  subQ: any;
+  selectedMatiere: string | null;
+  exerciseSubmitted: boolean;
+  exerciseAnswers: { [id: string]: string };
+}
+
+function ExerciseSubmissionTabs({
+  subQ,
+  selectedMatiere,
+  exerciseSubmitted,
+  exerciseAnswers,
+}: ExerciseSubmissionTabsProps) {
+  const [activeTab, setActiveTab] = useState<"text" | "scan">("text");
+
+  return (
+    <div className="mt-4 border-t pt-4">
+      <div className="flex gap-2 mb-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab("text")}
+          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
+            activeTab === "text"
+              ? "bg-teal-600 text-white"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          ⌨️ Saisie au clavier
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("scan")}
+          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
+            activeTab === "scan"
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+          }`}
+        >
+          📸 Photo / PDF (Scan & Correct)
+        </button>
+      </div>
+
+      {activeTab === "text" ? (
+        <ExerciseAiFeedback
+          questionId={subQ._id}
+          questionText={subQ.questionText || subQ.question || subQ.texte || ""}
+          studentAnswer={exerciseAnswers[subQ._id] || ""}
+          correctAnswer={subQ.correctAnswer || ""}
+          isSubmitted={exerciseSubmitted}
+          subject={selectedMatiere || ""}
+        />
+      ) : (
+        <ExerciseScanCorrect
+          questionId={subQ._id}
+          questionText={subQ.questionText || subQ.question || subQ.texte || ""}
+          correctAnswer={subQ.correctAnswer || ""}
+          subject={selectedMatiere || ""}
+        />
+      )}
+    </div>
+  );
+}
 
 export default function StudentPage() {
   const navigate = useNavigate();
@@ -290,6 +353,7 @@ export default function StudentPage() {
               else groupedExercises.push({ ...ex, subQuestions: [...(ex.subQuestions || [])] });
             });
             setWhiteExams(groupedExercises);
+            setExerciseAttempt(1);
           } catch (err) { setWhiteExams([]); }
         } else {
           let manualData: Astuce[] = [], aiData: Astuce[] = [];
@@ -340,65 +404,61 @@ export default function StudentPage() {
           manualExercises = groupedExercises;
         } catch (err) { console.error("Erreur Exercices Manuels", err); }
 
-       try {
-  const [resAiQcm, resAiExo] = await Promise.all([
-    axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers }),
-    axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=exercise`, { headers })
-  ]);
-  
-  const aiData = [...(resAiQcm.data || []), ...(resAiExo.data || [])];
-  
-  if (aiData.length > 0) {
-    const aiQcmQuestions: any[] = [];
-    const groupedAiExos: any[] = [];
+        try {
+          const [resAiQcm, resAiExo] = await Promise.all([
+            axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers }),
+            axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=exercise`, { headers })
+          ]);
+          
+          const aiData = [...(resAiQcm.data || []), ...(resAiExo.data || [])];
+          
+          if (aiData.length > 0) {
+            const aiQcmQuestions: any[] = [];
+            const groupedAiExos: any[] = [];
 
-    aiData.forEach((q: any) => {
-      const isExo = q.type === 'exercise';
-      // On récupère l'énoncé s'il existe (adapté selon le mapping de votre backend)
-      const enonceText = q.enonce || q.contextText || ""; 
+            aiData.forEach((q: any) => {
+              const isExo = q.type === 'exercise';
+              const enonceText = q.enonce || q.contextText || ""; 
 
-      const subQ = {
-        _id: q._id,
-        questionText: q.texte || q.questionText || q.question,
-        qType: isExo ? 'open' : 'qcm', 
-        options: q.options || [],
-        correctAnswer: q.reponseCorrecte,
-        explanation: q.explication,
-        image: q.image
-      };
+              const subQ = {
+                _id: q._id,
+                questionText: q.texte || q.questionText || q.question,
+                qType: isExo ? 'open' : 'qcm', 
+                options: q.options || [],
+                correctAnswer: q.reponseCorrecte,
+                explanation: q.explication,
+                image: q.image
+              };
 
-      if (isExo && enonceText) {
-        // Si c'est un exercice, on le groupe par son Enoncé global
-        const existingGroup = groupedAiExos.find(g => g.contextText === enonceText);
-        if (existingGroup) {
-          existingGroup.subQuestions.push(subQ);
-        } else {
-          groupedAiExos.push({
-            _id: "ia-exo-" + q._id,
-            contextText: enonceText,
-            subQuestions: [subQ]
-          });
+              if (isExo && enonceText) {
+                const existingGroup = groupedAiExos.find(g => g.contextText === enonceText);
+                if (existingGroup) {
+                  existingGroup.subQuestions.push(subQ);
+                } else {
+                  groupedAiExos.push({
+                    _id: "ia-exo-" + q._id,
+                    contextText: enonceText,
+                    subQuestions: [subQ]
+                  });
+                }
+              } else {
+                aiQcmQuestions.push(subQ);
+              }
+            });
+
+            if (aiQcmQuestions.length > 0) {
+              aiExercises.push({
+                _id: "ia-qcm-group-" + Date.now(),
+                contextText: "🧠 Questions à Choix Multiples (Générées par l'IA)",
+                subQuestions: aiQcmQuestions
+              });
+            }
+            
+            aiExercises = [...aiExercises, ...groupedAiExos];
+          }
+        } catch (err) { 
+          console.error("Erreur Exercices IA", err); 
         }
-      } else {
-        // Si c'est un QCM ou s'il n'y a pas d'énoncé global
-        aiQcmQuestions.push(subQ);
-      }
-    });
-
-    // On reconstitue la liste : d'abord le bloc global de QCM, puis les Exercices distincts
-    if (aiQcmQuestions.length > 0) {
-      aiExercises.push({
-        _id: "ia-qcm-group-" + Date.now(),
-        contextText: "🧠 Questions à Choix Multiples (Générées par l'IA)",
-        subQuestions: aiQcmQuestions
-      });
-    }
-    
-    aiExercises = [...aiExercises, ...groupedAiExos];
-  }
-} catch (err) { 
-  console.error("Erreur Exercices IA", err); 
-}
 
         setExercises([...manualExercises, ...aiExercises]);
         setExerciseIndex(0);
@@ -406,6 +466,7 @@ export default function StudentPage() {
         setExerciseSubmitted(false);
         setExerciseScore(null);
         setShowSolutions(false);
+        setExerciseAttempt(1);
       }
       else if (selectedAction === "Controles") {
         try {
@@ -418,11 +479,9 @@ export default function StudentPage() {
       }
       else if (selectedAction === "Cours") {
         try {
-          // On récupère tous les éléments liés à ce chapitre
           const res = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}`, { headers });
           const allItems = res.data || [];
           
-          // On filtre uniquement les types d'architecture "Cours Plat"
           const coursPlat = allItems.filter((item: any) => 
             ['chapter', 'lesson', 'quiz_question'].includes(item.type)
           );
@@ -590,9 +649,10 @@ export default function StudentPage() {
     setAnswers((prev) => ({ ...prev, [id]: value }));
   };
   
-const handleExerciseAnswer = (questionId: string, answer: string) => {
-  setExerciseAnswers((prev) => ({ ...prev, [questionId]: answer }));
-};
+  const handleExerciseAnswer = (questionId: string, answer: string) => {
+    setExerciseAnswers((prev) => ({ ...prev, [questionId]: answer }));
+  };
+
   const handleFinish = async () => {
     if (!currentExamId) return;
 
@@ -679,16 +739,16 @@ const handleExerciseAnswer = (questionId: string, answer: string) => {
               </span>
               <span className="text-xl">{isExpanded ? "🔽" : "▶️"}</span>
             </button>
-            <button onClick={() => setSelectedAction("Cours")} className="flex-1 min-w-[200px] bg-white border border-teal-200 text-teal-700 px-4 py-3 rounded-xl shadow hover:bg-teal-50 hover:border-teal-400 font-bold transition flex flex-col items-center gap-2">
-                  <span className="text-2xl">📖</span> Cours Complet
-            </button>
-
+            
             {isExpanded && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
                 className="flex flex-wrap gap-4 p-5 bg-blue-50 border-t-2 border-blue-100"
               >
+                <button onClick={() => setSelectedAction("Cours")} className="flex-1 min-w-[200px] bg-white border border-teal-200 text-teal-700 px-4 py-3 rounded-xl shadow hover:bg-teal-50 hover:border-teal-400 font-bold transition flex flex-col items-center gap-2">
+                  <span className="text-2xl">📖</span> Cours Complet
+                </button>
                 <button onClick={() => setSelectedAction("Exercises")} className="flex-1 min-w-[200px] bg-white border border-blue-200 text-blue-800 px-4 py-3 rounded-xl shadow hover:bg-blue-100 hover:border-blue-400 font-bold transition flex flex-col items-center gap-2">
                   <span className="text-2xl">📝</span> QCM & Exercices
                 </button>
@@ -1118,71 +1178,85 @@ const handleExerciseAnswer = (questionId: string, answer: string) => {
               </div>
 
               <div className="space-y-3">
-                {currentEx?.subQuestions?.map((subQ: any, index: number) => (
-                  <div key={subQ._id} className="pl-2 border-l-2 border-red-200 py-1">
-                    <div className="font-medium mb-2 flex flex-col items-start text-lg leading-relaxed">
-                      <div className="flex items-start w-full">
-                        <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-[12px] mr-2 mt-0.5 shrink-0 font-bold">
-                          Q{index + 1}
-                        </span>
-                        <div className="flex-1 text-lg font-medium text-gray-900">
-                          <MixedContentRenderer text={subQ.questionText || subQ.question || subQ.texte || ""} />
+                {currentEx?.subQuestions?.map((subQ: any, index: number) => {
+                  const isSubQCorrectAndFrozen = exerciseAttempt > 1 && exerciseAnswers[subQ._id] === subQ.correctAnswer;
+
+                  return (
+                    <div key={subQ._id} className="pl-2 border-l-2 border-red-200 py-1">
+                      <div className="font-medium mb-2 flex flex-col items-start text-lg leading-relaxed">
+                        <div className="flex items-start w-full justify-between">
+                          <div className="flex items-start">
+                            <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded text-[12px] mr-2 mt-0.5 shrink-0 font-bold">
+                              Q{index + 1}
+                            </span>
+                            <div className="flex-1 text-lg font-medium text-gray-900">
+                              <MixedContentRenderer text={subQ.questionText || subQ.question || subQ.texte || ""} />
+                            </div>
+                          </div>
+                          {isSubQCorrectAndFrozen && (
+                            <span className="bg-green-100 text-green-800 border border-green-300 text-xs px-2.5 py-0.5 rounded-full font-bold shrink-0 ml-2">
+                              🔒 Correcte (Figée)
+                            </span>
+                          )}
                         </div>
+
+                        {subQ.image && (
+                          !currentEx.contextImage || 
+                          subQ.image.replace(/^\/images\//, '').trim() !== currentEx.contextImage.replace(/^\/images\//, '').trim()
+                        ) && (
+                          <div className="mt-3 w-full">
+                            <img 
+                              src={subQ.image.startsWith('/') ? subQ.image : `/images/${subQ.image.replace(/^\/images\//, '').trim()}`} 
+                              alt="Illustration de question" 
+                              className="max-h-[200px] object-contain mx-auto block rounded-lg shadow-sm border border-gray-100"
+                            />
+                          </div>
+                        )}
                       </div>
 
-                      {subQ.image && (
-                        !currentEx.contextImage || 
-                        subQ.image.replace(/^\/images\//, '').trim() !== currentEx.contextImage.replace(/^\/images\//, '').trim()
-                      ) && (
-                        <div className="mt-3 w-full">
-                          <img 
-                            src={subQ.image.startsWith('/') ? subQ.image : `/images/${subQ.image.replace(/^\/images\//, '').trim()}`} 
-                            alt="Illustration de question" 
-                            className="max-h-[200px] object-contain mx-auto block rounded-lg shadow-sm border border-gray-100"
-                          />
+                      <div className="ml-8 grid grid-cols-1 md:grid-cols-2 gap-2">
+                        {subQ.options?.map((opt: string, i: number) => {
+                          const isSelected = exerciseAnswers[subQ._id] === opt;
+                          const isCorrect = opt === subQ.correctAnswer;
+                          
+                          let labelClass = "hover:bg-red-50 border-gray-200";
+                          if (exerciseSubmitted) {
+                            if (isSelected && isCorrect) labelClass = "bg-green-100 border-green-500 shadow-sm";
+                            else if (isSelected && !isCorrect) labelClass = "bg-red-100 border-red-500 shadow-sm";
+                            else labelClass = "bg-gray-50 opacity-50";
+                          } else if (isSubQCorrectAndFrozen) {
+                            if (isCorrect) labelClass = "bg-green-100 border-green-500 text-green-800 font-medium cursor-not-allowed";
+                            else labelClass = "bg-gray-50 border-gray-200 opacity-50 cursor-not-allowed";
+                          }
+
+                          return (
+                            <label key={i} className={`flex items-start px-3 py-2 border rounded-md text-base transition-all leading-snug ${isSubQCorrectAndFrozen ? 'cursor-not-allowed' : 'cursor-pointer'} ${labelClass}`}>
+                              <input 
+                                type="radio" 
+                                checked={isSelected} 
+                                disabled={exerciseSubmitted || isSubQCorrectAndFrozen} 
+                                onChange={() => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: opt }))} 
+                                className="mt-1 mr-3 shrink-0" 
+                              />
+                              <div className="flex-1 w-full">
+                                <MixedContentRenderer text={opt} />
+                              </div>
+                            </label>
+                          );
+                        })}
+                      </div>
+
+                      {exerciseSubmitted && exerciseAnswers[subQ._id] !== subQ.correctAnswer && (
+                        <div className="ml-8 mt-2 px-3 py-2 bg-red-50 text-red-800 rounded-md border border-red-100 text-sm">  
+                          <span className="font-bold flex items-center mb-1">💡 Correction :</span>
+                          <div className="prose max-w-none text-gray-800">
+                            <MixedContentRenderer text={subQ.explanation || ""} />
+                          </div>
                         </div>
                       )}
                     </div>
-
-                    <div className="ml-8 grid grid-cols-1 md:grid-cols-2 gap-2">
-                      {subQ.options?.map((opt: string, i: number) => {
-                        const isSelected = exerciseAnswers[subQ._id] === opt;
-                        const isCorrect = opt === subQ.correctAnswer;
-                        
-                        let labelClass = "hover:bg-red-50 border-gray-200";
-                        if (exerciseSubmitted) {
-                          if (isSelected && isCorrect) labelClass = "bg-green-100 border-green-500 shadow-sm";
-                          else if (isSelected && !isCorrect) labelClass = "bg-red-100 border-red-500 shadow-sm";
-                          else labelClass = "bg-gray-50 opacity-50";
-                        }
-
-                        return (
-                          <label key={i} className={`flex items-start px-3 py-2 border rounded-md cursor-pointer text-base transition-all leading-snug ${labelClass}`}>
-                            <input 
-                              type="radio" 
-                              checked={isSelected} 
-                              disabled={exerciseSubmitted} 
-                              onChange={() => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: opt }))} 
-                              className="mt-1 mr-3 shrink-0" 
-                            />
-                            <div className="flex-1 w-full">
-                              <MixedContentRenderer text={opt} />
-                            </div>
-                          </label>
-                        );
-                      })}
-                    </div>
-
-                    {exerciseSubmitted && exerciseAnswers[subQ._id] !== subQ.correctAnswer && (
-                      <div className="ml-8 mt-2 px-3 py-2 bg-red-50 text-red-800 rounded-md border border-red-100 text-sm">  
-                        <span className="font-bold flex items-center mb-1">💡 Correction :</span>
-                        <div className="prose max-w-none text-gray-800">
-                          <MixedContentRenderer text={subQ.explanation || ""} />
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
 
@@ -1233,11 +1307,25 @@ const handleExerciseAnswer = (questionId: string, answer: string) => {
               <button
                 onClick={() => {
                   setExerciseAttempt((prev) => prev + 1);
-                  setWhiteExams(wrongExercises); setExerciseIndex(0); setExerciseAnswers({}); setExerciseSubmitted(false); setExerciseScore(null);
+                  setWhiteExams(wrongExercises); 
+                  setExerciseIndex(0); 
+                  setExerciseAnswers((prevAnswers) => {
+                    const newAnswers = { ...prevAnswers };
+                    wrongExercises.forEach((ex) => {
+                      ex.subQuestions?.forEach((subQ: any) => {
+                        if (prevAnswers[subQ._id] !== subQ.correctAnswer) {
+                          delete newAnswers[subQ._id];
+                        }
+                      });
+                    });
+                    return newAnswers;
+                  });
+                  setExerciseSubmitted(false); 
+                  setExerciseScore(null);
                 }}
                 className="mt-4 px-6 py-2 bg-orange-500 text-white rounded w-full md:w-auto shadow hover:bg-orange-600 transition"
               >
-                🔁 Corriger mes erreurs
+                🔁 Refaire uniquement les exercices avec erreurs
               </button>
             )}
           </div>
@@ -1477,18 +1565,29 @@ const handleExerciseAnswer = (questionId: string, answer: string) => {
             <div className="space-y-6">
               {currentEx.subQuestions?.map((subQ: any, index: number) => {
                 const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+                // Détecte si cette question a été résolue correctement dans une tentative précédente
+                const isSubQCorrectAndFrozen = exerciseAttempt > 1 && exerciseAnswers[subQ._id] === subQ.correctAnswer;
 
                 return (
-                  <div key={subQ._id || index} className="pl-4 border-l-4 border-blue-500 py-2 bg-blue-50/20 rounded-r-xl">
+                  <div key={subQ._id || index} className={`pl-4 border-l-4 ${isSubQCorrectAndFrozen ? 'border-green-500 bg-green-50/30' : 'border-blue-500 bg-blue-50/20'} py-2 rounded-r-xl transition-all`}>
                     
                     <div className="font-medium mb-3 flex flex-col items-start text-lg leading-relaxed">
-                      <div className="flex items-start w-full gap-2">
-                        <span className="bg-blue-800 text-white px-2.5 py-0.5 rounded-md text-sm font-bold shrink-0 mt-0.5">
-                          {isExercice ? `${index + 1})` : `Question ${index + 1}`}
-                        </span>
-                        <div className="flex-1 text-lg font-medium text-gray-900">
-                          <MixedContentRenderer text={subQ.questionText || subQ.question || subQ.texte || ""} />
+                      <div className="flex items-start w-full gap-2 justify-between">
+                        <div className="flex items-start gap-2 flex-1">
+                          <span className={`px-2.5 py-0.5 rounded-md text-sm font-bold shrink-0 mt-0.5 ${isSubQCorrectAndFrozen ? 'bg-green-700 text-white' : 'bg-blue-800 text-white'}`}>
+                            {isExercice ? `${index + 1})` : `Question ${index + 1}`}
+                          </span>
+                          <div className="flex-1 text-lg font-medium text-gray-900">
+                            <MixedContentRenderer text={subQ.questionText || subQ.question || subQ.texte || ""} />
+                          </div>
                         </div>
+
+                        {/* Badge de verrouillage en cas de réussite préalable */}
+                        {isSubQCorrectAndFrozen && (
+                          <span className="bg-green-100 text-green-800 border border-green-300 text-xs px-2.5 py-1 rounded-full font-bold shrink-0 flex items-center gap-1">
+                            🔒 Correcte (Figée)
+                          </span>
+                        )}
                       </div>
 
                       {subQ.image && (
@@ -1506,70 +1605,77 @@ const handleExerciseAnswer = (questionId: string, answer: string) => {
                     </div>
                     
                     {/* CHOIX MULTIPLES (QCM) OU ZONE DE TEXTE (EXERCICE) */}
-                    
                     {hasOptions ? (
                       <div className="ml-2 md:ml-6 grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-2">
-                        
-                          {subQ.options.map((option: string, i: number) => {
-  const isSelected = exerciseAnswers[subQ._id] === option;
-  const isCorrect = option === subQ.correctAnswer;
-  // Détecte si la réponse est correcte et provient d'une tentative précédente
-  const isFrozenCorrect = exerciseAttempt > 1 && isSelected && isCorrect;
+                        {subQ.options.map((option: string, i: number) => {
+                          const isSelected = exerciseAnswers[subQ._id] === option;
+                          const isCorrect = option === subQ.correctAnswer;
 
-  let optionClasses = "border-gray-200 bg-white hover:bg-gray-50 text-gray-700";
+                          let optionClasses = "border-gray-200 bg-white hover:bg-gray-50 text-gray-700 cursor-pointer";
 
-  if (exerciseSubmitted) {
-    if (isSelected && !isCorrect) {
-      optionClasses = "border-red-500 bg-red-50 text-red-700 font-medium";
-    } else if (isSelected && isCorrect) {
-      optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium";
-    } else if (isCorrect && showSolutions) {
-      optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium";
-    } else {
-      optionClasses = "border-gray-200 bg-gray-50 opacity-70";
-    }
-  } else if (isFrozenCorrect) {
-    // Style appliqué quand on refait l'exercice et que cette option était déjà correcte
-    optionClasses = "border-green-500 bg-green-100 text-green-800 font-medium cursor-not-allowed";
-  } else if (isSelected) {
-    optionClasses = "border-teal-500 bg-teal-50 text-teal-800 font-medium";
-  }
+                          if (exerciseSubmitted) {
+                            if (isSelected && !isCorrect) {
+                              optionClasses = "border-red-500 bg-red-50 text-red-700 font-medium cursor-not-allowed";
+                            } else if (isSelected && isCorrect) {
+                              optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium cursor-not-allowed";
+                            } else if (isCorrect && showSolutions) {
+                              optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium cursor-not-allowed";
+                            } else {
+                              optionClasses = "border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed";
+                            }
+                          } else if (isSubQCorrectAndFrozen) {
+                            // Style appliqué lorsque la question était déjà correcte : figée et en vert
+                            if (isCorrect) {
+                              optionClasses = "border-green-500 bg-green-100 text-green-800 font-bold cursor-not-allowed shadow-sm";
+                            } else {
+                              optionClasses = "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed";
+                            }
+                          } else if (isSelected) {
+                            optionClasses = "border-teal-500 bg-teal-50 text-teal-800 font-medium";
+                          }
 
-  return (
-    <button
-      key={i}
-      onClick={() => {
-        if (!exerciseSubmitted && !isFrozenCorrect) {
-          handleExerciseAnswer(subQ._id, option);
-        }
-      }}
-      disabled={exerciseSubmitted || isFrozenCorrect}
-      className={`w-full text-left px-4 py-3 border rounded-xl transition-all ${optionClasses}`}
-    >
-      <MixedContentRenderer text={option} />
-    </button>
-  );
-})}
+                          return (
+                            <button
+                              key={i}
+                              onClick={() => {
+                                if (!exerciseSubmitted && !isSubQCorrectAndFrozen) {
+                                  handleExerciseAnswer(subQ._id, option);
+                                }
+                              }}
+                              disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
+                              className={`w-full text-left px-4 py-3 border rounded-xl transition-all ${optionClasses}`}
+                            >
+                              <div className="flex items-center justify-between">
+                                <MixedContentRenderer text={option} />
+                                {isSubQCorrectAndFrozen && isCorrect && (
+                                  <span className="text-green-600 ml-2 font-bold">✓</span>
+                                )}
+                              </div>
+                            </button>
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="ml-2 md:ml-6 mt-3 space-y-4">
                         <textarea
-                          disabled={exerciseSubmitted}
+                          disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
                           value={exerciseAnswers[subQ._id] || ""}
                           onChange={(e) => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: e.target.value }))}
-                          placeholder="Rédigez votre réponse détaillée ici..."
-                          className="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-800 disabled:bg-gray-100 resize-y min-h-[100px]"
+                          placeholder={isSubQCorrectAndFrozen ? "Réponse valide enregistrée." : "Rédigez votre réponse détaillée ici..."}
+                          className={`w-full p-3 border rounded-xl text-gray-800 resize-y min-h-[100px] ${
+                            isSubQCorrectAndFrozen 
+                              ? "border-green-500 bg-green-50 text-green-900 cursor-not-allowed font-medium" 
+                              : "border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+                          }`}
                         />
                         
-                        {/* Intégration du module IA pour corriger et guider l'étudiant */}
-                        <ExerciseAiFeedback 
-                          questionId={subQ._id}
-                          questionText={subQ.questionText || subQ.question || subQ.texte || ""}
-                          studentAnswer={exerciseAnswers[subQ._id] || ""}
-                          correctAnswer={subQ.correctAnswer || ""}
-                          isSubmitted={exerciseSubmitted}
-                          subject={selectedMatiere || ""}
-                        />
+                        {/* Appel correct du composant d'onglets IA */}
+    <ExerciseSubmissionTabs
+      subQ={subQ}
+      selectedMatiere={selectedMatiere}
+      exerciseSubmitted={exerciseSubmitted}
+      exerciseAnswers={exerciseAnswers}
+    />
                       </div>
                     )}                          
                     {/* EXPLICATION ET CORRECTION */}
@@ -1678,55 +1784,54 @@ const handleExerciseAnswer = (questionId: string, answer: string) => {
           )}
 
           {exerciseSubmitted && (
-  <div className="mt-6 flex flex-col md:flex-row justify-center gap-4">
-    {/* Bouton pour afficher la solution (disparaît une fois cliqué) */}
-    {!showSolutions && (
-      <button
-        onClick={() => setShowSolutions(true)}
-        className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow transition"
-      >
-        📖 Afficher la solution
-      </button>
-    )}
-    
-    {/* Bouton pour refaire les erreurs */}
-    {wrongExercises.length > 0 && (
-      <button
-        onClick={() => {
-  setExerciseAttempt((prev) => prev + 1);
-  setExercises(wrongExercises); 
-  setExerciseIndex(0); 
-  
-  // Au lieu de setExerciseAnswers({}), on conserve les réponses justes
-  setExerciseAnswers((prevAnswers) => {
-    const newAnswers = { ...prevAnswers };
-    wrongExercises.forEach((ex) => {
-      ex.subQuestions?.forEach((subQ: any) => {
-        const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
-        if (hasOptions) {
-          if (prevAnswers[subQ._id] !== subQ.correctAnswer) {
-            delete newAnswers[subQ._id]; // Efface la mauvaise réponse
-          }
-        } else {
-           // Pour les champs textes (questions ouvertes)
-           delete newAnswers[subQ._id]; 
-        }
+            <div className="mt-6 flex flex-col md:flex-row justify-center gap-4">
+              {/* Bouton pour afficher la solution */}
+              {!showSolutions && (
+                <button
+                  onClick={() => setShowSolutions(true)}
+                  className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl shadow transition"
+                >
+                  📖 Afficher la solution
+                </button>
+              )}
+              
+              {/* Bouton pour refaire les erreurs */}
+              {wrongExercises.length > 0 && !showSolutions && (
+  <button
+    onClick={() => {
+      setExerciseAttempt((prev) => prev + 1);
+      setExercises(wrongExercises); 
+      setExerciseIndex(0); 
+      
+      // On filtre pour ne supprimer QUE les mauvaises réponses
+      setExerciseAnswers((prevAnswers) => {
+        const newAnswers = { ...prevAnswers };
+        wrongExercises.forEach((ex) => {
+          ex.subQuestions?.forEach((subQ: any) => {
+            const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+            if (hasOptions) {
+              if (prevAnswers[subQ._id] !== subQ.correctAnswer) {
+                delete newAnswers[subQ._id]; // Efface la mauvaise réponse
+              }
+            } else {
+              delete newAnswers[subQ._id]; 
+            }
+          });
+        });
+        return newAnswers;
       });
-    });
-    return newAnswers;
-  });
 
-  setExerciseSubmitted(false); 
-  setShowSolutions(false);
-  setExerciseScore(null);
-}}
-        className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
-      >
-        🔁 Refaire uniquement les exercices avec erreurs
-      </button>
-    )}
-  </div>
+      setExerciseSubmitted(false); 
+      setShowSolutions(false);
+      setExerciseScore(null);
+    }}
+    className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
+  >
+    🔁 Refaire uniquement les exercices avec erreurs
+  </button>
 )}
+            </div>
+          )}
         </div>
       );
     }
@@ -1776,7 +1881,8 @@ const handleExerciseAnswer = (questionId: string, answer: string) => {
         </div>
       );
     }
-if (selectedChapter && selectedAction === "Cours") {
+
+    if (selectedChapter && selectedAction === "Cours") {
       const parentChapters = courseItems.filter(item => item.type === "chapter" || item.parent_id === null);
       
       return (
@@ -1793,7 +1899,6 @@ if (selectedChapter && selectedAction === "Cours") {
           ) : (
             <div className="space-y-8">
               {parentChapters.map(chapter => {
-                // Trouver les leçons/quiz enfants
                 const children = courseItems.filter(item => item.parent_id === chapter.course_id || item.parent_id === chapter._id);
                 
                 return (
@@ -1810,7 +1915,6 @@ if (selectedChapter && selectedAction === "Cours") {
                             <MixedContentRenderer text={child.content || child.texte || ""} />
                           </div>
                           
-                          {/* Si c'est un quiz_question (avec options JSON) */}
                           {child.type === "quiz_question" && child.content && child.content.includes("options") && (
                             <div className="mt-4 p-4 bg-gray-100 rounded-lg">
                               <span className="font-bold text-teal-800">🎯 Mini-Quiz</span>
