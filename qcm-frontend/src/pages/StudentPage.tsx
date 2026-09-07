@@ -1658,16 +1658,16 @@ export default function StudentPage() {
                     ) : (
                       <div className="ml-2 md:ml-6 mt-3 space-y-4">
                         <textarea
-                          disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
-                          value={exerciseAnswers[subQ._id] || ""}
-                          onChange={(e) => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: e.target.value }))}
-                          placeholder={isSubQCorrectAndFrozen ? "Réponse valide enregistrée." : "Rédigez votre réponse détaillée ici..."}
-                          className={`w-full p-3 border rounded-xl text-gray-800 resize-y min-h-[100px] ${
-                            isSubQCorrectAndFrozen 
-                              ? "border-green-500 bg-green-50 text-green-900 cursor-not-allowed font-medium" 
-                              : "border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
-                          }`}
-                        />
+  disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
+  value={exerciseAnswers[subQ._id] || ""}
+  onChange={(e) => setExerciseAnswers((prev) => ({ ...prev, [subQ._id]: e.target.value }))}
+  placeholder={isSubQCorrectAndFrozen ? "Réponse valide enregistrée." : "Rédigez votre réponse détaillée ici..."}
+  className={`w-full p-3 border rounded-xl text-gray-800 resize-y min-h-[100px] ${
+    isSubQCorrectAndFrozen 
+      ? "border-green-500 bg-green-50 text-green-900 cursor-not-allowed font-medium" 
+      : "bg-white border-gray-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:bg-gray-100"
+  }`}
+/>
                         
                         {/* Appel correct du composant d'onglets IA */}
     <ExerciseSubmissionTabs
