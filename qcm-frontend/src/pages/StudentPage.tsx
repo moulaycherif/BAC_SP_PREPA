@@ -1733,40 +1733,40 @@ export default function StudentPage() {
               )}
               
               {/* Bouton pour refaire les erreurs */}
-              {wrongExercises.length > 0 && (
-                <button
-                  onClick={() => {
-                    setExerciseAttempt((prev) => prev + 1);
-                    setExercises(wrongExercises); 
-                    setExerciseIndex(0); 
-                    
-                    // On filtre pour ne supprimer QUE les mauvaises réponses
-                    setExerciseAnswers((prevAnswers) => {
-                      const newAnswers = { ...prevAnswers };
-                      wrongExercises.forEach((ex) => {
-                        ex.subQuestions?.forEach((subQ: any) => {
-                          const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
-                          if (hasOptions) {
-                            if (prevAnswers[subQ._id] !== subQ.correctAnswer) {
-                              delete newAnswers[subQ._id]; // Efface la mauvaise réponse
-                            }
-                          } else {
-                            delete newAnswers[subQ._id]; 
-                          }
-                        });
-                      });
-                      return newAnswers;
-                    });
+              {wrongExercises.length > 0 && !showSolutions && (
+  <button
+    onClick={() => {
+      setExerciseAttempt((prev) => prev + 1);
+      setExercises(wrongExercises); 
+      setExerciseIndex(0); 
+      
+      // On filtre pour ne supprimer QUE les mauvaises réponses
+      setExerciseAnswers((prevAnswers) => {
+        const newAnswers = { ...prevAnswers };
+        wrongExercises.forEach((ex) => {
+          ex.subQuestions?.forEach((subQ: any) => {
+            const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+            if (hasOptions) {
+              if (prevAnswers[subQ._id] !== subQ.correctAnswer) {
+                delete newAnswers[subQ._id]; // Efface la mauvaise réponse
+              }
+            } else {
+              delete newAnswers[subQ._id]; 
+            }
+          });
+        });
+        return newAnswers;
+      });
 
-                    setExerciseSubmitted(false); 
-                    setShowSolutions(false);
-                    setExerciseScore(null);
-                  }}
-                  className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
-                >
-                  🔁 Refaire uniquement les exercices avec erreurs
-                </button>
-              )}
+      setExerciseSubmitted(false); 
+      setShowSolutions(false);
+      setExerciseScore(null);
+    }}
+    className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
+  >
+    🔁 Refaire uniquement les exercices avec erreurs
+  </button>
+)}
             </div>
           )}
         </div>
