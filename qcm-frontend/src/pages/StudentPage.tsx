@@ -1788,7 +1788,7 @@ export default function StudentPage() {
                 }}
                 className="px-8 py-3.5 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
               >
-                {isExercice ? "🤖 Soumettre pour correction IA" : "✅ Valider ce chapitre"}
+                {isExercice ? "🤖 Soumettre pour correction" : "✅ Valider ce chapitre"}
               </button>
             ) : (
               /* Bouton de bascule de correction uniquement après soumission */
