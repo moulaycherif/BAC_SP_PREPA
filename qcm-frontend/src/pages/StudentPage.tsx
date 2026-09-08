@@ -167,7 +167,7 @@ function OpenQuestionInput({
         </button>
       </div>
 
-      {/* Zone claire : Saisie au clavier (Activée uniquement au clic sur le bouton) */}
+      {/* Zone claire : Saisie au clavier */}
       <textarea
         disabled={!isKeyboardActive || exerciseSubmitted || isSubQCorrectAndFrozen}
         value={exerciseAnswers[subQ._id] || ""}
@@ -222,8 +222,8 @@ export default function StudentPage() {
   const [exercises, setExercises] = useState<any[]>([]);
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [exerciseAnswers, setExerciseAnswers] = useState<{ [id: string]: string }>({});
-  const [exerciseSubmitted, setExerciseSubmitted] = useState(false); // VRAI = Réponses validées (verrouillées)
-  const [showSolutions, setShowSolutions] = useState(false);         // VRAI = Solutions et explications affichées
+  const [exerciseSubmitted, setExerciseSubmitted] = useState(false);
+  const [showSolutions, setShowSolutions] = useState(false);
   const [exerciseScore, setExerciseScore] = useState<number | null>(null);
   const [wrongExercises, setWrongExercises] = useState<any[]>([]);
   const [exerciseAttempt, setExerciseAttempt] = useState(1);
@@ -409,80 +409,116 @@ export default function StudentPage() {
           setAstuces([...manualData, ...aiData]);
         }
       }
-      else if (selectedAction === "Exercises" || selectedAction === "Exercices" || selectedAction === "QCM") {
+      // =========================================================================
+      // 🌟 DISSOCIATION EXPLICITE : SÉPARATION DES CHARGEMENTS DE QCM ET EXERCICES
+      // =========================================================================
+      else if (selectedAction === "QCM" || selectedAction === "Exercices" || selectedAction === "Exercises") {
+        const isQcmMode = selectedAction === "QCM";
         let manualExercises: any[] = [], aiExercises: any[] = [];
 
+        // 1. Chargement des Exercices / QCM Manuels
         try {
           const res = await axios.get(`${API_BASE_URL}/api/exercises/${safeMatiere}/${safeChapter}?isWhiteExam=false`, { headers });
           const rawExercises = res.data || [];
           
           const normalizeForCompare = (val?: string) => val ? val.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/gi, '').replace(/\s+/g, '').toLowerCase().trim() : "";
           const groupedExercises: any[] = [];
+
           rawExercises.forEach((ex: any) => {
             const exText = normalizeForCompare(ex.contextText);
             const exImg = (ex.contextImage || "").trim();
-            const existingGroup = groupedExercises.find((g) => normalizeForCompare(g.contextText) === exText && (g.contextImage || "").trim() === exImg);
-            
-            if (existingGroup) existingGroup.subQuestions = [...existingGroup.subQuestions, ...(ex.subQuestions || [])];
-            else groupedExercises.push({ ...ex, subQuestions: [...(ex.subQuestions || [])] });
+
+            // Filtrage strict selon le mode choisi (QCM vs Exercice)
+            const filteredSubQ = (ex.subQuestions || []).filter((subQ: any) => {
+              const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+              const subType = subQ.qType || subQ.type;
+              
+              if (isQcmMode) {
+                return subType === 'qcm' || hasOptions;
+              } else {
+                return subType === 'exercise' || subType === 'open' || !hasOptions;
+              }
+            });
+
+            if (filteredSubQ.length > 0) {
+              const existingGroup = groupedExercises.find((g) => normalizeForCompare(g.contextText) === exText && (g.contextImage || "").trim() === exImg);
+              if (existingGroup) {
+                existingGroup.subQuestions = [...existingGroup.subQuestions, ...filteredSubQ];
+              } else {
+                groupedExercises.push({ ...ex, subQuestions: filteredSubQ });
+              }
+            }
           });
           manualExercises = groupedExercises;
-        } catch (err) { console.error("Erreur Exercices Manuels", err); }
+        } catch (err) { console.error("Erreur Exercices/QCM Manuels", err); }
 
+        // 2. Chargement cerné des éléments générés par l'IA
         try {
-          const [resAiQcm, resAiExo] = await Promise.all([
-            axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers }),
-            axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=exercise`, { headers })
-          ]);
-          
-          const aiData = [...(resAiQcm.data || []), ...(resAiExo.data || [])];
-          
-          if (aiData.length > 0) {
-            const aiQcmQuestions: any[] = [];
-            const groupedAiExos: any[] = [];
+          if (isQcmMode) {
+            // Uniquement les QCM IA
+            const resAiQcm = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers });
+            const aiData = resAiQcm.data || [];
 
-            aiData.forEach((q: any) => {
-              const isExo = q.type === 'exercise';
-              const enonceText = q.enonce || q.contextText || ""; 
-
-              const subQ = {
+            if (aiData.length > 0) {
+              const aiQcmQuestions = aiData.map((q: any) => ({
                 _id: q._id,
                 questionText: q.texte || q.questionText || q.question,
-                qType: isExo ? 'open' : 'qcm', 
+                qType: 'qcm', 
                 options: q.options || [],
                 correctAnswer: q.reponseCorrecte,
                 explanation: q.explication,
                 image: q.image
-              };
+              }));
 
-              if (isExo && enonceText) {
-                const existingGroup = groupedAiExos.find(g => g.contextText === enonceText);
-                if (existingGroup) {
-                  existingGroup.subQuestions.push(subQ);
-                } else {
-                  groupedAiExos.push({
-                    _id: "ia-exo-" + q._id,
-                    contextText: enonceText,
-                    subQuestions: [subQ]
-                  });
-                }
-              } else {
-                aiQcmQuestions.push(subQ);
-              }
-            });
-
-            if (aiQcmQuestions.length > 0) {
               aiExercises.push({
                 _id: "ia-qcm-group-" + Date.now(),
                 contextText: "🧠 Questions à Choix Multiples (Générées par l'IA)",
                 subQuestions: aiQcmQuestions
               });
             }
-            
-            aiExercises = [...aiExercises, ...groupedAiExos];
+          } else {
+            // Uniquement les Exercices IA
+            const resAiExo = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=exercise`, { headers });
+            const aiData = resAiExo.data || [];
+
+            if (aiData.length > 0) {
+              const groupedAiExos: any[] = [];
+              aiData.forEach((q: any) => {
+                const enonceText = q.enonce || q.contextText || ""; 
+                const subQ = {
+                  _id: q._id,
+                  questionText: q.texte || q.questionText || q.question,
+                  qType: 'open', 
+                  options: q.options || [],
+                  correctAnswer: q.reponseCorrecte,
+                  explanation: q.explication,
+                  image: q.image
+                };
+
+                if (enonceText) {
+                  const existingGroup = groupedAiExos.find(g => g.contextText === enonceText);
+                  if (existingGroup) {
+                    existingGroup.subQuestions.push(subQ);
+                  } else {
+                    groupedAiExos.push({
+                      _id: "ia-exo-" + q._id,
+                      contextText: enonceText,
+                      subQuestions: [subQ]
+                    });
+                  }
+                } else {
+                  groupedAiExos.push({
+                    _id: "ia-exo-single-" + q._id,
+                    contextText: "Exercice d'application généré par l'IA",
+                    subQuestions: [subQ]
+                  });
+                }
+              });
+              aiExercises = groupedAiExos;
+            }
           }
         } catch (err) { 
-          console.error("Erreur Exercices IA", err); 
+          console.error("Erreur Chargement IA", err); 
         }
 
         setExercises([...manualExercises, ...aiExercises]);
@@ -722,7 +758,6 @@ export default function StudentPage() {
     }
   };
 
-  // --- Validation de l'exercice (Passe en mode "Validé sans correction") ---
   const handleExerciseSubmitAi = async () => {
     let score = 0;
     let totalQ = 0;
@@ -759,7 +794,7 @@ export default function StudentPage() {
     try {
       const token = localStorage.getItem("token");
       await axios.post(`${API_BASE_URL}/api/student-activity`, {
-        type: "EXERCISE",
+        type: selectedAction === "QCM" ? "QCM" : "EXERCISE",
         subject: selectedMatiere,
         chapter: selectedChapter,
         score,
@@ -767,10 +802,9 @@ export default function StudentPage() {
         successRate: totalQ > 0 ? Math.round((score / totalQ) * 100) : 0,
       }, { headers: { Authorization: `Bearer ${token}` } });
     } catch (err) { 
-      console.error("Erreur enregistrement activité exercice:", err); 
+      console.error("Erreur enregistrement activité exercice/QCM:", err); 
     }
 
-    // Séparation explicite : la soumission gèle les réponses SANS forcer l'affichage immédiat des solutions
     setExerciseSubmitted(true);
     setShowSolutions(false); 
     setWrongExercises(wrong);
@@ -819,25 +853,52 @@ export default function StudentPage() {
               <span className="text-xl">{isExpanded ? "🔽" : "▶️"}</span>
             </button>
             
+            {/* 🌟 ACTION BUTTONS (SÉPARATION QCM ET EXERCICES) */}
             {isExpanded && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: "auto" }}
-                className="flex flex-wrap gap-4 p-5 bg-blue-50 border-t-2 border-blue-100"
+                className="flex flex-wrap gap-3 p-5 bg-blue-50 border-t-2 border-blue-100"
               >
-                <button onClick={() => setSelectedAction("Cours")} className="flex-1 min-w-[200px] bg-white border border-teal-200 text-teal-700 px-4 py-3 rounded-xl shadow hover:bg-teal-50 hover:border-teal-400 font-bold transition flex flex-col items-center gap-2">
+                <button 
+                  onClick={() => setSelectedAction("Cours")} 
+                  className="flex-1 min-w-[170px] bg-white border border-teal-200 text-teal-700 px-3 py-3 rounded-xl shadow hover:bg-teal-50 hover:border-teal-400 font-bold transition flex flex-col items-center gap-1.5"
+                >
                   <span className="text-2xl">📖</span> Cours Complet
                 </button>
-                <button onClick={() => setSelectedAction("Exercises")} className="flex-1 min-w-[200px] bg-white border border-blue-200 text-blue-800 px-4 py-3 rounded-xl shadow hover:bg-blue-100 hover:border-blue-400 font-bold transition flex flex-col items-center gap-2">
-                  <span className="text-2xl">📝</span> QCM & Exercices
+                
+                <button 
+                  onClick={() => setSelectedAction("QCM")} 
+                  className="flex-1 min-w-[170px] bg-white border border-indigo-200 text-indigo-800 px-3 py-3 rounded-xl shadow hover:bg-indigo-50 hover:border-indigo-400 font-bold transition flex flex-col items-center gap-1.5"
+                >
+                  <span className="text-2xl">❓</span> QCM
                 </button>
-                <button onClick={() => setSelectedAction("Astuces")} className="flex-1 min-w-[200px] bg-white border border-yellow-200 text-yellow-700 px-4 py-3 rounded-xl shadow hover:bg-yellow-50 hover:border-yellow-400 font-bold transition flex flex-col items-center gap-2">
+
+                <button 
+                  onClick={() => setSelectedAction("Exercices")} 
+                  className="flex-1 min-w-[170px] bg-white border border-blue-200 text-blue-800 px-3 py-3 rounded-xl shadow hover:bg-blue-50 hover:border-blue-400 font-bold transition flex flex-col items-center gap-1.5"
+                >
+                  <span className="text-2xl">📝</span> Exercices
+                </button>
+
+                <button 
+                  onClick={() => setSelectedAction("Astuces")} 
+                  className="flex-1 min-w-[170px] bg-white border border-yellow-200 text-yellow-700 px-3 py-3 rounded-xl shadow hover:bg-yellow-50 hover:border-yellow-400 font-bold transition flex flex-col items-center gap-1.5"
+                >
                   <span className="text-2xl">💡</span> Astuces
                 </button>
-                <button onClick={() => setSelectedAction("Résumé")} className="flex-1 min-w-[200px] bg-white border border-green-200 text-green-700 px-4 py-3 rounded-xl shadow hover:bg-green-50 hover:border-green-400 font-bold transition flex flex-col items-center gap-2">
+
+                <button 
+                  onClick={() => setSelectedAction("Résumé")} 
+                  className="flex-1 min-w-[170px] bg-white border border-green-200 text-green-700 px-3 py-3 rounded-xl shadow hover:bg-green-50 hover:border-green-400 font-bold transition flex flex-col items-center gap-1.5"
+                >
                   <span className="text-2xl">📄</span> Fiches ou Résumés
                 </button>
-                <button onClick={() => setSelectedAction("Controles")} className="flex-1 min-w-[200px] bg-white border border-purple-200 text-purple-700 px-4 py-3 rounded-xl shadow hover:bg-purple-50 hover:border-purple-400 font-bold transition flex flex-col items-center gap-2">
+
+                <button 
+                  onClick={() => setSelectedAction("Controles")} 
+                  className="flex-1 min-w-[170px] bg-white border border-purple-200 text-purple-700 px-3 py-3 rounded-xl shadow hover:bg-purple-50 hover:border-purple-400 font-bold transition flex flex-col items-center gap-1.5"
+                >
                   <span className="text-2xl">✍️</span> Contrôles
                 </button>
               </motion.div>
@@ -1571,31 +1632,25 @@ export default function StudentPage() {
     }
 
     // =========================================================================
-    // 🌟 SECTION ADAPTÉE : QCM & EXERCICES COMPLEXES (MODULAIRE & SÉPARÉ) 🌟
+    // 🌟 SECTION ADAPTÉE : QCM & EXERCICES COMPLEXES (SÉPARÉS EXPLICITEMENT)
     // =========================================================================
     if (selectedChapter && (selectedAction === "Exercises" || selectedAction === "Exercices" || selectedAction === "QCM")) {
+      const isQcmSection = selectedAction === "QCM";
       const currentEx = exercises[exerciseIndex];
+
       if (!exercises || exercises.length === 0) {
-        return <p className="text-center mt-10 text-gray-500 font-semibold">Aucun exercice ou QCM trouvé pour ce chapitre.</p>;
+        return (
+          <div className="p-8 text-center bg-white rounded-2xl shadow border-t-4 border-blue-500 max-w-lg mx-auto my-12">
+            <span className="text-5xl block mb-4">{isQcmSection ? "❓" : "📝"}</span>
+            <p className="text-gray-700 font-bold text-lg">
+              Aucun {isQcmSection ? "QCM" : "exercice"} trouvé pour ce chapitre.
+            </p>
+          </div>
+        );
       }
 
       const totalQuestionsCount = exercises.reduce((acc, ex) => acc + (ex.subQuestions?.length || 0), 0);
-
-      // --- 1. DÉTERMINATION DYNAMIQUE DU MODE (QCM vs EXERCICE) ---
-      const explicitType = currentEx?.type || currentEx?.qType;
-      const hasGlobalContext = Boolean(
-        currentEx?.contextText || 
-        currentEx?.enonce || 
-        (currentEx?.texte && !currentEx?.texte.includes("QCM"))
-      );
-      const allQuestionsHaveOptions = currentEx?.subQuestions?.every(
-        (q: any) => Array.isArray(q.options) && q.options.length > 0
-      );
-
-      // Si le type est explicitement renseigné ('qcm' ou 'exercice'), il est prioritaire. Sinon, déduction dynamique.
-      const isExercice = explicitType 
-        ? (explicitType === 'exercise' || explicitType === 'exercice' || explicitType === 'open')
-        : (hasGlobalContext || !allQuestionsHaveOptions);
+      const isExercice = !isQcmSection;
 
       return (
         <div className="p-6 exercice-view-container max-w-5xl mx-auto">
@@ -1613,10 +1668,11 @@ export default function StudentPage() {
           
           {/* Entête */}
           <div className="mb-6 text-center">
-            <h2 className="text-3xl font-extrabold text-blue-900 tracking-wide uppercase">
-              {isExercice 
-                ? `EXERCICE ${exercises.length > 1 ? exerciseIndex + 1 : "1"}` 
-                : "QUESTIONS À CHOIX MULTIPLES (QCM)"}
+            <h2 className="text-3xl font-extrabold text-blue-900 tracking-wide uppercase flex items-center justify-center gap-2">
+              <span>{isQcmSection ? "❓" : "📝"}</span>
+              {isQcmSection 
+                ? "QUESTIONS À CHOIX MULTIPLES (QCM)" 
+                : `EXERCICE ${exercises.length > 1 ? exerciseIndex + 1 : "1"}`}
             </h2>
             <p className="font-semibold text-gray-500 text-sm mt-1">
               (Total : {totalQuestionsCount} question{totalQuestionsCount > 1 ? "s" : ""})
@@ -1625,8 +1681,8 @@ export default function StudentPage() {
           
           <div className="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-blue-600">
             
-            {/* Énoncé Global */}
-            {isExercice && hasGlobalContext && (
+            {/* Énoncé Global (Exercice Rédactionnel) */}
+            {isExercice && (currentEx?.contextText || currentEx?.enonce || currentEx?.texte) && (
               <div className="mb-6 border-b pb-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
                 <h3 className="text-sm font-bold text-blue-800 mb-2 uppercase tracking-wide">Énoncé</h3>
                 <div className="text-base font-medium text-gray-800 leading-relaxed">
@@ -1684,7 +1740,7 @@ export default function StudentPage() {
                       )}
                     </div>
                     
-                    {/* --- 3. BLOC D'AFFICHAGE CONDITIONNEL MODULAIRE (SWITCH TYPE) --- */}
+                    {/* Switch selon le type de question */}
                     {(() => {
                       switch (questionType) {
                         case 'qcm':
@@ -1752,22 +1808,6 @@ export default function StudentPage() {
                             />
                           );
 
-                        case 'matching':
-                          return (
-                            <div className="ml-2 md:ml-6 mt-3 p-4 bg-purple-50 rounded-xl border border-purple-200 text-purple-900 text-sm">
-                              <p className="font-bold mb-1">🔗 Question à relier :</p>
-                              <p className="text-xs text-purple-700">Module d'association personnalisé à intégrer.</p>
-                            </div>
-                          );
-
-                        case 'fill_blank':
-                          return (
-                            <div className="ml-2 md:ml-6 mt-3 p-4 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-sm">
-                              <p className="font-bold mb-1">✏️ Texte à trous :</p>
-                              <p className="text-xs text-amber-700">Module de saisie dans le texte à intégrer.</p>
-                            </div>
-                          );
-
                         default:
                           return (
                             <OpenQuestionInput
@@ -1782,7 +1822,7 @@ export default function StudentPage() {
                       }
                     })()}
 
-                    {/* --- 2. AFFICHAGE DES SOLUTIONS (SEULEMENT SI showSolutions EST VRAI) --- */}
+                    {/* Explications et solutions */}
                     {exerciseSubmitted && showSolutions && (
                       <div className="ml-2 md:ml-6 mt-3 px-4 py-3 bg-blue-50 text-blue-900 rounded-xl border border-blue-200 text-sm">  
                         <span className="font-bold flex items-center mb-1 text-blue-900">💡 Solution & Correction :</span>
@@ -1803,35 +1843,35 @@ export default function StudentPage() {
           </div>
           
           {/* Navigation Inter-exercices */}
-          <div className="flex justify-between items-center mt-6">
-            <button 
-              onClick={() => setExerciseIndex((i) => i - 1)} 
-              disabled={exerciseIndex === 0} 
-              className="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl disabled:opacity-40 font-semibold transition"
-            >
-              ⬅️ Exercice Précédent
-            </button>
-            <button 
-              onClick={() => setExerciseIndex((i) => i + 1)} 
-              disabled={exerciseIndex === Math.max(0, exercises.length - 1)} 
-              className="px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl disabled:opacity-40 font-semibold transition"
-            >
-              Exercice Suivant ➡️
-            </button>
-          </div>
+          {exercises.length > 1 && (
+            <div className="flex justify-between items-center mt-6">
+              <button 
+                onClick={() => setExerciseIndex((i) => i - 1)} 
+                disabled={exerciseIndex === 0} 
+                className="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-xl disabled:opacity-40 font-semibold transition"
+              >
+                ⬅️ Précédent
+              </button>
+              <button 
+                onClick={() => setExerciseIndex((i) => i + 1)} 
+                disabled={exerciseIndex === Math.max(0, exercises.length - 1)} 
+                className="px-5 py-2.5 bg-blue-700 hover:bg-blue-800 text-white rounded-xl disabled:opacity-40 font-semibold transition"
+              >
+                Suivant ➡️
+              </button>
+            </div>
+          )}
 
-          {/* --- 2. BOUTONS DE GESTION DES ÉTATS (SOUmission VS CORRECTION) --- */}
+          {/* Validation & Affichage des résultats */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             {!exerciseSubmitted ? (
-              /* État Brouillon -> Passera à Validé */
               <button
                 onClick={handleExerciseSubmitAi}
                 className="px-8 py-3.5 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
               >
-                {isExercice ? "🤖 Valider mes réponses" : "✅ Valider ce chapitre"}
+                {isExercice ? "🤖 Valider mes réponses" : "✅ Valider ce QCM"}
               </button>
             ) : (
-              /* État Validé -> Permet d'afficher/masquer le mode Corrigé */
               <button
                 onClick={() => setShowSolutions(!showSolutions)}
                 className="px-8 py-3.5 bg-slate-800 hover:bg-slate-900 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
@@ -1878,7 +1918,7 @@ export default function StudentPage() {
                 }}
                 className="px-6 py-2.5 bg-orange-500 hover:bg-orange-600 text-white font-bold rounded-xl shadow transition"
               >
-                🔁 Refaire uniquement les exercices avec erreurs
+                🔁 Refaire uniquement les questions avec erreurs
               </button>
             </div>
           )}
