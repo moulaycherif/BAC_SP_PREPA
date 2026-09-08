@@ -218,16 +218,16 @@ export default function StudentPage() {
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   
-  // États pour les exercices
+  // --- États pour la gestion des exercices (Brouillon, Validé, Corrigé) ---
   const [exercises, setExercises] = useState<any[]>([]);
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [exerciseAnswers, setExerciseAnswers] = useState<{ [id: string]: string }>({});
-  const [exerciseSubmitted, setExerciseSubmitted] = useState(false);
+  const [exerciseSubmitted, setExerciseSubmitted] = useState(false); // VRAI = Réponses validées (verrouillées)
+  const [showSolutions, setShowSolutions] = useState(false);         // VRAI = Solutions et explications affichées
   const [exerciseScore, setExerciseScore] = useState<number | null>(null);
   const [wrongExercises, setWrongExercises] = useState<any[]>([]);
   const [exerciseAttempt, setExerciseAttempt] = useState(1);
   const [whiteExams, setWhiteExams] = useState<any[]>([]);
-  const [showSolutions, setShowSolutions] = useState(false);
   
   const [astuces, setAstuces] = useState<Astuce[]>([]);
   const [resumes, setResumes] = useState<any[]>([]);
@@ -722,6 +722,7 @@ export default function StudentPage() {
     }
   };
 
+  // --- Validation de l'exercice (Passe en mode "Validé sans correction") ---
   const handleExerciseSubmitAi = async () => {
     let score = 0;
     let totalQ = 0;
@@ -769,7 +770,9 @@ export default function StudentPage() {
       console.error("Erreur enregistrement activité exercice:", err); 
     }
 
+    // Séparation explicite : la soumission gèle les réponses SANS forcer l'affichage immédiat des solutions
     setExerciseSubmitted(true);
+    setShowSolutions(false); 
     setWrongExercises(wrong);
   };
 
@@ -1568,7 +1571,7 @@ export default function StudentPage() {
     }
 
     // =========================================================================
-    // 🌟 SECTION ADAPTÉE : QCM & EXERCICES COMPLEXES 🌟
+    // 🌟 SECTION ADAPTÉE : QCM & EXERCICES COMPLEXES (MODULAIRE & SÉPARÉ) 🌟
     // =========================================================================
     if (selectedChapter && (selectedAction === "Exercises" || selectedAction === "Exercices" || selectedAction === "QCM")) {
       const currentEx = exercises[exerciseIndex];
@@ -1578,17 +1581,21 @@ export default function StudentPage() {
 
       const totalQuestionsCount = exercises.reduce((acc, ex) => acc + (ex.subQuestions?.length || 0), 0);
 
+      // --- 1. DÉTERMINATION DYNAMIQUE DU MODE (QCM vs EXERCICE) ---
+      const explicitType = currentEx?.type || currentEx?.qType;
       const hasGlobalContext = Boolean(
         currentEx?.contextText || 
         currentEx?.enonce || 
-        (currentEx?.texte && currentEx?.texte !== "🧠 Questions d'entraînement (QCM & Exercices générés par l'IA)")
+        (currentEx?.texte && !currentEx?.texte.includes("QCM"))
       );
-
       const allQuestionsHaveOptions = currentEx?.subQuestions?.every(
         (q: any) => Array.isArray(q.options) && q.options.length > 0
       );
 
-      const isExercice = hasGlobalContext || !allQuestionsHaveOptions;
+      // Si le type est explicitement renseigné ('qcm' ou 'exercice'), il est prioritaire. Sinon, déduction dynamique.
+      const isExercice = explicitType 
+        ? (explicitType === 'exercise' || explicitType === 'exercice' || explicitType === 'open')
+        : (hasGlobalContext || !allQuestionsHaveOptions);
 
       return (
         <div className="p-6 exercice-view-container max-w-5xl mx-auto">
@@ -1639,8 +1646,8 @@ export default function StudentPage() {
             {/* Questions */}
             <div className="space-y-6">
               {currentEx.subQuestions?.map((subQ: any, index: number) => {
-                const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
                 const isSubQCorrectAndFrozen = exerciseAttempt > 1 && exerciseAnswers[subQ._id] === subQ.correctAnswer;
+                const questionType = subQ.qType || subQ.type || (Array.isArray(subQ.options) && subQ.options.length > 0 ? 'qcm' : 'open');
 
                 return (
                   <div key={subQ._id || index} className={`pl-4 border-l-4 ${isSubQCorrectAndFrozen ? 'border-green-500 bg-green-50/30' : 'border-blue-500 bg-blue-50/20'} py-2 rounded-r-xl transition-all`}>
@@ -1677,73 +1684,109 @@ export default function StudentPage() {
                       )}
                     </div>
                     
-                    {/* Choix Multiple (QCM) OU Zone de Saisie Ouverte */}
-                    {hasOptions ? (
-                      <div className="ml-2 md:ml-6 grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-2">
-                        {subQ.options.map((option: string, i: number) => {
-                          const isSelected = exerciseAnswers[subQ._id] === option;
-                          const isCorrect = option === subQ.correctAnswer;
-
-                          let optionClasses = "border-gray-200 bg-white hover:bg-gray-50 text-gray-700 cursor-pointer";
-
-                          if (exerciseSubmitted) {
-                            if (isSelected && !isCorrect) {
-                              optionClasses = "border-red-500 bg-red-50 text-red-700 font-medium cursor-not-allowed";
-                            } else if (isSelected && isCorrect) {
-                              optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium cursor-not-allowed";
-                            } else if (isCorrect && showSolutions) {
-                              optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium cursor-not-allowed";
-                            } else {
-                              optionClasses = "border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed";
-                            }
-                          } else if (isSubQCorrectAndFrozen) {
-                            if (isCorrect) {
-                              optionClasses = "border-green-500 bg-green-100 text-green-800 font-bold cursor-not-allowed shadow-sm";
-                            } else {
-                              optionClasses = "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed";
-                            }
-                          } else if (isSelected) {
-                            optionClasses = "border-teal-500 bg-teal-50 text-teal-800 font-medium";
-                          }
-
+                    {/* --- 3. BLOC D'AFFICHAGE CONDITIONNEL MODULAIRE (SWITCH TYPE) --- */}
+                    {(() => {
+                      switch (questionType) {
+                        case 'qcm':
                           return (
-                            <button
-                              key={i}
-                              onClick={() => {
-                                if (!exerciseSubmitted && !isSubQCorrectAndFrozen) {
-                                  handleExerciseAnswer(subQ._id, option);
-                                }
-                              }}
-                              disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
-                              className={`w-full text-left px-4 py-3 border rounded-xl transition-all ${optionClasses}`}
-                            >
-                              <div className="flex items-center justify-between">
-                                <MixedContentRenderer text={option} />
-                                {isSubQCorrectAndFrozen && isCorrect && (
-                                  <span className="text-green-600 ml-2 font-bold">✓</span>
-                                )}
-                              </div>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      /* Saisie au clavier + Photo / PDF par question */
-                      <OpenQuestionInput
-                        subQ={subQ}
-                        selectedMatiere={selectedMatiere}
-                        exerciseSubmitted={exerciseSubmitted}
-                        exerciseAnswers={exerciseAnswers}
-                        onAnswerChange={handleExerciseAnswer}
-                        isSubQCorrectAndFrozen={isSubQCorrectAndFrozen}
-                      />
-                    )}
+                            <div className="ml-2 md:ml-6 grid grid-cols-1 md:grid-cols-2 gap-2.5 mt-2">
+                              {subQ.options?.map((option: string, i: number) => {
+                                const isSelected = exerciseAnswers[subQ._id] === option;
+                                const isCorrect = option === subQ.correctAnswer;
 
-                    {/* Explications & Solution */}
+                                let optionClasses = "border-gray-200 bg-white hover:bg-gray-50 text-gray-700 cursor-pointer";
+
+                                if (exerciseSubmitted) {
+                                  if (isSelected && !isCorrect) {
+                                    optionClasses = "border-red-500 bg-red-50 text-red-700 font-medium cursor-not-allowed";
+                                  } else if (isSelected && isCorrect) {
+                                    optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium cursor-not-allowed";
+                                  } else if (isCorrect && showSolutions) {
+                                    optionClasses = "border-green-500 bg-green-50 text-green-700 font-medium cursor-not-allowed";
+                                  } else {
+                                    optionClasses = "border-gray-200 bg-gray-50 opacity-70 cursor-not-allowed";
+                                  }
+                                } else if (isSubQCorrectAndFrozen) {
+                                  if (isCorrect) {
+                                    optionClasses = "border-green-500 bg-green-100 text-green-800 font-bold cursor-not-allowed shadow-sm";
+                                  } else {
+                                    optionClasses = "border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed";
+                                  }
+                                } else if (isSelected) {
+                                  optionClasses = "border-teal-500 bg-teal-50 text-teal-800 font-medium";
+                                }
+
+                                return (
+                                  <button
+                                    key={i}
+                                    onClick={() => {
+                                      if (!exerciseSubmitted && !isSubQCorrectAndFrozen) {
+                                        handleExerciseAnswer(subQ._id, option);
+                                      }
+                                    }}
+                                    disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
+                                    className={`w-full text-left px-4 py-3 border rounded-xl transition-all ${optionClasses}`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <MixedContentRenderer text={option} />
+                                      {isSubQCorrectAndFrozen && isCorrect && (
+                                        <span className="text-green-600 ml-2 font-bold">✓</span>
+                                      )}
+                                    </div>
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          );
+
+                        case 'open':
+                        case 'exercice':
+                          return (
+                            <OpenQuestionInput
+                              subQ={subQ}
+                              selectedMatiere={selectedMatiere}
+                              exerciseSubmitted={exerciseSubmitted}
+                              exerciseAnswers={exerciseAnswers}
+                              onAnswerChange={handleExerciseAnswer}
+                              isSubQCorrectAndFrozen={isSubQCorrectAndFrozen}
+                            />
+                          );
+
+                        case 'matching':
+                          return (
+                            <div className="ml-2 md:ml-6 mt-3 p-4 bg-purple-50 rounded-xl border border-purple-200 text-purple-900 text-sm">
+                              <p className="font-bold mb-1">🔗 Question à relier :</p>
+                              <p className="text-xs text-purple-700">Module d'association personnalisé à intégrer.</p>
+                            </div>
+                          );
+
+                        case 'fill_blank':
+                          return (
+                            <div className="ml-2 md:ml-6 mt-3 p-4 bg-amber-50 rounded-xl border border-amber-200 text-amber-900 text-sm">
+                              <p className="font-bold mb-1">✏️ Texte à trous :</p>
+                              <p className="text-xs text-amber-700">Module de saisie dans le texte à intégrer.</p>
+                            </div>
+                          );
+
+                        default:
+                          return (
+                            <OpenQuestionInput
+                              subQ={subQ}
+                              selectedMatiere={selectedMatiere}
+                              exerciseSubmitted={exerciseSubmitted}
+                              exerciseAnswers={exerciseAnswers}
+                              onAnswerChange={handleExerciseAnswer}
+                              isSubQCorrectAndFrozen={isSubQCorrectAndFrozen}
+                            />
+                          );
+                      }
+                    })()}
+
+                    {/* --- 2. AFFICHAGE DES SOLUTIONS (SEULEMENT SI showSolutions EST VRAI) --- */}
                     {exerciseSubmitted && showSolutions && (
                       <div className="ml-2 md:ml-6 mt-3 px-4 py-3 bg-blue-50 text-blue-900 rounded-xl border border-blue-200 text-sm">  
                         <span className="font-bold flex items-center mb-1 text-blue-900">💡 Solution & Correction :</span>
-                        {subQ.correctAnswer && !hasOptions && (
+                        {subQ.correctAnswer && questionType !== 'qcm' && (
                           <div className="mb-2 font-semibold text-green-700">
                             Réponse attendue : <MixedContentRenderer text={subQ.correctAnswer} />
                           </div>
@@ -1777,21 +1820,18 @@ export default function StudentPage() {
             </button>
           </div>
 
-         {/* BOUTON UNIQUE À LA FIN DE L'EXERCICE OU QCM */}
+          {/* --- 2. BOUTONS DE GESTION DES ÉTATS (SOUmission VS CORRECTION) --- */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             {!exerciseSubmitted ? (
-              /* Un seul bouton avant soumission */
+              /* État Brouillon -> Passera à Validé */
               <button
-                onClick={() => {
-                  handleExerciseSubmitAi();
-                  setShowSolutions(true);
-                }}
+                onClick={handleExerciseSubmitAi}
                 className="px-8 py-3.5 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
               >
-                {isExercice ? "🤖 Soumettre pour correction" : "✅ Valider ce chapitre"}
+                {isExercice ? "🤖 Valider mes réponses" : "✅ Valider ce chapitre"}
               </button>
             ) : (
-              /* Bouton de bascule de correction uniquement après soumission */
+              /* État Validé -> Permet d'afficher/masquer le mode Corrigé */
               <button
                 onClick={() => setShowSolutions(!showSolutions)}
                 className="px-8 py-3.5 bg-slate-800 hover:bg-slate-900 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
