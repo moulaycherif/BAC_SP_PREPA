@@ -14,7 +14,6 @@ import bgImage from "/Image3.jfif";
 import StudentDashboardStats from "../components/stats/StudentDashboardStats";
 import StudentAstuceDetail from "./StudentAstuceDetail";
 import PdfViewer from "../components/PdfViewer";
-import React from 'react';
 import ExerciseScanCorrect from "../components/ExerciseScanCorrect";
 import "mathlive";
 
@@ -114,7 +113,135 @@ const chaptersBySubject: Record<string, string[]> = {
   ],
 };
 
-// Sous-composant de gestion de réponse par question ouverte
+// ==========================================
+// COMPOSANTS EXTERNALISÉS (Optimisation React)
+// ==========================================
+
+function MixedContentRenderer({ text }: { text: string }) {
+  if (!text) return null;
+
+  const processedText = text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/<smiles>[\s\S]*?<\/smiles>/gi, "");
+
+  const combinedRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\\\\\[[\s\S]*?\\\\\]|\\\\\([\s\S]*?\\\\\)|(?<![\\<])\$[^$]+?\$|\[\[\s*IMG\s*=\s*[^\]]+\s*\]\])/gi;
+  const parts = processedText.split(combinedRegex);
+
+  return (
+    <span className="w-full inline-block text-justify text-gray-800">
+      {parts.map((part, index) => {
+        if (!part) return null;
+
+        const trimmedPart = part.trim();
+
+        if (trimmedPart.toUpperCase().startsWith("[[IMG=") && trimmedPart.endsWith("]]")) {
+          const filename = trimmedPart.substring(6, trimmedPart.length - 2).trim();
+          
+          return (
+            <span key={index} className="w-full flex justify-center my-4 block clearfix">
+              <img 
+                src={`/images/${filename.replace(/^\/images\//, '')}`} 
+                alt="Illustration" 
+                className="max-h-64 object-contain rounded-lg shadow-sm border border-gray-200"
+              />
+            </span>
+          );
+        }
+
+        let isMath = false;
+        let mathContent = part;
+        let isBlock = false;
+
+        if (trimmedPart.startsWith("$$") && trimmedPart.endsWith("$$")) {
+          isMath = true; isBlock = true; mathContent = trimmedPart.slice(2, -2);
+        } else if (trimmedPart.startsWith("\\[") && trimmedPart.endsWith("\\]")) {
+          isMath = true; isBlock = true; mathContent = trimmedPart.slice(2, -2);
+        } else if (trimmedPart.startsWith("\\(") && trimmedPart.endsWith("\\)")) {
+          isMath = true; mathContent = trimmedPart.slice(2, -2);
+        } else if (trimmedPart.startsWith("$") && trimmedPart.endsWith("$")) {
+          if (!trimmedPart.includes("<") && !trimmedPart.includes(">")) {
+            isMath = true; 
+            mathContent = trimmedPart.slice(1, -1);
+          }
+        }
+
+        if (isMath) {
+          try {
+            let safeMath = mathContent
+              .replace(/<[^>]*>/g, "") 
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/&amp;/g, "&");
+
+            const html = katex.renderToString(safeMath, {
+              displayMode: isBlock,
+              throwOnError: false,
+              strict: false,
+            });
+
+            return (
+              <span 
+                key={index} 
+                dangerouslySetInnerHTML={{ __html: html }} 
+                className={isBlock ? "block my-2 text-center overflow-x-auto" : "inline-block"} 
+              />
+            );
+          } catch (e) {
+            return <span key={index} className="text-red-500">{part}</span>;
+          }
+        }
+
+        return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
+      })}
+    </span>
+  );
+}
+
+const Flashcard = ({ title, content }: { title: string, content: string }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  return (
+    <div 
+      className="relative w-full h-80 cursor-pointer group"
+      style={{ perspective: '1000px' }}
+      onClick={() => setIsFlipped(!isFlipped)}
+    >
+      <div 
+        className="relative w-full h-full transition-transform duration-700 ease-in-out"
+        style={{ 
+          transformStyle: 'preserve-3d', 
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' 
+        }}
+      >
+        <div 
+          className="absolute w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center text-center text-white border-2 border-indigo-400 hover:shadow-2xl transition-shadow"
+          style={{ backfaceVisibility: 'hidden' }}
+        >
+          <span className="text-4xl mb-4 block">💡</span>
+          <h3 className="text-2xl font-bold leading-tight">
+            <MixedContentRenderer text={title} />
+          </h3>
+          <p className="absolute bottom-5 text-indigo-200 text-sm font-medium animate-pulse">
+            Cliquez pour retourner ↺
+          </p>
+        </div>
+
+        <div 
+          className="absolute w-full h-full bg-white rounded-2xl shadow-xl p-6 overflow-y-auto flex items-center justify-center border-4 border-indigo-100 custom-scrollbar"
+          style={{ 
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)'
+          }}
+        >
+          <div className="text-gray-800 text-lg font-medium w-full text-left">
+            <MixedContentRenderer text={content} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface OpenQuestionInputProps {
   subQ: any;
   selectedMatiere: string | null;
@@ -136,12 +263,10 @@ function OpenQuestionInput({
   const [showScan, setShowScan] = useState(false);
   const mathFieldRef = useRef<any>(null);
 
-  // Écouteur d'événement pour le composant web MathLive
   useEffect(() => {
     const mathField = mathFieldRef.current;
     if (mathField) {
       const handleInput = (e: Event) => {
-        // Exporte la valeur en LaTeX
         onAnswerChange(subQ._id, (e.target as any).value);
       };
       mathField.addEventListener("input", handleInput);
@@ -149,16 +274,15 @@ function OpenQuestionInput({
     }
   }, [subQ._id, onAnswerChange]);
 
-  // Synchronisation de la valeur si effacée ou réinitialisée depuis le parent
+  const currentAnswer = exerciseAnswers[subQ._id];
   useEffect(() => {
-    if (mathFieldRef.current && exerciseAnswers[subQ._id] === undefined) {
+    if (mathFieldRef.current && currentAnswer === undefined) {
       mathFieldRef.current.value = "";
     }
-  }, [exerciseAnswers, subQ._id]);
+  }, [currentAnswer]);
 
   return (
     <div className="ml-2 md:ml-6 mt-3 space-y-3">
-      {/* Boutons d'action pour la question */}
       <div className="flex flex-wrap gap-2 mb-2">
         <button
           type="button"
@@ -189,7 +313,6 @@ function OpenQuestionInput({
         </button>
       </div>
 
-      {/* Remplacement du <textarea> par MathLive */}
       {isKeyboardActive && (
         <div className={`w-full p-2 border rounded-xl overflow-hidden transition ${
           isSubQCorrectAndFrozen ? "border-green-500 bg-green-50" : "bg-white border-teal-500 ring-2 ring-teal-100"
@@ -211,7 +334,6 @@ function OpenQuestionInput({
         </div>
       )}
 
-      {/* Zone d'import Scan / PDF si activée */}
       {showScan && (
         <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl mt-2">
           <ExerciseScanCorrect
@@ -241,7 +363,6 @@ export default function StudentPage() {
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   
-  // --- États pour la gestion des exercices (Brouillon, Validé, Corrigé) ---
   const [exercises, setExercises] = useState<any[]>([]);
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [exerciseAnswers, setExerciseAnswers] = useState<{ [id: string]: string }>({});
@@ -386,63 +507,37 @@ export default function StudentPage() {
         setResumes([...manualData, ...aiData]);
       }
       else if (selectedAction === "Astuces") {
-        const isWhiteExamAction = selectedMatiere === "SVT";
-
-        if (isWhiteExamAction) {
-          try {
-            const res = await axios.get(`${API_BASE_URL}/api/exercises/${safeMatiere}/${safeChapter}?isWhiteExam=true`, { headers });
-            const rawExercises = res.data || [];
-            
-            const normalizeForCompare = (val?: string) => val ? val.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/gi, '').replace(/\s+/g, '').toLowerCase().trim() : "";
-            const groupedExercises: any[] = [];
-            rawExercises.forEach((ex: any) => {
-              const exText = normalizeForCompare(ex.contextText);
-              const exImg = (ex.contextImage || "").trim();
-              const existingGroup = groupedExercises.find((g) => normalizeForCompare(g.contextText) === exText && (g.contextImage || "").trim() === exImg);
-              
-              if (existingGroup) existingGroup.subQuestions = [...existingGroup.subQuestions, ...(ex.subQuestions || [])];
-              else groupedExercises.push({ ...ex, subQuestions: [...(ex.subQuestions || [])] });
-            });
-            setWhiteExams(groupedExercises);
-            setExerciseAttempt(1);
-          } catch (err) { setWhiteExams([]); }
-        } else {
-          let manualData: Astuce[] = [], aiData: Astuce[] = [];
+        let manualData: Astuce[] = [], aiData: Astuce[] = [];
+        
+        try {
+          const data = await fetchAstucesByChapter(selectedChapter);
+          manualData = (data as Astuce[]) || [];
+        } catch (err) { console.error("Erreur Astuces", err); }
+        
+        try {
+          const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=astuce`, { headers });
+          const rawAiData = resAi.data || [];
           
-          try {
-            const data = await fetchAstucesByChapter(selectedChapter);
-            manualData = (data as Astuce[]) || [];
-          } catch (err) { console.error("Erreur Astuces", err); }
-          
-          try {
-            const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=astuce`, { headers });
-            const rawAiData = resAi.data || [];
-            
-            aiData = rawAiData.map((q: any) => ({
-              _id: q._id,
-              title: q.texte || "Astuce générée par IA", 
-              subject: q.subject,
-              chapter: q.chapter,
-              cases: [
-                {
-                  title: "Explication de l'IA",
-                  content: q.explication || "Aucune explication fournie."
-                }
-              ]
-            }));
-          } catch (err) { console.error("Erreur Astuces IA", err); }
-          
-          setAstuces([...manualData, ...aiData]);
-        }
+          aiData = rawAiData.map((q: any) => ({
+            _id: q._id,
+            title: q.texte || "Astuce générée par IA", 
+            subject: q.subject,
+            chapter: q.chapter,
+            cases: [
+              {
+                title: "Explication de l'IA",
+                content: q.explication || "Aucune explication fournie."
+              }
+            ]
+          }));
+        } catch (err) { console.error("Erreur Astuces IA", err); }
+        
+        setAstuces([...manualData, ...aiData]);
       }
-      // =========================================================================
-      // 🌟 DISSOCIATION EXPLICITE : SÉPARATION DES CHARGEMENTS DE QCM ET EXERCICES
-      // =========================================================================
       else if (selectedAction === "QCM" || selectedAction === "Exercices" || selectedAction === "Exercises") {
         const isQcmMode = selectedAction === "QCM";
         let manualExercises: any[] = [], aiExercises: any[] = [];
 
-        // 1. Chargement des Exercices / QCM Manuels
         try {
           const res = await axios.get(`${API_BASE_URL}/api/exercises/${safeMatiere}/${safeChapter}?isWhiteExam=false`, { headers });
           const rawExercises = res.data || [];
@@ -454,7 +549,6 @@ export default function StudentPage() {
             const exText = normalizeForCompare(ex.contextText);
             const exImg = (ex.contextImage || "").trim();
 
-            // Filtrage strict selon le mode choisi (QCM vs Exercice)
             const filteredSubQ = (ex.subQuestions || []).filter((subQ: any) => {
               const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
               const subType = subQ.qType || subQ.type;
@@ -478,10 +572,8 @@ export default function StudentPage() {
           manualExercises = groupedExercises;
         } catch (err) { console.error("Erreur Exercices/QCM Manuels", err); }
 
-        // 2. Chargement cerné des éléments générés par l'IA
         try {
           if (isQcmMode) {
-            // Uniquement les QCM IA
             const resAiQcm = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers });
             const aiData = resAiQcm.data || [];
 
@@ -503,7 +595,6 @@ export default function StudentPage() {
               });
             }
           } else {
-            // Uniquement les Exercices IA
             const resAiExo = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=exercise`, { headers });
             const aiData = resAiExo.data || [];
 
@@ -592,131 +683,6 @@ export default function StudentPage() {
     setScore(null);
   };
 
-  function MixedContentRenderer({ text }: { text: string }) {
-    if (!text) return null;
-
-    const processedText = text
-      .replace(/&nbsp;/gi, " ")
-      .replace(/<smiles>[\s\S]*?<\/smiles>/gi, "");
-
-    const combinedRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\\\\\[[\s\S]*?\\\\\]|\\\\\([\s\S]*?\\\\\)|(?<![\\<])\$[^$]+?\$|\[\[\s*IMG\s*=\s*[^\]]+\s*\]\])/gi;
-    const parts = processedText.split(combinedRegex);
-
-    return (
-      <span className="w-full inline-block text-justify text-gray-800">
-        {parts.map((part, index) => {
-          if (!part) return null;
-
-          const trimmedPart = part.trim();
-
-          if (trimmedPart.toUpperCase().startsWith("[[IMG=") && trimmedPart.endsWith("]]")) {
-            const filename = trimmedPart.substring(6, trimmedPart.length - 2).trim();
-            
-            return (
-              <span key={index} className="w-full flex justify-center my-4 block clearfix">
-                <img 
-                  src={`/images/${filename.replace(/^\/images\//, '')}`} 
-                  alt="Illustration" 
-                  className="max-h-64 object-contain rounded-lg shadow-sm border border-gray-200"
-                />
-              </span>
-            );
-          }
-
-          let isMath = false;
-          let mathContent = part;
-          let isBlock = false;
-
-          if (trimmedPart.startsWith("$$") && trimmedPart.endsWith("$$")) {
-            isMath = true; isBlock = true; mathContent = trimmedPart.slice(2, -2);
-          } else if (trimmedPart.startsWith("\\[") && trimmedPart.endsWith("\\]")) {
-            isMath = true; isBlock = true; mathContent = trimmedPart.slice(2, -2);
-          } else if (trimmedPart.startsWith("\\(") && trimmedPart.endsWith("\\)")) {
-            isMath = true; mathContent = trimmedPart.slice(2, -2);
-          } else if (trimmedPart.startsWith("$") && trimmedPart.endsWith("$")) {
-            if (!trimmedPart.includes("<") && !trimmedPart.includes(">")) {
-              isMath = true; 
-              mathContent = trimmedPart.slice(1, -1);
-            }
-          }
-
-          if (isMath) {
-            try {
-              let safeMath = mathContent
-                .replace(/<[^>]*>/g, "") 
-                .replace(/&lt;/g, "<")
-                .replace(/&gt;/g, ">")
-                .replace(/&amp;/g, "&");
-
-              const html = katex.renderToString(safeMath, {
-                displayMode: isBlock,
-                throwOnError: false,
-                strict: false,
-              });
-
-              return (
-                <span 
-                  key={index} 
-                  dangerouslySetInnerHTML={{ __html: html }} 
-                  className={isBlock ? "block my-2 text-center overflow-x-auto" : "inline-block"} 
-                />
-              );
-            } catch (e) {
-              return <span key={index} className="text-red-500">{part}</span>;
-            }
-          }
-
-          return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
-        })}
-      </span>
-    );
-  }
- 
-  const Flashcard = ({ title, content }: { title: string, content: string }) => {
-    const [isFlipped, setIsFlipped] = useState(false);
-
-    return (
-      <div 
-        className="relative w-full h-80 cursor-pointer group"
-        style={{ perspective: '1000px' }}
-        onClick={() => setIsFlipped(!isFlipped)}
-      >
-        <div 
-          className="relative w-full h-full transition-transform duration-700 ease-in-out"
-          style={{ 
-            transformStyle: 'preserve-3d', 
-            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' 
-          }}
-        >
-          <div 
-            className="absolute w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center text-center text-white border-2 border-indigo-400 hover:shadow-2xl transition-shadow"
-            style={{ backfaceVisibility: 'hidden' }}
-          >
-            <span className="text-4xl mb-4 block">💡</span>
-            <h3 className="text-2xl font-bold leading-tight">
-              <MixedContentRenderer text={title} />
-            </h3>
-            <p className="absolute bottom-5 text-indigo-200 text-sm font-medium animate-pulse">
-              Cliquez pour retourner ↺
-            </p>
-          </div>
-
-          <div 
-            className="absolute w-full h-full bg-white rounded-2xl shadow-xl p-6 overflow-y-auto flex items-center justify-center border-4 border-indigo-100 custom-scrollbar"
-            style={{ 
-              backfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg)'
-            }}
-          >
-            <div className="text-gray-800 text-lg font-medium w-full text-left">
-              <MixedContentRenderer text={content} />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   function renderContent(content?: string) {
     if (!content) return null;
     return (
@@ -785,90 +751,87 @@ export default function StudentPage() {
   };
 
   const handleExerciseSubmitAi = async () => {
-  setIsEvaluating(true);
-  let finalScore = 0;
-  let totalQ = 0;
-  const newFeedbacks: { [id: string]: any } = {};
-  const wrong: any[] = [];
+    setIsEvaluating(true);
+    let finalScore = 0;
+    let totalQ = 0;
+    const newFeedbacks: { [id: string]: any } = {};
+    const wrong: any[] = [];
 
-  for (const ex of exercises) {
-    let exerciseHasError = false;
+    for (const ex of exercises) {
+      let exerciseHasError = false;
 
-    if (ex.subQuestions) {
-      for (const subQ of ex.subQuestions) {
-        totalQ++;
-        const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
-        const userAnswer = exerciseAnswers[subQ._id] || "";
+      if (ex.subQuestions) {
+        for (const subQ of ex.subQuestions) {
+          totalQ++;
+          const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+          const userAnswer = exerciseAnswers[subQ._id] || "";
 
-        if (hasOptions) {
-          // Vérification classique pour QCM
-          if (userAnswer === subQ.correctAnswer) {
-            finalScore++;
-          } else {
-            exerciseHasError = true;
-          }
-        } else {
-          // Évaluation IA pour les questions ouvertes (Éditeur Mathématique)
-          if (userAnswer.trim().length > 0) {
-            try {
-              const token = localStorage.getItem("token");
-              const res = await axios.post(
-                `${API_BASE_URL}/api/verify-answer`, 
-                {
-                  question: subQ.questionText || subQ.question || subQ.texte,
-                  expectedAnswer: subQ.correctAnswer,
-                  userAnswer: userAnswer,
-                  context: ex.contextText // Ajout du contexte global
-                },
-                { headers: { Authorization: `Bearer ${token}` } }
-              );
-              
-              const evaluation = res.data;
-              newFeedbacks[subQ._id] = evaluation;
-
-              if (evaluation.isCorrect) {
-                finalScore += evaluation.score || 1;
-              } else {
-                exerciseHasError = true;
-              }
-            } catch (error) {
-              console.error("Erreur IA", error);
+          if (hasOptions) {
+            if (userAnswer === subQ.correctAnswer) {
+              finalScore++;
+            } else {
               exerciseHasError = true;
             }
           } else {
-            exerciseHasError = true; // Champ vide = Faux
+            if (userAnswer.trim().length > 0) {
+              try {
+                const token = localStorage.getItem("token");
+                const res = await axios.post(
+                  `${API_BASE_URL}/api/verify-answer`, 
+                  {
+                    question: subQ.questionText || subQ.question || subQ.texte,
+                    expectedAnswer: subQ.correctAnswer,
+                    userAnswer: userAnswer,
+                    context: ex.contextText
+                  },
+                  { headers: { Authorization: `Bearer ${token}` } }
+                );
+                
+                const evaluation = res.data;
+                newFeedbacks[subQ._id] = evaluation;
+
+                if (evaluation.isCorrect) {
+                  finalScore += evaluation.score || 1;
+                } else {
+                  exerciseHasError = true;
+                }
+              } catch (error) {
+                console.error("Erreur IA", error);
+                exerciseHasError = true;
+              }
+            } else {
+              exerciseHasError = true;
+            }
           }
         }
       }
+      
+      if (exerciseHasError) {
+        wrong.push(ex);
+      }
     }
-    
-    if (exerciseHasError) {
-      wrong.push(ex);
+
+    setAiFeedbacks(newFeedbacks);
+    setExerciseScore(finalScore);
+    setExerciseSubmitted(true);
+    setShowSolutions(false); 
+    setWrongExercises(wrong);
+    setIsEvaluating(false);
+
+    try {
+      const token = localStorage.getItem("token");
+      await axios.post(`${API_BASE_URL}/api/student-activity`, {
+        type: selectedAction === "QCM" ? "QCM" : "EXERCISE",
+        subject: selectedMatiere,
+        chapter: selectedChapter,
+        score: finalScore,
+        totalQuestions: totalQ,
+        successRate: totalQ > 0 ? Math.round((finalScore / totalQ) * 100) : 0,
+      }, { headers: { Authorization: `Bearer ${token}` } });
+    } catch (err) { 
+      console.error("Erreur enregistrement activité:", err); 
     }
-  }
-
-  setAiFeedbacks(newFeedbacks);
-  setExerciseScore(finalScore);
-  setExerciseSubmitted(true);
-  setShowSolutions(false); 
-  setWrongExercises(wrong);
-  setIsEvaluating(false);
-
-  // Enregistrement de l'activité (conservé de votre code d'origine)
-  try {
-    const token = localStorage.getItem("token");
-    await axios.post(`${API_BASE_URL}/api/student-activity`, {
-      type: selectedAction === "QCM" ? "QCM" : "EXERCISE",
-      subject: selectedMatiere,
-      chapter: selectedChapter,
-      score: finalScore,
-      totalQuestions: totalQ,
-      successRate: totalQ > 0 ? Math.round((finalScore / totalQ) * 100) : 0,
-    }, { headers: { Authorization: `Bearer ${token}` } });
-  } catch (err) { 
-    console.error("Erreur enregistrement activité:", err); 
-  }
-};
+  };
 
   const renderCenterContent = () => {
     if (selectedTipId) {
