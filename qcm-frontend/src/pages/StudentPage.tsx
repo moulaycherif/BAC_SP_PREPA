@@ -1671,7 +1671,7 @@ export default function StudentPage() {
             <h2 className="text-3xl font-extrabold text-blue-900 tracking-wide uppercase flex items-center justify-center gap-2">
               <span>{isQcmSection ? "❓" : "📝"}</span>
               {isQcmSection 
-                ? "QUESTIONS À CHOIX MULTIPLES (QCM)" 
+                🎓 "QUESTIONS À CHOIX MULTIPLES (QCM)" 
                 : `EXERCICE ${exercises.length > 1 ? exerciseIndex + 1 : "1"}`}
             </h2>
             <p className="font-semibold text-gray-500 text-sm mt-1">
