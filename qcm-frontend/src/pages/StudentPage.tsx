@@ -1821,6 +1821,7 @@ export default function StudentPage() {
                         case 'open':
                         case 'exercice':
                           return (
+                            <>
                             <OpenQuestionInput
   subQ={subQ}
   selectedMatiere={selectedMatiere}
@@ -1843,6 +1844,7 @@ export default function StudentPage() {
     <p>{aiFeedbacks[subQ._id].feedback}</p>
   </div>
 )}
+  </>
                           );
 
                         default:
