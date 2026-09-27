@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import axios from "../api/axios"; 
 import { useNavigate } from "react-router-dom";
@@ -16,6 +16,7 @@ import StudentAstuceDetail from "./StudentAstuceDetail";
 import PdfViewer from "../components/PdfViewer";
 import React from 'react';
 import ExerciseScanCorrect from "../components/ExerciseScanCorrect";
+import "mathlive";
 
 // Indispensable pour l'interprétation globale
 (window as any).katex = katex;
@@ -133,6 +134,27 @@ function OpenQuestionInput({
 }: OpenQuestionInputProps) {
   const [isKeyboardActive, setIsKeyboardActive] = useState(false);
   const [showScan, setShowScan] = useState(false);
+  const mathFieldRef = useRef<any>(null);
+
+  // Écouteur d'événement pour le composant web MathLive
+  useEffect(() => {
+    const mathField = mathFieldRef.current;
+    if (mathField) {
+      const handleInput = (e: Event) => {
+        // Exporte la valeur en LaTeX
+        onAnswerChange(subQ._id, (e.target as any).value);
+      };
+      mathField.addEventListener("input", handleInput);
+      return () => mathField.removeEventListener("input", handleInput);
+    }
+  }, [subQ._id, onAnswerChange]);
+
+  // Synchronisation de la valeur si effacée ou réinitialisée depuis le parent
+  useEffect(() => {
+    if (mathFieldRef.current && exerciseAnswers[subQ._id] === undefined) {
+      mathFieldRef.current.value = "";
+    }
+  }, [exerciseAnswers, subQ._id]);
 
   return (
     <div className="ml-2 md:ml-6 mt-3 space-y-3">
@@ -151,7 +173,7 @@ function OpenQuestionInput({
               : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
           } disabled:opacity-50`}
         >
-          ⌨️ Saisie au clavier
+          ⌨️ Saisie Mathématique
         </button>
         <button
           type="button"
@@ -167,26 +189,27 @@ function OpenQuestionInput({
         </button>
       </div>
 
-      {/* Zone claire : Saisie au clavier */}
-      <textarea
-        disabled={!isKeyboardActive || exerciseSubmitted || isSubQCorrectAndFrozen}
-        value={exerciseAnswers[subQ._id] || ""}
-        onChange={(e) => onAnswerChange(subQ._id, e.target.value)}
-        placeholder={
-          isSubQCorrectAndFrozen
-            ? "Réponse valide enregistrée."
-            : !isKeyboardActive
-            ? "Cliquez sur 'Saisie au clavier' pour activer la rédaction de votre réponse..."
-            : "Rédigez votre réponse détaillée ici..."
-        }
-        className={`w-full p-3 border rounded-xl text-gray-800 resize-y min-h-[110px] transition ${
-          isSubQCorrectAndFrozen
-            ? "border-green-500 bg-green-50 text-green-900 cursor-not-allowed font-medium"
-            : !isKeyboardActive
-            ? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed"
-            : "bg-white border-teal-500 ring-2 ring-teal-100 text-gray-900 focus:outline-none"
-        }`}
-      />
+      {/* Remplacement du <textarea> par MathLive */}
+      {isKeyboardActive && (
+        <div className={`w-full p-2 border rounded-xl overflow-hidden transition ${
+          isSubQCorrectAndFrozen ? "border-green-500 bg-green-50" : "bg-white border-teal-500 ring-2 ring-teal-100"
+        }`}>
+          {/* @ts-ignore : Ignorer l'erreur TypeScript pour le custom element */}
+          <math-field
+            ref={mathFieldRef}
+            read-only={exerciseSubmitted || isSubQCorrectAndFrozen ? "true" : "false"}
+            style={{ 
+              width: '100%', 
+              fontSize: '1.2rem', 
+              padding: '10px',
+              backgroundColor: 'transparent',
+              outline: 'none'
+            }}
+          >
+            {exerciseAnswers[subQ._id] || ""}
+          </math-field>
+        </div>
+      )}
 
       {/* Zone d'import Scan / PDF si activée */}
       {showScan && (
@@ -238,6 +261,9 @@ export default function StudentPage() {
 
   const [controles, setControles] = useState<any[]>([]);
   const [courseItems, setCourseItems] = useState<any[]>([]);
+
+  const [aiFeedbacks, setAiFeedbacks] = useState<{ [id: string]: any }>({});
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   const subjectImages: Record<string, string> = {
     Mathématique: mathsImg,
@@ -759,56 +785,90 @@ export default function StudentPage() {
   };
 
   const handleExerciseSubmitAi = async () => {
-    let score = 0;
-    let totalQ = 0;
+  setIsEvaluating(true);
+  let finalScore = 0;
+  let totalQ = 0;
+  const newFeedbacks: { [id: string]: any } = {};
+  const wrong: any[] = [];
 
-    exercises.forEach((ex) => {
-      ex.subQuestions?.forEach((subQ: any) => {
+  for (const ex of exercises) {
+    let exerciseHasError = false;
+
+    if (ex.subQuestions) {
+      for (const subQ of ex.subQuestions) {
         totalQ++;
         const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
-        
+        const userAnswer = exerciseAnswers[subQ._id] || "";
+
         if (hasOptions) {
-          if (exerciseAnswers[subQ._id] === subQ.correctAnswer) {
-            score++;
+          // Vérification classique pour QCM
+          if (userAnswer === subQ.correctAnswer) {
+            finalScore++;
+          } else {
+            exerciseHasError = true;
           }
         } else {
-          if (exerciseAnswers[subQ._id] && exerciseAnswers[subQ._id].trim().length > 0) {
-            score++;
+          // Évaluation IA pour les questions ouvertes (Éditeur Mathématique)
+          if (userAnswer.trim().length > 0) {
+            try {
+              const token = localStorage.getItem("token");
+              const res = await axios.post(
+                `${API_BASE_URL}/api/verify-answer`, 
+                {
+                  question: subQ.questionText || subQ.question || subQ.texte,
+                  expectedAnswer: subQ.correctAnswer,
+                  userAnswer: userAnswer,
+                  context: ex.contextText // Ajout du contexte global
+                },
+                { headers: { Authorization: `Bearer ${token}` } }
+              );
+              
+              const evaluation = res.data;
+              newFeedbacks[subQ._id] = evaluation;
+
+              if (evaluation.isCorrect) {
+                finalScore += evaluation.score || 1;
+              } else {
+                exerciseHasError = true;
+              }
+            } catch (error) {
+              console.error("Erreur IA", error);
+              exerciseHasError = true;
+            }
+          } else {
+            exerciseHasError = true; // Champ vide = Faux
           }
         }
-      });
-    });
-
-    const wrong = exercises.filter((ex) => 
-      ex.subQuestions?.some((subQ: any) => {
-        const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
-        if (hasOptions) {
-          return exerciseAnswers[subQ._id] !== subQ.correctAnswer;
-        }
-        return !exerciseAnswers[subQ._id] || exerciseAnswers[subQ._id].trim().length === 0;
-      })
-    );
-
-    setExerciseScore(score);
-
-    try {
-      const token = localStorage.getItem("token");
-      await axios.post(`${API_BASE_URL}/api/student-activity`, {
-        type: selectedAction === "QCM" ? "QCM" : "EXERCISE",
-        subject: selectedMatiere,
-        chapter: selectedChapter,
-        score,
-        totalQuestions: totalQ,
-        successRate: totalQ > 0 ? Math.round((score / totalQ) * 100) : 0,
-      }, { headers: { Authorization: `Bearer ${token}` } });
-    } catch (err) { 
-      console.error("Erreur enregistrement activité exercice/QCM:", err); 
+      }
     }
+    
+    if (exerciseHasError) {
+      wrong.push(ex);
+    }
+  }
 
-    setExerciseSubmitted(true);
-    setShowSolutions(false); 
-    setWrongExercises(wrong);
-  };
+  setAiFeedbacks(newFeedbacks);
+  setExerciseScore(finalScore);
+  setExerciseSubmitted(true);
+  setShowSolutions(false); 
+  setWrongExercises(wrong);
+  setIsEvaluating(false);
+
+  // Enregistrement de l'activité (conservé de votre code d'origine)
+  try {
+    const token = localStorage.getItem("token");
+    await axios.post(`${API_BASE_URL}/api/student-activity`, {
+      type: selectedAction === "QCM" ? "QCM" : "EXERCISE",
+      subject: selectedMatiere,
+      chapter: selectedChapter,
+      score: finalScore,
+      totalQuestions: totalQ,
+      successRate: totalQ > 0 ? Math.round((finalScore / totalQ) * 100) : 0,
+    }, { headers: { Authorization: `Bearer ${token}` } });
+  } catch (err) { 
+    console.error("Erreur enregistrement activité:", err); 
+  }
+};
 
   const renderCenterContent = () => {
     if (selectedTipId) {
@@ -1799,13 +1859,27 @@ export default function StudentPage() {
                         case 'exercice':
                           return (
                             <OpenQuestionInput
-                              subQ={subQ}
-                              selectedMatiere={selectedMatiere}
-                              exerciseSubmitted={exerciseSubmitted}
-                              exerciseAnswers={exerciseAnswers}
-                              onAnswerChange={handleExerciseAnswer}
-                              isSubQCorrectAndFrozen={isSubQCorrectAndFrozen}
-                            />
+  subQ={subQ}
+  selectedMatiere={selectedMatiere}
+  exerciseSubmitted={exerciseSubmitted}
+  exerciseAnswers={exerciseAnswers}
+  onAnswerChange={handleExerciseAnswer}
+  isSubQCorrectAndFrozen={isSubQCorrectAndFrozen || aiFeedbacks[subQ._id]?.isCorrect}
+/>
+
+{/* Affichage du feedback IA */}
+{exerciseSubmitted && aiFeedbacks[subQ._id] && (
+  <div className={`ml-2 md:ml-6 mt-3 px-4 py-3 rounded-xl border text-sm ${
+    aiFeedbacks[subQ._id].isCorrect 
+      ? "bg-green-50 text-green-900 border-green-200" 
+      : "bg-red-50 text-red-900 border-red-200"
+  }`}>
+    <span className="font-bold flex items-center mb-1">
+      🤖 Évaluation IA : {aiFeedbacks[subQ._id].isCorrect ? "Correct" : "Incorrect"}
+    </span>
+    <p>{aiFeedbacks[subQ._id].feedback}</p>
+  </div>
+)}
                           );
 
                         default:
