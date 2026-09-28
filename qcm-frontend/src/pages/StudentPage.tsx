@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import axios from "../api/axios"; 
 import { useNavigate } from "react-router-dom";
@@ -17,7 +17,18 @@ import PdfViewer from "../components/PdfViewer";
 import ExerciseScanCorrect from "../components/ExerciseScanCorrect";
 import "mathlive";
 
-// Indispensable pour l'interprétation globale
+// --- Déclaration TypeScript pour reconnaître l'élément personnalisé <math-field> ---
+declare global {
+  namespace JSX {
+    interface IntrinsicElements {
+      'math-field': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
+        'read-only'?: string;
+      };
+    }
+  }
+}
+
+// Indispensable pour l'interprétation globale de KaTeX
 (window as any).katex = katex;
 
 // --- Interfaces ---
@@ -54,6 +65,53 @@ interface Question {
   reponseCorrecte: string;
   note: number;
 }
+
+// --- Interface & Composant MathInput ---
+interface MathInputProps {
+  value: string;
+  onChange: (value: string) => void;
+  disabled?: boolean;
+}
+
+export const MathInput: React.FC<MathInputProps> = ({ value, onChange, disabled }) => {
+  const mfRef = useRef<any>(null);
+
+  useEffect(() => {
+    const mathField = mfRef.current;
+    if (!mathField) return;
+
+    const handleInput = (e: Event) => {
+      const target = e.target as HTMLInputElement;
+      onChange(target.value);
+    };
+
+    mathField.addEventListener('input', handleInput);
+
+    return () => {
+      mathField.removeEventListener('input', handleInput);
+    };
+  }, [onChange]);
+
+  useEffect(() => {
+    if (mfRef.current && mfRef.current.value !== value) {
+      mfRef.current.value = value || '';
+    }
+  }, [value]);
+
+  return (
+    <math-field
+      ref={mfRef}
+      read-only={disabled ? "true" : undefined}
+      style={{
+        width: '100%',
+        padding: '8px',
+        border: '1px solid #ccc',
+        borderRadius: '8px',
+        display: 'block'
+      }}
+    />
+  );
+};
 
 const chaptersBySubject: Record<string, string[]> = {
   Mathématique: [
@@ -114,7 +172,7 @@ const chaptersBySubject: Record<string, string[]> = {
 };
 
 // ==========================================
-// COMPOSANTS EXTERNALISÉS (Optimisation React)
+// COMPOSANTS EXTERNALISÉS
 // ==========================================
 
 function MixedContentRenderer({ text }: { text: string }) {
@@ -261,25 +319,6 @@ function OpenQuestionInput({
 }: OpenQuestionInputProps) {
   const [isKeyboardActive, setIsKeyboardActive] = useState(false);
   const [showScan, setShowScan] = useState(false);
-  const mathFieldRef = useRef<any>(null);
-
-  useEffect(() => {
-    const mathField = mathFieldRef.current;
-    if (mathField) {
-      const handleInput = (e: Event) => {
-        onAnswerChange(subQ._id, (e.target as any).value);
-      };
-      mathField.addEventListener("input", handleInput);
-      return () => mathField.removeEventListener("input", handleInput);
-    }
-  }, [subQ._id, onAnswerChange]);
-
-  const currentAnswer = exerciseAnswers[subQ._id];
-  useEffect(() => {
-    if (mathFieldRef.current && currentAnswer === undefined) {
-      mathFieldRef.current.value = "";
-    }
-  }, [currentAnswer]);
 
   return (
     <div className="ml-2 md:ml-6 mt-3 space-y-3">
@@ -287,7 +326,7 @@ function OpenQuestionInput({
         <button
           type="button"
           onClick={() => {
-            setIsKeyboardActive(true);
+            setIsKeyboardActive(!isKeyboardActive);
             setShowScan(false);
           }}
           disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
@@ -317,20 +356,11 @@ function OpenQuestionInput({
         <div className={`w-full p-2 border rounded-xl overflow-hidden transition ${
           isSubQCorrectAndFrozen ? "border-green-500 bg-green-50" : "bg-white border-teal-500 ring-2 ring-teal-100"
         }`}>
-          {/* @ts-ignore : Ignorer l'erreur TypeScript pour le custom element */}
-          <math-field
-            ref={mathFieldRef}
-            read-only={exerciseSubmitted || isSubQCorrectAndFrozen ? "true" : "false"}
-            style={{ 
-              width: '100%', 
-              fontSize: '1.2rem', 
-              padding: '10px',
-              backgroundColor: 'transparent',
-              outline: 'none'
-            }}
-          >
-            {exerciseAnswers[subQ._id] || ""}
-          </math-field>
+          <MathInput
+            value={exerciseAnswers[subQ._id] || ""}
+            onChange={(newValue) => onAnswerChange(subQ._id, newValue)}
+            disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
+          />
         </div>
       )}
 
@@ -876,7 +906,6 @@ export default function StudentPage() {
               <span className="text-xl">{isExpanded ? "🔽" : "▶️"}</span>
             </button>
             
-            {/* 🌟 ACTION BUTTONS (SÉPARATION QCM ET EXERCICES) */}
             {isExpanded && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
@@ -1654,9 +1683,6 @@ export default function StudentPage() {
       );
     }
 
-    // =========================================================================
-    // 🌟 SECTION ADAPTÉE : QCM & EXERCICES COMPLEXES (SÉPARÉS EXPLICITEMENT)
-    // =========================================================================
     if (selectedChapter && (selectedAction === "Exercises" || selectedAction === "Exercices" || selectedAction === "QCM")) {
       const isQcmSection = selectedAction === "QCM";
       const currentEx = exercises[exerciseIndex];
@@ -1689,7 +1715,6 @@ export default function StudentPage() {
             }
           `}</style>
           
-          {/* Entête */}
           <div className="mb-6 text-center">
             <h2 className="text-3xl font-extrabold text-blue-900 tracking-wide uppercase flex items-center justify-center gap-2">
               <span>{isQcmSection ? "🎓" : "📝"}</span>
@@ -1704,7 +1729,6 @@ export default function StudentPage() {
           
           <div className="bg-white p-6 rounded-2xl shadow-lg border-t-4 border-blue-600">
             
-            {/* Énoncé Global (Exercice Rédactionnel) */}
             {isExercice && (currentEx?.contextText || currentEx?.enonce || currentEx?.texte) && (
               <div className="mb-6 border-b pb-4 bg-gray-50 p-5 rounded-xl border border-gray-100">
                 <h3 className="text-sm font-bold text-blue-800 mb-2 uppercase tracking-wide">Énoncé</h3>
@@ -1722,7 +1746,6 @@ export default function StudentPage() {
               </div>
             )}
             
-            {/* Questions */}
             <div className="space-y-6">
               {currentEx.subQuestions?.map((subQ: any, index: number) => {
                 const isSubQCorrectAndFrozen = exerciseAttempt > 1 && exerciseAnswers[subQ._id] === subQ.correctAnswer;
@@ -1763,7 +1786,6 @@ export default function StudentPage() {
                       )}
                     </div>
                     
-                    {/* Switch selon le type de question */}
                     {(() => {
                       switch (questionType) {
                         case 'qcm':
@@ -1822,29 +1844,28 @@ export default function StudentPage() {
                         case 'exercice':
                           return (
                             <>
-                            <OpenQuestionInput
-  subQ={subQ}
-  selectedMatiere={selectedMatiere}
-  exerciseSubmitted={exerciseSubmitted}
-  exerciseAnswers={exerciseAnswers}
-  onAnswerChange={handleExerciseAnswer}
-  isSubQCorrectAndFrozen={isSubQCorrectAndFrozen || aiFeedbacks[subQ._id]?.isCorrect}
-/>
+                              <OpenQuestionInput
+                                subQ={subQ}
+                                selectedMatiere={selectedMatiere}
+                                exerciseSubmitted={exerciseSubmitted}
+                                exerciseAnswers={exerciseAnswers}
+                                onAnswerChange={handleExerciseAnswer}
+                                isSubQCorrectAndFrozen={isSubQCorrectAndFrozen || aiFeedbacks[subQ._id]?.isCorrect}
+                              />
 
-{/* Affichage du feedback IA */}
-{exerciseSubmitted && aiFeedbacks[subQ._id] && (
-  <div className={`ml-2 md:ml-6 mt-3 px-4 py-3 rounded-xl border text-sm ${
-    aiFeedbacks[subQ._id].isCorrect 
-      ? "bg-green-50 text-green-900 border-green-200" 
-      : "bg-red-50 text-red-900 border-red-200"
-  }`}>
-    <span className="font-bold flex items-center mb-1">
-      🤖 Évaluation IA : {aiFeedbacks[subQ._id].isCorrect ? "Correct" : "Incorrect"}
-    </span>
-    <p>{aiFeedbacks[subQ._id].feedback}</p>
-  </div>
-)}
-  </>
+                              {exerciseSubmitted && aiFeedbacks[subQ._id] && (
+                                <div className={`ml-2 md:ml-6 mt-3 px-4 py-3 rounded-xl border text-sm ${
+                                  aiFeedbacks[subQ._id].isCorrect 
+                                    ? "bg-green-50 text-green-900 border-green-200" 
+                                    : "bg-red-50 text-red-900 border-red-200"
+                                }`}>
+                                  <span className="font-bold flex items-center mb-1">
+                                    🤖 Évaluation IA : {aiFeedbacks[subQ._id].isCorrect ? "Correct" : "Incorrect"}
+                                  </span>
+                                  <p>{aiFeedbacks[subQ._id].feedback}</p>
+                                </div>
+                              )}
+                            </>
                           );
 
                         default:
@@ -1861,7 +1882,6 @@ export default function StudentPage() {
                       }
                     })()}
 
-                    {/* Explications et solutions */}
                     {exerciseSubmitted && showSolutions && (
                       <div className="ml-2 md:ml-6 mt-3 px-4 py-3 bg-blue-50 text-blue-900 rounded-xl border border-blue-200 text-sm">  
                         <span className="font-bold flex items-center mb-1 text-blue-900">💡 Solution & Correction :</span>
@@ -1881,7 +1901,6 @@ export default function StudentPage() {
             </div>
           </div>
           
-          {/* Navigation Inter-exercices */}
           {exercises.length > 1 && (
             <div className="flex justify-between items-center mt-6">
               <button 
@@ -1901,7 +1920,6 @@ export default function StudentPage() {
             </div>
           )}
 
-          {/* Validation & Affichage des résultats */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
             {!exerciseSubmitted ? (
               <button
