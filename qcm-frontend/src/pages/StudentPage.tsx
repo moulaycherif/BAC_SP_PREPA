@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import axios from "../api/axios"; 
 import { useNavigate } from "react-router-dom";
@@ -14,8 +14,8 @@ import bgImage from "/Image3.jfif";
 import StudentDashboardStats from "../components/stats/StudentDashboardStats";
 import StudentAstuceDetail from "./StudentAstuceDetail";
 import PdfViewer from "../components/PdfViewer";
-import React from 'react';
 import ExerciseScanCorrect from "../components/ExerciseScanCorrect";
+import "mathlive";
 
 // Indispensable pour l'interprétation globale
 (window as any).katex = katex;
@@ -113,7 +113,135 @@ const chaptersBySubject: Record<string, string[]> = {
   ],
 };
 
-// Sous-composant de gestion de réponse par question ouverte
+// ==========================================
+// COMPOSANTS EXTERNALISÉS (Optimisation React)
+// ==========================================
+
+function MixedContentRenderer({ text }: { text: string }) {
+  if (!text) return null;
+
+  const processedText = text
+    .replace(/&nbsp;/gi, " ")
+    .replace(/<smiles>[\s\S]*?<\/smiles>/gi, "");
+
+  const combinedRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\\\\\[[\s\S]*?\\\\\]|\\\\\([\s\S]*?\\\\\)|(?<![\\<])\$[^$]+?\$|\[\[\s*IMG\s*=\s*[^\]]+\s*\]\])/gi;
+  const parts = processedText.split(combinedRegex);
+
+  return (
+    <span className="w-full inline-block text-justify text-gray-800">
+      {parts.map((part, index) => {
+        if (!part) return null;
+
+        const trimmedPart = part.trim();
+
+        if (trimmedPart.toUpperCase().startsWith("[[IMG=") && trimmedPart.endsWith("]]")) {
+          const filename = trimmedPart.substring(6, trimmedPart.length - 2).trim();
+          
+          return (
+            <span key={index} className="w-full flex justify-center my-4 block clearfix">
+              <img 
+                src={`/images/${filename.replace(/^\/images\//, '')}`} 
+                alt="Illustration" 
+                className="max-h-64 object-contain rounded-lg shadow-sm border border-gray-200"
+              />
+            </span>
+          );
+        }
+
+        let isMath = false;
+        let mathContent = part;
+        let isBlock = false;
+
+        if (trimmedPart.startsWith("$$") && trimmedPart.endsWith("$$")) {
+          isMath = true; isBlock = true; mathContent = trimmedPart.slice(2, -2);
+        } else if (trimmedPart.startsWith("\\[") && trimmedPart.endsWith("\\]")) {
+          isMath = true; isBlock = true; mathContent = trimmedPart.slice(2, -2);
+        } else if (trimmedPart.startsWith("\\(") && trimmedPart.endsWith("\\)")) {
+          isMath = true; mathContent = trimmedPart.slice(2, -2);
+        } else if (trimmedPart.startsWith("$") && trimmedPart.endsWith("$")) {
+          if (!trimmedPart.includes("<") && !trimmedPart.includes(">")) {
+            isMath = true; 
+            mathContent = trimmedPart.slice(1, -1);
+          }
+        }
+
+        if (isMath) {
+          try {
+            let safeMath = mathContent
+              .replace(/<[^>]*>/g, "") 
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/&amp;/g, "&");
+
+            const html = katex.renderToString(safeMath, {
+              displayMode: isBlock,
+              throwOnError: false,
+              strict: false,
+            });
+
+            return (
+              <span 
+                key={index} 
+                dangerouslySetInnerHTML={{ __html: html }} 
+                className={isBlock ? "block my-2 text-center overflow-x-auto" : "inline-block"} 
+              />
+            );
+          } catch (e) {
+            return <span key={index} className="text-red-500">{part}</span>;
+          }
+        }
+
+        return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
+      })}
+    </span>
+  );
+}
+
+const Flashcard = ({ title, content }: { title: string, content: string }) => {
+  const [isFlipped, setIsFlipped] = useState(false);
+
+  return (
+    <div 
+      className="relative w-full h-80 cursor-pointer group"
+      style={{ perspective: '1000px' }}
+      onClick={() => setIsFlipped(!isFlipped)}
+    >
+      <div 
+        className="relative w-full h-full transition-transform duration-700 ease-in-out"
+        style={{ 
+          transformStyle: 'preserve-3d', 
+          transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' 
+        }}
+      >
+        <div 
+          className="absolute w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center text-center text-white border-2 border-indigo-400 hover:shadow-2xl transition-shadow"
+          style={{ backfaceVisibility: 'hidden' }}
+        >
+          <span className="text-4xl mb-4 block">💡</span>
+          <h3 className="text-2xl font-bold leading-tight">
+            <MixedContentRenderer text={title} />
+          </h3>
+          <p className="absolute bottom-5 text-indigo-200 text-sm font-medium animate-pulse">
+            Cliquez pour retourner ↺
+          </p>
+        </div>
+
+        <div 
+          className="absolute w-full h-full bg-white rounded-2xl shadow-xl p-6 overflow-y-auto flex items-center justify-center border-4 border-indigo-100 custom-scrollbar"
+          style={{ 
+            backfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)'
+          }}
+        >
+          <div className="text-gray-800 text-lg font-medium w-full text-left">
+            <MixedContentRenderer text={content} />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 interface OpenQuestionInputProps {
   subQ: any;
   selectedMatiere: string | null;
@@ -133,10 +261,28 @@ function OpenQuestionInput({
 }: OpenQuestionInputProps) {
   const [isKeyboardActive, setIsKeyboardActive] = useState(false);
   const [showScan, setShowScan] = useState(false);
+  const mathFieldRef = useRef<any>(null);
+
+  useEffect(() => {
+    const mathField = mathFieldRef.current;
+    if (mathField) {
+      const handleInput = (e: Event) => {
+        onAnswerChange(subQ._id, (e.target as any).value);
+      };
+      mathField.addEventListener("input", handleInput);
+      return () => mathField.removeEventListener("input", handleInput);
+    }
+  }, [subQ._id, onAnswerChange]);
+
+  const currentAnswer = exerciseAnswers[subQ._id];
+  useEffect(() => {
+    if (mathFieldRef.current && currentAnswer === undefined) {
+      mathFieldRef.current.value = "";
+    }
+  }, [currentAnswer]);
 
   return (
     <div className="ml-2 md:ml-6 mt-3 space-y-3">
-      {/* Boutons d'action pour la question */}
       <div className="flex flex-wrap gap-2 mb-2">
         <button
           type="button"
@@ -151,7 +297,7 @@ function OpenQuestionInput({
               : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
           } disabled:opacity-50`}
         >
-          ⌨️ Saisie au clavier
+          ⌨️ Saisie Mathématique
         </button>
         <button
           type="button"
@@ -167,28 +313,27 @@ function OpenQuestionInput({
         </button>
       </div>
 
-      {/* Zone claire : Saisie au clavier */}
-      <textarea
-        disabled={!isKeyboardActive || exerciseSubmitted || isSubQCorrectAndFrozen}
-        value={exerciseAnswers[subQ._id] || ""}
-        onChange={(e) => onAnswerChange(subQ._id, e.target.value)}
-        placeholder={
-          isSubQCorrectAndFrozen
-            ? "Réponse valide enregistrée."
-            : !isKeyboardActive
-            ? "Cliquez sur 'Saisie au clavier' pour activer la rédaction de votre réponse..."
-            : "Rédigez votre réponse détaillée ici..."
-        }
-        className={`w-full p-3 border rounded-xl text-gray-800 resize-y min-h-[110px] transition ${
-          isSubQCorrectAndFrozen
-            ? "border-green-500 bg-green-50 text-green-900 cursor-not-allowed font-medium"
-            : !isKeyboardActive
-            ? "bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed"
-            : "bg-white border-teal-500 ring-2 ring-teal-100 text-gray-900 focus:outline-none"
-        }`}
-      />
+      {isKeyboardActive && (
+        <div className={`w-full p-2 border rounded-xl overflow-hidden transition ${
+          isSubQCorrectAndFrozen ? "border-green-500 bg-green-50" : "bg-white border-teal-500 ring-2 ring-teal-100"
+        }`}>
+          {/* @ts-ignore : Ignorer l'erreur TypeScript pour le custom element */}
+          <math-field
+            ref={mathFieldRef}
+            read-only={exerciseSubmitted || isSubQCorrectAndFrozen ? "true" : "false"}
+            style={{ 
+              width: '100%', 
+              fontSize: '1.2rem', 
+              padding: '10px',
+              backgroundColor: 'transparent',
+              outline: 'none'
+            }}
+          >
+            {exerciseAnswers[subQ._id] || ""}
+          </math-field>
+        </div>
+      )}
 
-      {/* Zone d'import Scan / PDF si activée */}
       {showScan && (
         <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl mt-2">
           <ExerciseScanCorrect
@@ -218,7 +363,6 @@ export default function StudentPage() {
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState<number | null>(null);
   
-  // --- États pour la gestion des exercices (Brouillon, Validé, Corrigé) ---
   const [exercises, setExercises] = useState<any[]>([]);
   const [exerciseIndex, setExerciseIndex] = useState(0);
   const [exerciseAnswers, setExerciseAnswers] = useState<{ [id: string]: string }>({});
@@ -238,6 +382,9 @@ export default function StudentPage() {
 
   const [controles, setControles] = useState<any[]>([]);
   const [courseItems, setCourseItems] = useState<any[]>([]);
+
+  const [aiFeedbacks, setAiFeedbacks] = useState<{ [id: string]: any }>({});
+  const [isEvaluating, setIsEvaluating] = useState(false);
 
   const subjectImages: Record<string, string> = {
     Mathématique: mathsImg,
@@ -360,63 +507,37 @@ export default function StudentPage() {
         setResumes([...manualData, ...aiData]);
       }
       else if (selectedAction === "Astuces") {
-        const isWhiteExamAction = selectedMatiere === "SVT";
-
-        if (isWhiteExamAction) {
-          try {
-            const res = await axios.get(`${API_BASE_URL}/api/exercises/${safeMatiere}/${safeChapter}?isWhiteExam=true`, { headers });
-            const rawExercises = res.data || [];
-            
-            const normalizeForCompare = (val?: string) => val ? val.replace(/<[^>]*>?/gm, '').replace(/&nbsp;/gi, '').replace(/\s+/g, '').toLowerCase().trim() : "";
-            const groupedExercises: any[] = [];
-            rawExercises.forEach((ex: any) => {
-              const exText = normalizeForCompare(ex.contextText);
-              const exImg = (ex.contextImage || "").trim();
-              const existingGroup = groupedExercises.find((g) => normalizeForCompare(g.contextText) === exText && (g.contextImage || "").trim() === exImg);
-              
-              if (existingGroup) existingGroup.subQuestions = [...existingGroup.subQuestions, ...(ex.subQuestions || [])];
-              else groupedExercises.push({ ...ex, subQuestions: [...(ex.subQuestions || [])] });
-            });
-            setWhiteExams(groupedExercises);
-            setExerciseAttempt(1);
-          } catch (err) { setWhiteExams([]); }
-        } else {
-          let manualData: Astuce[] = [], aiData: Astuce[] = [];
+        let manualData: Astuce[] = [], aiData: Astuce[] = [];
+        
+        try {
+          const data = await fetchAstucesByChapter(selectedChapter);
+          manualData = (data as Astuce[]) || [];
+        } catch (err) { console.error("Erreur Astuces", err); }
+        
+        try {
+          const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=astuce`, { headers });
+          const rawAiData = resAi.data || [];
           
-          try {
-            const data = await fetchAstucesByChapter(selectedChapter);
-            manualData = (data as Astuce[]) || [];
-          } catch (err) { console.error("Erreur Astuces", err); }
-          
-          try {
-            const resAi = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=astuce`, { headers });
-            const rawAiData = resAi.data || [];
-            
-            aiData = rawAiData.map((q: any) => ({
-              _id: q._id,
-              title: q.texte || "Astuce générée par IA", 
-              subject: q.subject,
-              chapter: q.chapter,
-              cases: [
-                {
-                  title: "Explication de l'IA",
-                  content: q.explication || "Aucune explication fournie."
-                }
-              ]
-            }));
-          } catch (err) { console.error("Erreur Astuces IA", err); }
-          
-          setAstuces([...manualData, ...aiData]);
-        }
+          aiData = rawAiData.map((q: any) => ({
+            _id: q._id,
+            title: q.texte || "Astuce générée par IA", 
+            subject: q.subject,
+            chapter: q.chapter,
+            cases: [
+              {
+                title: "Explication de l'IA",
+                content: q.explication || "Aucune explication fournie."
+              }
+            ]
+          }));
+        } catch (err) { console.error("Erreur Astuces IA", err); }
+        
+        setAstuces([...manualData, ...aiData]);
       }
-      // =========================================================================
-      // 🌟 DISSOCIATION EXPLICITE : SÉPARATION DES CHARGEMENTS DE QCM ET EXERCICES
-      // =========================================================================
       else if (selectedAction === "QCM" || selectedAction === "Exercices" || selectedAction === "Exercises") {
         const isQcmMode = selectedAction === "QCM";
         let manualExercises: any[] = [], aiExercises: any[] = [];
 
-        // 1. Chargement des Exercices / QCM Manuels
         try {
           const res = await axios.get(`${API_BASE_URL}/api/exercises/${safeMatiere}/${safeChapter}?isWhiteExam=false`, { headers });
           const rawExercises = res.data || [];
@@ -428,7 +549,6 @@ export default function StudentPage() {
             const exText = normalizeForCompare(ex.contextText);
             const exImg = (ex.contextImage || "").trim();
 
-            // Filtrage strict selon le mode choisi (QCM vs Exercice)
             const filteredSubQ = (ex.subQuestions || []).filter((subQ: any) => {
               const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
               const subType = subQ.qType || subQ.type;
@@ -452,10 +572,8 @@ export default function StudentPage() {
           manualExercises = groupedExercises;
         } catch (err) { console.error("Erreur Exercices/QCM Manuels", err); }
 
-        // 2. Chargement cerné des éléments générés par l'IA
         try {
           if (isQcmMode) {
-            // Uniquement les QCM IA
             const resAiQcm = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=qcm`, { headers });
             const aiData = resAiQcm.data || [];
 
@@ -477,7 +595,6 @@ export default function StudentPage() {
               });
             }
           } else {
-            // Uniquement les Exercices IA
             const resAiExo = await axios.get(`${API_BASE_URL}/api/questions?subject=${safeMatiere}&chapter=${safeChapter}&type=exercise`, { headers });
             const aiData = resAiExo.data || [];
 
@@ -566,131 +683,6 @@ export default function StudentPage() {
     setScore(null);
   };
 
-  function MixedContentRenderer({ text }: { text: string }) {
-    if (!text) return null;
-
-    const processedText = text
-      .replace(/&nbsp;/gi, " ")
-      .replace(/<smiles>[\s\S]*?<\/smiles>/gi, "");
-
-    const combinedRegex = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|\\\\\[[\s\S]*?\\\\\]|\\\\\([\s\S]*?\\\\\)|(?<![\\<])\$[^$]+?\$|\[\[\s*IMG\s*=\s*[^\]]+\s*\]\])/gi;
-    const parts = processedText.split(combinedRegex);
-
-    return (
-      <span className="w-full inline-block text-justify text-gray-800">
-        {parts.map((part, index) => {
-          if (!part) return null;
-
-          const trimmedPart = part.trim();
-
-          if (trimmedPart.toUpperCase().startsWith("[[IMG=") && trimmedPart.endsWith("]]")) {
-            const filename = trimmedPart.substring(6, trimmedPart.length - 2).trim();
-            
-            return (
-              <span key={index} className="w-full flex justify-center my-4 block clearfix">
-                <img 
-                  src={`/images/${filename.replace(/^\/images\//, '')}`} 
-                  alt="Illustration" 
-                  className="max-h-64 object-contain rounded-lg shadow-sm border border-gray-200"
-                />
-              </span>
-            );
-          }
-
-          let isMath = false;
-          let mathContent = part;
-          let isBlock = false;
-
-          if (trimmedPart.startsWith("$$") && trimmedPart.endsWith("$$")) {
-            isMath = true; isBlock = true; mathContent = trimmedPart.slice(2, -2);
-          } else if (trimmedPart.startsWith("\\[") && trimmedPart.endsWith("\\]")) {
-            isMath = true; isBlock = true; mathContent = trimmedPart.slice(2, -2);
-          } else if (trimmedPart.startsWith("\\(") && trimmedPart.endsWith("\\)")) {
-            isMath = true; mathContent = trimmedPart.slice(2, -2);
-          } else if (trimmedPart.startsWith("$") && trimmedPart.endsWith("$")) {
-            if (!trimmedPart.includes("<") && !trimmedPart.includes(">")) {
-              isMath = true; 
-              mathContent = trimmedPart.slice(1, -1);
-            }
-          }
-
-          if (isMath) {
-            try {
-              let safeMath = mathContent
-                .replace(/<[^>]*>/g, "") 
-                .replace(/&lt;/g, "<")
-                .replace(/&gt;/g, ">")
-                .replace(/&amp;/g, "&");
-
-              const html = katex.renderToString(safeMath, {
-                displayMode: isBlock,
-                throwOnError: false,
-                strict: false,
-              });
-
-              return (
-                <span 
-                  key={index} 
-                  dangerouslySetInnerHTML={{ __html: html }} 
-                  className={isBlock ? "block my-2 text-center overflow-x-auto" : "inline-block"} 
-                />
-              );
-            } catch (e) {
-              return <span key={index} className="text-red-500">{part}</span>;
-            }
-          }
-
-          return <span key={index} dangerouslySetInnerHTML={{ __html: part }} />;
-        })}
-      </span>
-    );
-  }
- 
-  const Flashcard = ({ title, content }: { title: string, content: string }) => {
-    const [isFlipped, setIsFlipped] = useState(false);
-
-    return (
-      <div 
-        className="relative w-full h-80 cursor-pointer group"
-        style={{ perspective: '1000px' }}
-        onClick={() => setIsFlipped(!isFlipped)}
-      >
-        <div 
-          className="relative w-full h-full transition-transform duration-700 ease-in-out"
-          style={{ 
-            transformStyle: 'preserve-3d', 
-            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)' 
-          }}
-        >
-          <div 
-            className="absolute w-full h-full bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-lg p-6 flex flex-col items-center justify-center text-center text-white border-2 border-indigo-400 hover:shadow-2xl transition-shadow"
-            style={{ backfaceVisibility: 'hidden' }}
-          >
-            <span className="text-4xl mb-4 block">💡</span>
-            <h3 className="text-2xl font-bold leading-tight">
-              <MixedContentRenderer text={title} />
-            </h3>
-            <p className="absolute bottom-5 text-indigo-200 text-sm font-medium animate-pulse">
-              Cliquez pour retourner ↺
-            </p>
-          </div>
-
-          <div 
-            className="absolute w-full h-full bg-white rounded-2xl shadow-xl p-6 overflow-y-auto flex items-center justify-center border-4 border-indigo-100 custom-scrollbar"
-            style={{ 
-              backfaceVisibility: 'hidden',
-              transform: 'rotateY(180deg)'
-            }}
-          >
-            <div className="text-gray-800 text-lg font-medium w-full text-left">
-              <MixedContentRenderer text={content} />
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  };
-
   function renderContent(content?: string) {
     if (!content) return null;
     return (
@@ -759,37 +751,72 @@ export default function StudentPage() {
   };
 
   const handleExerciseSubmitAi = async () => {
-    let score = 0;
+    setIsEvaluating(true);
+    let finalScore = 0;
     let totalQ = 0;
+    const newFeedbacks: { [id: string]: any } = {};
+    const wrong: any[] = [];
 
-    exercises.forEach((ex) => {
-      ex.subQuestions?.forEach((subQ: any) => {
-        totalQ++;
-        const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
-        
-        if (hasOptions) {
-          if (exerciseAnswers[subQ._id] === subQ.correctAnswer) {
-            score++;
-          }
-        } else {
-          if (exerciseAnswers[subQ._id] && exerciseAnswers[subQ._id].trim().length > 0) {
-            score++;
+    for (const ex of exercises) {
+      let exerciseHasError = false;
+
+      if (ex.subQuestions) {
+        for (const subQ of ex.subQuestions) {
+          totalQ++;
+          const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
+          const userAnswer = exerciseAnswers[subQ._id] || "";
+
+          if (hasOptions) {
+            if (userAnswer === subQ.correctAnswer) {
+              finalScore++;
+            } else {
+              exerciseHasError = true;
+            }
+          } else {
+            if (userAnswer.trim().length > 0) {
+              try {
+                const token = localStorage.getItem("token");
+                const res = await axios.post(
+                  `${API_BASE_URL}/api/verify-answer`, 
+                  {
+                    question: subQ.questionText || subQ.question || subQ.texte,
+                    expectedAnswer: subQ.correctAnswer,
+                    userAnswer: userAnswer,
+                    context: ex.contextText
+                  },
+                  { headers: { Authorization: `Bearer ${token}` } }
+                );
+                
+                const evaluation = res.data;
+                newFeedbacks[subQ._id] = evaluation;
+
+                if (evaluation.isCorrect) {
+                  finalScore += evaluation.score || 1;
+                } else {
+                  exerciseHasError = true;
+                }
+              } catch (error) {
+                console.error("Erreur IA", error);
+                exerciseHasError = true;
+              }
+            } else {
+              exerciseHasError = true;
+            }
           }
         }
-      });
-    });
+      }
+      
+      if (exerciseHasError) {
+        wrong.push(ex);
+      }
+    }
 
-    const wrong = exercises.filter((ex) => 
-      ex.subQuestions?.some((subQ: any) => {
-        const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
-        if (hasOptions) {
-          return exerciseAnswers[subQ._id] !== subQ.correctAnswer;
-        }
-        return !exerciseAnswers[subQ._id] || exerciseAnswers[subQ._id].trim().length === 0;
-      })
-    );
-
-    setExerciseScore(score);
+    setAiFeedbacks(newFeedbacks);
+    setExerciseScore(finalScore);
+    setExerciseSubmitted(true);
+    setShowSolutions(false); 
+    setWrongExercises(wrong);
+    setIsEvaluating(false);
 
     try {
       const token = localStorage.getItem("token");
@@ -797,17 +824,13 @@ export default function StudentPage() {
         type: selectedAction === "QCM" ? "QCM" : "EXERCISE",
         subject: selectedMatiere,
         chapter: selectedChapter,
-        score,
+        score: finalScore,
         totalQuestions: totalQ,
-        successRate: totalQ > 0 ? Math.round((score / totalQ) * 100) : 0,
+        successRate: totalQ > 0 ? Math.round((finalScore / totalQ) * 100) : 0,
       }, { headers: { Authorization: `Bearer ${token}` } });
     } catch (err) { 
-      console.error("Erreur enregistrement activité exercice/QCM:", err); 
+      console.error("Erreur enregistrement activité:", err); 
     }
-
-    setExerciseSubmitted(true);
-    setShowSolutions(false); 
-    setWrongExercises(wrong);
   };
 
   const renderCenterContent = () => {
@@ -1669,7 +1692,7 @@ export default function StudentPage() {
           {/* Entête */}
           <div className="mb-6 text-center">
             <h2 className="text-3xl font-extrabold text-blue-900 tracking-wide uppercase flex items-center justify-center gap-2">
-              <span>{isQcmSection ? "❓" : "📝"}</span>
+              <span>{isQcmSection ? "🎓" : "📝"}</span>
               {isQcmSection 
                 ? "QUESTIONS À CHOIX MULTIPLES (QCM)" 
                 : `EXERCICE ${exercises.length > 1 ? exerciseIndex + 1 : "1"}`}
@@ -1798,14 +1821,30 @@ export default function StudentPage() {
                         case 'open':
                         case 'exercice':
                           return (
+                            <>
                             <OpenQuestionInput
-                              subQ={subQ}
-                              selectedMatiere={selectedMatiere}
-                              exerciseSubmitted={exerciseSubmitted}
-                              exerciseAnswers={exerciseAnswers}
-                              onAnswerChange={handleExerciseAnswer}
-                              isSubQCorrectAndFrozen={isSubQCorrectAndFrozen}
-                            />
+  subQ={subQ}
+  selectedMatiere={selectedMatiere}
+  exerciseSubmitted={exerciseSubmitted}
+  exerciseAnswers={exerciseAnswers}
+  onAnswerChange={handleExerciseAnswer}
+  isSubQCorrectAndFrozen={isSubQCorrectAndFrozen || aiFeedbacks[subQ._id]?.isCorrect}
+/>
+
+{/* Affichage du feedback IA */}
+{exerciseSubmitted && aiFeedbacks[subQ._id] && (
+  <div className={`ml-2 md:ml-6 mt-3 px-4 py-3 rounded-xl border text-sm ${
+    aiFeedbacks[subQ._id].isCorrect 
+      ? "bg-green-50 text-green-900 border-green-200" 
+      : "bg-red-50 text-red-900 border-red-200"
+  }`}>
+    <span className="font-bold flex items-center mb-1">
+      🤖 Évaluation IA : {aiFeedbacks[subQ._id].isCorrect ? "Correct" : "Incorrect"}
+    </span>
+    <p>{aiFeedbacks[subQ._id].feedback}</p>
+  </div>
+)}
+  </>
                           );
 
                         default:

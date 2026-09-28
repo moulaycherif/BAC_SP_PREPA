@@ -3,6 +3,7 @@
   "dependencies": {
     "@cerebras/cerebras_cloud_sdk": "^1.91.0",
     "jsonwebtoken": "^9.0.3",
+    "mathlive": "^0.110.0",
     "smiles-drawer": "^2.3.0"
   },
   "devDependencies": {
