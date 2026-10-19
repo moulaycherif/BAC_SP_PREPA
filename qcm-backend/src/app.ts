@@ -17,6 +17,7 @@ import uploadRoutes from "./routes/uploadRoutes";
 import astuceRoutes from "./routes/astuceRoutes";
 import bacRoutes from "./routes/bacRoutes";
 import adminExamRouter from "./routes/adminExam";
+import aiRoutes from "./routes/aiRoutes";
 
 dotenv.config();
 
@@ -78,6 +79,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/astuces", astuceRoutes);
 app.use("/api/bac", bacRoutes);
 app.use("/api/admin", adminExamRouter);
+app.use("/api", aiRoutes);
 
 // Fichiers statiques
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));

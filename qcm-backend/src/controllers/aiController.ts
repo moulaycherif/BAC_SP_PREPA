@@ -444,3 +444,129 @@ export const importCorrectedExcel = async (req: Request, res: Response): Promise
       res.status(500).json({ message: "Erreur lors de l'importation de l'Excel corrigé." });
     }
 };
+// ======================================================
+// 🤖 CORRECTION INTELLIGENTE DES SAISIES LIBRES ET LATEX
+// ======================================================
+export const verifyAnswer = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { question, expectedAnswer, userAnswer, context } = req.body;
+
+    // 1. Validation basique
+    if (!userAnswer || String(userAnswer).trim() === "") {
+      res.json({
+        isCorrect: false,
+        score: 0,
+        feedback: "Aucune réponse n'a été saisie."
+      });
+      return;
+    }
+
+    // 2. Préparation du prompt d'évaluation
+    const systemPrompt = `
+Tu es un professeur expert en correction d'examens scientifiques (Mathématiques, Physique, Chimie, SVT).
+Ton rôle est d'évaluer la réponse d'un élève à une question d'exercice.
+
+ÉNONCÉ / CONTEXTE : "${context || 'Non spécifié'}"
+QUESTION : "${question || 'Non spécifiée'}"
+RÉPONSE OFFICIELLE ATTENDUE : "${expectedAnswer || 'Non spécifiée'}"
+RÉPONSE SAISIE PAR L'ÉLÈVE : "${userAnswer}"
+
+DIRECTIVES D'ÉVALUATION ÉQUITABLE ET SOUPLE :
+1. SYNTAXE LATEX / MATHLIVE :
+   - La réponse de l'élève contient souvent du LaTeX généré par un clavier virtuel (ex: \\frac{1}{2}, \\sqrt{x}, x^2, \\int, \\lim_{x\\to 0}). Tu DOIS interpréter correctement ces formules mathématiques.
+2. ÉQUIVALENCES MATHÉMATIQUES & SCIENTIFIQUES :
+   - Accepte TOUTES les formes mathématiquement équivalentes.
+   - Exemples : "0,5", "0.5", "1/2", "\\frac{1}{2}" sont TOUS strictement équivalents et doivent être validés.
+   - Exemples : "2x + 1" et "1 + 2x" sont identiques.
+   - Exemples physiques : "m/s" et "m.s^-1" sont identiques.
+3. SOUPLESSE DE RÉDACTION :
+   - Ignore les variations de majuscules/minuscules, la ponctuation, les fautes d'orthographe légères.
+   - Si la bonne conclusion scientifique ou mathématique est présente, valide la réponse, même si la formulation textuelle diffère légèrement du corrigé.
+
+FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
+{
+  "isCorrect": true ou false,
+  "score": (1 si isCorrect est true, 0 sinon),
+  "feedback": "Un très court message (1 ou 2 phrases max) expliquant poliment et pédagogiquement pourquoi c'est juste ou faux."
+}
+`;
+
+    // 3. Récupération du client IA configuré (OpenAI, Groq, OpenRouter...)
+    const { client: aiClient, model: defaultModel, provider } = getAIConfig();
+    let responseContent: string | undefined = undefined;
+
+    // --- BRANCHE CEREBRAS ---
+    if (provider === 'CEREBRAS') {
+      const cerebrasResponse = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: defaultModel,
+          messages: [
+            { role: "system", content: "Tu es un API JSON qui ne renvoie que du JSON valide." },
+            { role: "user", content: systemPrompt }
+          ],
+          temperature: 0.1,
+          max_tokens: 500
+        })
+      });
+
+      if (cerebrasResponse.ok) {
+        const responseData = await cerebrasResponse.json();
+        responseContent = responseData.choices?.[0]?.message?.content;
+      } else {
+        throw new Error("Erreur avec l'API Cerebras");
+      }
+
+    // --- BRANCHE GROQ, OPENROUTER OU OPENAI ---
+    } else if (aiClient) {
+      const response = await aiClient.chat.completions.create({
+        model: provider === 'GROQ' ? "llama-3.3-70b-versatile" : defaultModel, // Llama 70b est excellent pour Groq sur cette tâche
+        messages: [
+          { role: "system", content: "Tu es un évaluateur JSON strict. Ne renvoie AUCUN texte avant ou après le JSON." },
+          { role: "user", content: systemPrompt }
+        ],
+        response_format: { type: "json_object" },
+        temperature: 0.1, // Basse température pour plus de déterminisme
+        max_tokens: 500
+      });
+      responseContent = response.choices[0]?.message?.content || undefined;
+    }
+
+    if (!responseContent) throw new Error("Réponse vide de l'IA lors de la vérification.");
+
+    // 4. Extraction et sécurisation du JSON retourné
+    const firstBrace = responseContent.indexOf('{');
+    const lastBrace = responseContent.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1) throw new Error("L'IA n'a pas renvoyé un format JSON.");
+    
+    const rawJsonStr = responseContent.substring(firstBrace, lastBrace + 1);
+    
+    let evaluation: any;
+    try {
+      // jsonrepair aide au cas où le LLM a mal formaté le JSON
+      evaluation = JSON.parse(jsonrepair(rawJsonStr));
+    } catch (e) {
+      throw new Error("JSON IA invalide après tentative de réparation.");
+    }
+
+    // 5. Retour des résultats au Frontend
+    res.json({
+      isCorrect: Boolean(evaluation.isCorrect),
+      score: evaluation.isCorrect ? 1 : 0,
+      feedback: evaluation.feedback || (evaluation.isCorrect ? "Réponse exacte !" : "Réponse incorrecte.")
+    });
+
+  } catch (error) {
+    console.error("❌ Erreur dans verifyAnswer (Correction IA) :", error);
+    res.status(500).json({
+      error: "Erreur serveur lors de la vérification par l'IA",
+      isCorrect: false,
+      score: 0,
+      feedback: "⚠️ Impossible de vérifier votre réponse (le serveur IA ne répond pas)."
+    });
+  }
+};
