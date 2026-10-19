@@ -523,17 +523,56 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
 
     // --- BRANCHE GROQ, OPENROUTER OU OPENAI ---
     } else if (aiClient) {
-      const response = await aiClient.chat.completions.create({
-        model: provider === 'GROQ' ? "llama-3.3-70b-versatile" : defaultModel, // Llama 70b est excellent pour Groq sur cette tâche
-        messages: [
-          { role: "system", content: "Tu es un évaluateur JSON strict. Ne renvoie AUCUN texte avant ou après le JSON." },
-          { role: "user", content: systemPrompt }
-        ],
-        response_format: { type: "json_object" },
-        temperature: 0.1, // Basse température pour plus de déterminisme
-        max_tokens: 500
-      });
-      responseContent = response.choices[0]?.message?.content || undefined;
+      if (provider === 'GROQ') {
+        // Liste de secours des modèles Groq valides
+        const groqModels = [
+          defaultModel,
+          "llama-3.1-8b-instant",
+          "llama3-70b-8192",
+          "llama-3.3-70b-versatile",
+          "mixtral-8x7b-32768"
+        ].filter(Boolean);
+
+        let lastError: any = null;
+
+        for (const modelCandidate of groqModels) {
+          try {
+            const response = await aiClient.chat.completions.create({
+              model: modelCandidate,
+              messages: [
+                { role: "system", content: "Tu es un évaluateur JSON strict. Ne renvoie AUCUN texte avant ou après le JSON." },
+                { role: "user", content: systemPrompt }
+              ],
+              response_format: { type: "json_object" },
+              temperature: 0.1,
+              max_tokens: 500
+            });
+
+            responseContent = response.choices[0]?.message?.content || undefined;
+            if (responseContent) break;
+          } catch (err: any) {
+            console.warn(`[GROQ verifyAnswer] Échec avec ${modelCandidate}: ${err.message}`);
+            lastError = err;
+          }
+        }
+
+        if (!responseContent) {
+          throw new Error(`Tous les modèles Groq ont échoué : ${lastError?.message || "Erreur inconnue"}`);
+        }
+      } else {
+        // Mode OpenAI / OpenRouter standard
+        const response = await aiClient.chat.completions.create({
+          model: defaultModel,
+          messages: [
+            { role: "system", content: "Tu es un évaluateur JSON strict. Ne renvoie AUCUN texte avant ou après le JSON." },
+            { role: "user", content: systemPrompt }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.1,
+          max_tokens: 500
+        });
+        responseContent = response.choices[0]?.message?.content || undefined;
+      }
     }
 
     if (!responseContent) throw new Error("Réponse vide de l'IA lors de la vérification.");
@@ -547,7 +586,6 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
     
     let evaluation: any;
     try {
-      // jsonrepair aide au cas où le LLM a mal formaté le JSON
       evaluation = JSON.parse(jsonrepair(rawJsonStr));
     } catch (e) {
       throw new Error("JSON IA invalide après tentative de réparation.");
