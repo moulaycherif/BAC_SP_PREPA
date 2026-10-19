@@ -476,7 +476,7 @@ DIRECTIVES D'ÉVALUATION ÉQUITABLE ET SOUPLE :
    - La réponse de l'élève contient souvent du LaTeX généré par un clavier virtuel (ex: \\frac{1}{2}, \\sqrt{x}, x^2, \\int, \\lim_{x\\to 0}). Tu DOIS interpréter correctement ces formules mathématiques.
 2. ÉQUIVALENCES MATHÉMATIQUES & SCIENTIFIQUES :
    - Accepte TOUTES les formes mathématiquement équivalentes.
-   - Exemples : "0,5", "0.5", "1/2", "\\frac{1}{2}" sont TOUS strictement équivalents et doivent être validés.
+   - Exemples : "0,5", "0.5", "1/2", "\\frac{1}{2}" sont TOUS strictly équivalents et doivent être validés.
    - Exemples : "2x + 1" et "1 + 2x" sont identiques.
    - Exemples physiques : "m/s" et "m.s^-1" sont identiques.
 3. SOUPLESSE DE RÉDACTION :
@@ -524,21 +524,39 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
     // --- BRANCHE GROQ, OPENROUTER OU OPENAI ---
     } else if (aiClient) {
       if (provider === 'GROQ') {
-        // Liste de secours des modèles Groq valides
-        const groqModels = [
-          defaultModel,
-          "llama-3.1-8b-instant",
-          "llama3-70b-8192",
-          "llama-3.3-70b-versatile",
-          "mixtral-8x7b-32768"
-        ].filter(Boolean);
+        let groqCandidateModels: string[] = [];
+
+        // Récupération dynamique de la liste des modèles actifs
+        try {
+          const modelsList = await aiClient.models.list();
+          const availableIds: string[] = modelsList.data.map((m: any) => m.id);
+
+          // Filtrage des modèles non textuels (whisper, guard, vision, etc.)
+          groqCandidateModels = availableIds.filter((id: string) => {
+            const lower = id.toLowerCase();
+            return !lower.includes('whisper') && 
+                   !lower.includes('guard') && 
+                   !lower.includes('embed') && 
+                   !lower.includes('vision') &&
+                   !lower.includes('audio');
+          });
+
+          console.log(`[GROQ verifyAnswer] Modèles actifs détectés (${groqCandidateModels.length}) :`, groqCandidateModels);
+        } catch (e: any) {
+          console.warn(`[GROQ verifyAnswer] Erreur lors de la récupération dynamique (${e.message}).`);
+        }
+
+        if (groqCandidateModels.length === 0) {
+          groqCandidateModels = [defaultModel].filter(Boolean);
+        }
 
         let lastError: any = null;
 
-        for (const modelCandidate of groqModels) {
+        for (const candidateModel of groqCandidateModels) {
           try {
+            console.log(`[GROQ verifyAnswer] Tentative avec le modèle : ${candidateModel}...`);
             const response = await aiClient.chat.completions.create({
-              model: modelCandidate,
+              model: candidateModel,
               messages: [
                 { role: "system", content: "Tu es un évaluateur JSON strict. Ne renvoie AUCUN texte avant ou après le JSON." },
                 { role: "user", content: systemPrompt }
@@ -549,15 +567,18 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
             });
 
             responseContent = response.choices[0]?.message?.content || undefined;
-            if (responseContent) break;
+            if (responseContent) {
+              console.log(`[GROQ verifyAnswer] Succès avec : ${candidateModel}`);
+              break;
+            }
           } catch (err: any) {
-            console.warn(`[GROQ verifyAnswer] Échec avec ${modelCandidate}: ${err.message}`);
+            console.warn(`[GROQ verifyAnswer] Échec avec ${candidateModel}: ${err.message}`);
             lastError = err;
           }
         }
 
         if (!responseContent) {
-          throw new Error(`Tous les modèles Groq ont échoué : ${lastError?.message || "Erreur inconnue"}`);
+          throw new Error(`Tous les modèles Groq actifs ont échoué : ${lastError?.message || "Erreur inconnue"}`);
         }
       } else {
         // Mode OpenAI / OpenRouter standard
