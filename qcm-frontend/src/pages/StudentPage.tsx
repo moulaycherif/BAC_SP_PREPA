@@ -70,17 +70,11 @@ interface MathInputProps {
   disabled?: boolean;
 }
 
-<<<<<<< HEAD
-// On indique à TypeScript que cet élément HTML personnalisé possède une propriété "value"
-interface MathFieldElement extends HTMLElement {
-  value: string;
-=======
 // Interface étendue si nécessaire pour inclure defaultMode et setOptions
 interface MathFieldElement extends HTMLElement {
   value: string;
   defaultMode?: string;
   setOptions?: (options: Record<string, any>) => void;
->>>>>>> 7a6f01cb24f5d984b6c23ae576ab444923946a82
 }
 
 export const MathInput: React.FC<MathInputProps> = ({ value, onChange, disabled }) => {
@@ -118,10 +112,7 @@ export const MathInput: React.FC<MathInputProps> = ({ value, onChange, disabled 
   return (
     <math-field
       ref={mfRef}
-<<<<<<< HEAD
-=======
-      default-mode="text" // 2. Attribut HTML par défaut
->>>>>>> 7a6f01cb24f5d984b6c23ae576ab444923946a82
+      default-mode="text"
       readOnly={disabled || undefined}
       style={{
         width: "100%",
