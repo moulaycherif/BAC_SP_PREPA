@@ -70,9 +70,17 @@ interface MathInputProps {
   disabled?: boolean;
 }
 
+<<<<<<< HEAD
 // On indique à TypeScript que cet élément HTML personnalisé possède une propriété "value"
 interface MathFieldElement extends HTMLElement {
   value: string;
+=======
+// Interface étendue si nécessaire pour inclure defaultMode et setOptions
+interface MathFieldElement extends HTMLElement {
+  value: string;
+  defaultMode?: string;
+  setOptions?: (options: Record<string, any>) => void;
+>>>>>>> 7a6f01cb24f5d984b6c23ae576ab444923946a82
 }
 
 export const MathInput: React.FC<MathInputProps> = ({ value, onChange, disabled }) => {
@@ -82,34 +90,45 @@ export const MathInput: React.FC<MathInputProps> = ({ value, onChange, disabled 
     const mathField = mfRef.current;
     if (!mathField) return;
 
+    // 1. Forcer le mode par défaut en "text" dans les options de MathLive
+    if (typeof mathField.setOptions === "function") {
+      mathField.setOptions({ defaultMode: "text" });
+    } else {
+      mathField.defaultMode = "text";
+    }
+
     const handleInput = (e: Event) => {
       const target = e.target as HTMLInputElement;
       onChange(target.value);
     };
 
-    mathField.addEventListener('input', handleInput);
+    mathField.addEventListener("input", handleInput);
 
     return () => {
-      mathField.removeEventListener('input', handleInput);
+      mathField.removeEventListener("input", handleInput);
     };
   }, [onChange]);
 
   useEffect(() => {
     if (mfRef.current && mfRef.current.value !== value) {
-      mfRef.current.value = value || '';
+      mfRef.current.value = value || "";
     }
   }, [value]);
 
   return (
     <math-field
       ref={mfRef}
+<<<<<<< HEAD
+=======
+      default-mode="text" // 2. Attribut HTML par défaut
+>>>>>>> 7a6f01cb24f5d984b6c23ae576ab444923946a82
       readOnly={disabled || undefined}
       style={{
-        width: '100%',
-        padding: '8px',
-        border: '1px solid #ccc',
-        borderRadius: '8px',
-        display: 'block'
+        width: "100%",
+        padding: "8px",
+        border: "1px solid #ccc",
+        borderRadius: "8px",
+        display: "block",
       }}
     ></math-field>
   );
@@ -864,6 +883,8 @@ export default function StudentPage() {
       console.error("Erreur enregistrement activité:", err); 
     }
   };
+  
+console.log("TEST TEST TEST");
 
   const renderCenterContent = () => {
     if (selectedTipId) {
