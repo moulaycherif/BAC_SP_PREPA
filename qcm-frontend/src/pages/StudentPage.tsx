@@ -884,8 +884,6 @@ export default function StudentPage() {
     }
   };
   
-console.log("TEST TEST TEST");
-
   const renderCenterContent = () => {
     if (selectedTipId) {
       return <StudentAstuceDetail id={selectedTipId} onBack={() => setSelectedTipId(null)} />;

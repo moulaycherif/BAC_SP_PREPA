@@ -630,3 +630,57 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
     });
   }
 };
+export const scanAndCorrect = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const file = req.file;
+    if (!file) {
+      res.status(400).json({ error: "Aucun fichier fourni." });
+      return;
+    }
+
+    // Convertir le fichier (image) en base64 pour l'API Vision
+    const base64Image = file.buffer.toString('base64');
+    const mimeType = file.mimetype;
+    const dataURI = `data:${mimeType};base64,${base64Image}`;
+
+    const systemPrompt = `
+    Tu es un examinateur IA expert. Analyse la copie de l'étudiant (photo/scan).
+    Lis la démarche, identifie les erreurs de calcul ou de raisonnement, et fournis une correction pas à pas.
+    Rends ton résultat STRICTEMENT au format JSON : 
+    {
+      "feedback": "Commentaire global",
+      "score": 15,
+      "details": ["erreur 1", "point positif 1"]
+    }`;
+
+    const { client: aiClient } = getAIConfig();
+    
+    if (!aiClient) {
+      throw new Error("Client IA non disponible.");
+    }
+
+    const response = await aiClient.chat.completions.create({
+      model: "gpt-4o-mini", // Modèle compatible Vision
+      messages: [
+        { role: "system", content: systemPrompt },
+        { 
+          role: "user", 
+          content: [
+            { type: "text", text: "Analyse cette copie :" },
+            { type: "image_url", image_url: { url: dataURI } }
+          ] 
+        }
+      ],
+      response_format: { type: "json_object" }
+    });
+
+    const content = response.choices[0]?.message?.content;
+    if (!content) throw new Error("Réponse vide");
+
+    res.json(JSON.parse(content));
+
+  } catch (error) {
+    console.error("Erreur Examinateur IA :", error);
+    res.status(500).json({ error: "Erreur lors de l'analyse." });
+  }
+};
