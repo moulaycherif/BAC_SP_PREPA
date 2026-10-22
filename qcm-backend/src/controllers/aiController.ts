@@ -630,57 +630,76 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
     });
   }
 };
+// ======================================================
+// 📸 EXAMINATEUR IA (Scan & Correct)
+// ======================================================
 export const scanAndCorrect = async (req: Request, res: Response): Promise<void> => {
   try {
     const file = req.file;
+    const { questionText, correctAnswer, subject } = req.body;
+
     if (!file) {
-      res.status(400).json({ error: "Aucun fichier fourni." });
+      res.status(400).json({ error: "Aucun fichier n'a été fourni." });
       return;
     }
 
-    // Convertir le fichier (image) en base64 pour l'API Vision
+    // Conversion de l'image en base64 pour l'API
     const base64Image = file.buffer.toString('base64');
     const mimeType = file.mimetype;
-    const dataURI = `data:${mimeType};base64,${base64Image}`;
+    const dataUri = `data:${mimeType};base64,${base64Image}`;
 
     const systemPrompt = `
-    Tu es un examinateur IA expert. Analyse la copie de l'étudiant (photo/scan).
-    Lis la démarche, identifie les erreurs de calcul ou de raisonnement, et fournis une correction pas à pas.
-    Rends ton résultat STRICTEMENT au format JSON : 
-    {
-      "feedback": "Commentaire global",
-      "score": 15,
-      "details": ["erreur 1", "point positif 1"]
-    }`;
+Tu es un professeur expert en ${subject || "Sciences"}. 
+Analyse le scan de la démarche manuscrite de l'étudiant.
 
-    const { client: aiClient } = getAIConfig();
-    
+QUESTION POSÉE : "${questionText || "Non spécifiée"}"
+RÉPONSE ATTENDUE : "${correctAnswer || "Non spécifiée"}"
+
+Analyse pas à pas l'image, repère les erreurs de calcul ou de logique, et fournis une explication claire.
+Renvoie STRICTEMENT un objet JSON avec cette structure (n'ajoute aucun texte autour) :
+{
+  "feedback": "Ton explication pédagogique détaillée ici."
+}
+`;
+
+    const { client: aiClient, model: defaultModel } = getAIConfig();
+
     if (!aiClient) {
       throw new Error("Client IA non disponible.");
     }
 
     const response = await aiClient.chat.completions.create({
-      model: "gpt-4o-mini", // Modèle compatible Vision
+      model: "gpt-4o-mini", // Utilisation d'un modèle multimodal compatible vision
       messages: [
-        { role: "system", content: systemPrompt },
+        { role: "system", content: "Tu es un évaluateur JSON strict renvoyant uniquement { \"feedback\": \"...\" }." },
         { 
           role: "user", 
           content: [
-            { type: "text", text: "Analyse cette copie :" },
-            { type: "image_url", image_url: { url: dataURI } }
+            { type: "text", text: systemPrompt },
+            { type: "image_url", image_url: { url: dataUri } }
           ] 
         }
       ],
-      response_format: { type: "json_object" }
+      response_format: { type: "json_object" },
+      max_tokens: 1500,
+      temperature: 0.2
     });
 
-    const content = response.choices[0]?.message?.content;
-    if (!content) throw new Error("Réponse vide");
+    const responseContent = response.choices[0]?.message?.content;
+    if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
-    res.json(JSON.parse(content));
+    const jsonResult = JSON.parse(responseContent);
 
-  } catch (error) {
-    console.error("Erreur Examinateur IA :", error);
-    res.status(500).json({ error: "Erreur lors de l'analyse." });
+    // Le frontend s'attend à recevoir "report" ou "feedback" (setReport(response.data.report || response.data.feedback))
+    res.json({
+      feedback: jsonResult.feedback || "Analyse terminée, mais aucun retour généré."
+    });
+
+  } catch (error: any) {
+    console.error("❌ Erreur Examinateur IA (scanAndCorrect) :", error);
+    res.status(500).json({ 
+      error: "Erreur lors de l'analyse par l'Examinateur IA",
+      feedback: "Une erreur est survenue lors du traitement de l'image."
+    });
   }
 };
