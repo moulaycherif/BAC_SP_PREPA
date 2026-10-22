@@ -26,6 +26,7 @@ interface IAItemResponse {
 interface IAGeneratedData {
   items: IAItemResponse[];
 }
+console.log("PASSAGE PAR AICONTROLLER...");
 
 // Configuration des clients IA
 const getAIConfig = (): { client: OpenAI | null; model: string; provider: string } => {
