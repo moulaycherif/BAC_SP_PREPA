@@ -17,13 +17,10 @@ import PdfViewer from "../components/PdfViewer";
 import ExerciseScanCorrect from "../components/ExerciseScanCorrect";
 import "mathlive";
 
-// --- Déclaration TypeScript pour reconnaître l'élément personnalisé <math-field> ---
-declare global {
+declare module "react" {
   namespace JSX {
     interface IntrinsicElements {
-      'math-field': React.DetailedHTMLProps<React.HTMLAttributes<HTMLElement>, HTMLElement> & {
-        'read-only'?: string;
-      };
+      "math-field": any; // Force TypeScript à accepter la balise avec n'importe quelles props
     }
   }
 }
@@ -73,8 +70,13 @@ interface MathInputProps {
   disabled?: boolean;
 }
 
+// On indique à TypeScript que cet élément HTML personnalisé possède une propriété "value"
+interface MathFieldElement extends HTMLElement {
+  value: string;
+}
+
 export const MathInput: React.FC<MathInputProps> = ({ value, onChange, disabled }) => {
-  const mfRef = useRef<any>(null);
+  const mfRef = useRef<MathFieldElement>(null);
 
   useEffect(() => {
     const mathField = mfRef.current;
@@ -101,7 +103,7 @@ export const MathInput: React.FC<MathInputProps> = ({ value, onChange, disabled 
   return (
     <math-field
       ref={mfRef}
-      read-only={disabled ? "true" : undefined}
+      readOnly={disabled || undefined}
       style={{
         width: '100%',
         padding: '8px',
@@ -109,7 +111,7 @@ export const MathInput: React.FC<MathInputProps> = ({ value, onChange, disabled 
         borderRadius: '8px',
         display: 'block'
       }}
-    />
+    ></math-field>
   );
 };
 
@@ -1924,9 +1926,24 @@ export default function StudentPage() {
             {!exerciseSubmitted ? (
               <button
                 onClick={handleExerciseSubmitAi}
-                className="px-8 py-3.5 bg-green-600 hover:bg-green-700 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
+                disabled={isEvaluating}
+                className={`px-8 py-3.5 text-white text-lg font-bold rounded-2xl shadow-lg transition transform flex items-center gap-2 ${
+                  isEvaluating 
+                    ? "bg-gray-400 cursor-not-allowed" 
+                    : "bg-green-600 hover:bg-green-700 hover:scale-102"
+                }`}
               >
-                {isExercice ? "🤖 Valider mes réponses" : "✅ Valider ce QCM"}
+                {isEvaluating ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    🤖 Évaluation en cours...
+                  </>
+                ) : (
+                  isExercice ? "🤖 Valider mes réponses (Correction IA)" : "✅ Valider ce QCM"
+                )}
               </button>
             ) : (
               <button
