@@ -36,7 +36,7 @@ router.post("/scan-correct",
         console.error("❌ [DEBUG 3 - ERREUR MULTER] :", err.message);
         return res.status(500).json({ error: "Erreur lors du traitement du fichier", details: err.message });
       }
-      console.log("🚀 [DEBUG 3] Upload réussi ! Le fichier est lu.");
+      console.log("🚀 [DEBUG 3] Upload réussi ! Le fichier est bien lu.");
       next();
     });
   }, 
