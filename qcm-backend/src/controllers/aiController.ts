@@ -610,8 +610,6 @@ Renvoie STRICTEMENT un objet JSON avec cette structure : { "feedback": "Ton expl
 `;
 
     // 2. Forcer un fournisseur compatible avec la Vision (OpenAI ou OpenRouter)
-    import { OpenAI } from "openai"; // Assurez-vous que cet import est en haut du fichier
-    
     let visionClient;
     let visionModel;
 
