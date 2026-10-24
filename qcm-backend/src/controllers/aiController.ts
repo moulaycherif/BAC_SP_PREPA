@@ -20,15 +20,12 @@ interface IAItemResponse {
   title?: string;
   content?: string;
 }
-
 interface IAGeneratedData {
   items: IAItemResponse[];
 }
-
 // Configuration des clients IA
 const getAIConfig = (): { client: OpenAI | null; model: string; provider: string } => {
 const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
-
   switch (provider) {
     case 'CEREBRAS':
       return {
@@ -38,19 +35,13 @@ const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
       };
     case 'GROQ':
       return {
-        client: new OpenAI({ 
-          apiKey: process.env.GROQ_API_KEY, 
-          baseURL: "https://api.groq.com/openai/v1" 
-        }),
+        client: new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: "https://api.groq.com/openai/v1" }),
         model: "llama-3.3-70b-versatile",
         provider: 'GROQ'
       };
     case 'OPENROUTER':
       return {
-        client: new OpenAI({ 
-          apiKey: process.env.OPENROUTER_API_KEY, 
-          baseURL: "https://openrouter.ai/api/v1" 
-        }),
+        client: new OpenAI({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: "https://openrouter.ai/api/v1" }),
         model: "meta-llama/llama-3.1-8b-instruct:free",
         provider: 'OPENROUTER'
       };
@@ -98,8 +89,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     2. SYMBOLES EXACTS : Utilise les vraies commandes LaTeX (\\mathbb{R}, \\varepsilon, \\delta, \\Omega).
     3. DOUBLE ANTISLASH OBLIGATOIRE : Tu DOIS écrire 2 antislashs pour CHAQUE commande (\\frac, \\lim).
     RÈGLE DE STRUCTURE : Le champ "options" doit être un tableau de simples chaînes de caractères.
-    IMPORTANT : Ta réponse DOIT être uniquement un objet JSON valide, sans texte additionnel.
-    `;
+    IMPORTANT : Ta réponse DOIT être uniquement un objet JSON valide, sans texte additionnel.`;
 
     let systemPrompt = "";
     if (contentType === "qcm") {
@@ -149,7 +139,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
         const modelsResponse = await fetch("https://api.cerebras.ai/v1/models", {
           headers: { "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}` }
         });
-        
         if (modelsResponse.ok) {
           const modelsData = await modelsResponse.json();
           const availableModels = modelsData.data?.map((m: any) => m.id) || [];
@@ -178,7 +167,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
           max_tokens: 2500
         })
       });
-
       if (!cerebrasResponse.ok) {
         const errorText = await cerebrasResponse.text();
         throw new Error(`Erreur API Cerebras HTTP ${cerebrasResponse.status}: ${errorText}`);
@@ -186,30 +174,21 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 
       const responseData = await cerebrasResponse.json();
       responseContent = responseData.choices?.[0]?.message?.content;
-
     // --- BRANCHE GROQ, OPENROUTER OU OPENAI ---
     } else if (aiClient) {
-
       if (provider === 'GROQ') {
         let groqCandidateModels: string[] = [];
-
         // Récupération dynamique et priorisation intelligente des modèles actifs
         try {
           console.log("[GROQ] Récupération dynamique de la liste des modèles actifs...");
           const modelsList = await aiClient.models.list();
           const availableIds: string[] = modelsList.data.map((m: any) => m.id);
-
           // 1. Filtrer les modèles non adaptés (audio, TTS, guard, vision, embeddings)
           const filtered = availableIds.filter((id: string) => {
             const lower = id.toLowerCase();
-            return !lower.includes('whisper') && 
-                   !lower.includes('guard') && 
-                   !lower.includes('embed') && 
-                   !lower.includes('vision') &&
-                   !lower.includes('orpheus') &&
-                   !lower.includes('audio');
+            return !lower.includes('whisper') && !lower.includes('guard') && !lower.includes('embed') && 
+                   !lower.includes('vision') && !lower.includes('orpheus') && !lower.includes('audio');
           });
-
           // 2. Prioriser les modèles LLM texte les plus performants et stables
           const priorityKeywords = [
             'gpt-oss-120b',
@@ -230,7 +209,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
         } catch (e: any) {
           console.warn(`[GROQ] Impossible de récupérer la liste dynamique (${e.message}). Utilisation de la liste de secours.`);
         }
-
         // Liste de secours à jour au cas où l'API de liste échoue
         if (groqCandidateModels.length === 0) {
           groqCandidateModels = [
@@ -241,9 +219,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
             "groq/compound-mini"
           ];
         }
-
         let lastError: any = null;
-
         for (const candidateModel of groqCandidateModels) {
           try {
             console.log(`[GROQ] Tentative de génération avec le modèle : ${candidateModel}...`);
@@ -257,7 +233,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
               temperature: 0.2,
               max_tokens: 2500
             });
-
             responseContent = response.choices[0]?.message?.content || undefined;
             if (responseContent) {
               console.log(`[GROQ] Succès avec le modèle : ${candidateModel}`);
@@ -268,11 +243,9 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
             lastError = err;
           }
         }
-
         if (!responseContent) {
           throw new Error(`Tous les modèles Groq ont échoué. Dernière erreur : ${lastError?.message || "Erreur inconnue"}`);
         }
-
       } else {
         // Mode OpenAI / OpenRouter standard
         const response = await aiClient.chat.completions.create({
@@ -288,15 +261,11 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
         responseContent = response.choices[0]?.message?.content || undefined;
       }
     }
-
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
-
     const firstBrace = responseContent.indexOf('{');
     const lastBrace = responseContent.lastIndexOf('}');
-    if (firstBrace === -1 || lastBrace === -1) throw new Error("L'IA n'a pas renvoyé de JSON.");
-    
+    if (firstBrace === -1 || lastBrace === -1) throw new Error("L'IA n'a pas renvoyé de JSON.");    
     const rawJsonStr = responseContent.substring(firstBrace, lastBrace + 1);
-
     let generatedData: IAGeneratedData;
     try {
       const repairedJson = jsonrepair(rawJsonStr); 
@@ -304,15 +273,12 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     } catch (parseError) {
       throw new Error("Le format renvoyé par l'IA est irrécupérable.");
     }
-
     if (!generatedData || !Array.isArray(generatedData.items)) {
       throw new Error("La structure JSON retournée par l'IA ne contient pas le tableau 'items' attendu.");
     }
-
     const isControle = contentType === "controle";
     const finalExamName = isControle ? "Contrôle IA" : (examId || "Support de cours IA");
     const finalTypeEpreuve = isControle ? "blanc" : "ia"; 
-
     const excelRows = generatedData.items.map((item: IAItemResponse) => {
       // 1. Logique pour le nouveau format plat (Chapitres, Leçons)
       if (contentType === "cours_complet") {
@@ -324,11 +290,9 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
           Contenu: item.content || ""
         };
       }
-
       // 2. Logique existante pour les QCM et autres formats
       let rawOptions = item.options || [];
-      let cleanOptions = Array.isArray(rawOptions) ? rawOptions.map(String) : [];
-      
+      let cleanOptions = Array.isArray(rawOptions) ? rawOptions.map(String) : [];      
       let cleanReponseCorrecte = "";
       if (cleanOptions.length > 0) {
         const idx = typeof item.correctAnswerIndex === 'number' ? item.correctAnswerIndex : 0;
@@ -336,7 +300,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       } else if (item.reponseCorrecte) {
         cleanReponseCorrecte = String(item.reponseCorrecte);
       }
-
       return {
         Enonce: item.enonce || "",
         Question: item.question || "",
@@ -351,16 +314,13 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
         NumConcoursBlanc: numeroConcoursBlanc || ""
       };
     });
-
     const worksheet = xlsx.utils.json_to_sheet(excelRows);
     const workbook = xlsx.utils.book_new();
     xlsx.utils.book_append_sheet(workbook, worksheet, "Generations_IA");
     const excelBuffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-
     res.setHeader('Content-Disposition', `attachment; filename="Generations_IA_${contentType}.xlsx"`);
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.send(excelBuffer);
-
   } catch (error) {
     console.error("Erreur IA:", error);
     if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); 
@@ -375,7 +335,6 @@ export const importCorrectedExcel = async (req: Request, res: Response): Promise
         res.status(400).json({ message: "Aucun fichier Excel fourni." });
         return;
       }
-  
       let buffer: Buffer;
       if (file.buffer) {
         buffer = file.buffer;
@@ -384,37 +343,31 @@ export const importCorrectedExcel = async (req: Request, res: Response): Promise
       } else {
         res.status(400).json({ message: "Fichier illisible." });
         return;
-      }
-  
+      }  
       const workbook = xlsx.read(buffer, { type: 'buffer' });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rawData: any[] = xlsx.utils.sheet_to_json(worksheet);
-  
+      const rawData: any[] = xlsx.utils.sheet_to_json(worksheet);  
       if (rawData.length === 0) {
         res.status(400).json({ message: "Le fichier Excel est vide." });
         return;
-      }
-  
+      }  
       const itemsToInsert = rawData.map(row => {
         const type = (row.Type || "qcm").toLowerCase();
         const optionsArray = type === 'exercise' 
           ? [] 
-          : (row.Options ? String(row.Options).split(" || ").map(opt => opt.trim()).filter(opt => opt !== "") : []);
-  
+          : (row.Options ? String(row.Options).split(" || ").map(opt => opt.trim()).filter(opt => opt !== "") : []);  
         return {
           // Champs classiques QCM/Exercices
           enonce: row.Enonce || null, 
           texte: row.Question || null,
           options: optionsArray,      
           reponseCorrecte: row.ReponseCorrecte ? String(row.ReponseCorrecte) : null,
-          explication: row.Explication || "",
-          
+          explication: row.Explication || "",          
           // Nouveaux champs pour "Cours Plat"
           course_id: row.ID || null,
           parent_id: row.Parent_ID || null,
           title: row.Titre || null,
-          content: row.Contenu || null,
-          
+          content: row.Contenu || null,          
           // Métadonnées
           type: type, // "chapter", "lesson", "quiz_question", "qcm", "exercise"...
           subject: row.Sujet || null,
@@ -427,9 +380,7 @@ export const importCorrectedExcel = async (req: Request, res: Response): Promise
       });
   
       await Question.insertMany(itemsToInsert);
-  
       if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
-  
       res.status(200).json({ message: "Excel corrigé importé avec succès !", count: itemsToInsert.length });
     } catch (error) {
       console.error("Erreur Import Excel IA :", error);
@@ -635,8 +586,18 @@ export const scanAndCorrect = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // Convertir l'image en base64 pour l'API Vision
-    const base64Image = file.buffer.toString('base64');
+    // 1. Lecture ultra-sécurisée du fichier (qu'il soit en mémoire ou sur le disque)
+    let base64Image = "";
+    if (file.buffer) {
+      base64Image = file.buffer.toString('base64');
+    } else if (file.path) {
+      base64Image = fs.readFileSync(file.path).toString('base64');
+      // Optionnel: nettoyer le fichier temporaire
+      fs.unlinkSync(file.path);
+    } else {
+      throw new Error("Impossible de lire le contenu du fichier uploadé.");
+    }
+
     const mimeType = file.mimetype || "image/jpeg";
     const dataUri = `data:${mimeType};base64,${base64Image}`;
 
@@ -654,13 +615,24 @@ Renvoie STRICTEMENT un objet JSON avec cette structure :
 }
 `;
 
-    // ✅ CORRECTION ICI : Instanciation correcte du client OpenAI
-    const aiClient = new OpenAI({
-      apiKey: process.env.OPENAI_API_KEY // Assurez-vous que cette variable est bien dans votre .env
-    });
+    // 2. Utilisation de votre configuration dynamique existante
+    const { client: aiClient, provider } = getAIConfig();
 
+    if (!aiClient) {
+      throw new Error("Le client IA configuré ne supporte pas l'analyse d'images (Cerebras, etc.).");
+    }
+
+    // 3. Sélection dynamique d'un modèle "Vision" selon le provider actif
+    let visionModel = "gpt-4o-mini"; // Modèle Vision par défaut (OpenAI)
+    if (provider === 'GROQ') {
+      visionModel = "llama-3.2-11b-vision-preview"; // Modèle Vision officiel de Groq
+    } else if (provider === 'OPENROUTER') {
+      visionModel = "meta-llama/llama-3.2-11b-vision-instruct:free"; // Modèle Vision gratuit sur OpenRouter
+    }
+
+    // 4. Appel à l'API
     const response = await aiClient.chat.completions.create({
-      model: "gpt-4o-mini", // Modèle compatible vision
+      model: visionModel,
       messages: [
         { role: "system", content: "Tu es un évaluateur JSON strict renvoyant uniquement { \"feedback\": \"...\" }." },
         { 
@@ -678,7 +650,13 @@ Renvoie STRICTEMENT un objet JSON avec cette structure :
     const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
-    const jsonResult = JSON.parse(responseContent);
+    // Sécurisation de la lecture du JSON
+    let jsonResult;
+    try {
+      jsonResult = JSON.parse(jsonrepair(responseContent)); // jsonrepair est déjà importé en haut de votre fichier
+    } catch (e) {
+      jsonResult = JSON.parse(responseContent);
+    }
 
     res.json({
       feedback: jsonResult.feedback || "Analyse terminée."
