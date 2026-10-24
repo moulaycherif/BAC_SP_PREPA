@@ -574,7 +574,7 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
   }
 };
 // ======================================================
-// 📸 EXAMINATEUR IA (Scan & Correct) - Dynamique
+// 📸 EXAMINATEUR IA (Scan & Correct) - Force Vision Provider
 // ======================================================
 export const scanAndCorrect = async (req: Request, res: Response): Promise<void> => {
   console.log("🚀 [DEBUG] Requête reçue sur scanAndCorrect");
@@ -595,8 +595,6 @@ export const scanAndCorrect = async (req: Request, res: Response): Promise<void>
     } else if (file.path) {
       base64Image = fs.readFileSync(file.path).toString('base64');
       fs.unlinkSync(file.path);
-    } else {
-      throw new Error("Impossible de lire le contenu du fichier uploadé.");
     }
 
     const mimeType = file.mimetype || "image/jpeg";
@@ -605,56 +603,35 @@ export const scanAndCorrect = async (req: Request, res: Response): Promise<void>
     const systemPrompt = `
 Tu es un examinateur expert en ${subject || "Sciences"}. 
 Analyse le scan de la démarche manuscrite de l'étudiant.
-
 QUESTION : "${questionText || "Non spécifiée"}"
 RÉPONSE ATTENDUE : "${correctAnswer || "Non spécifiée"}"
-
 Analyse pas à pas l'image, repère les erreurs de calcul ou de logique, et fournis une explication claire.
-Renvoie STRICTEMENT un objet JSON avec cette structure :
-{
-  "feedback": "Ton explication pédagogique détaillée ici."
-}
+Renvoie STRICTEMENT un objet JSON avec cette structure : { "feedback": "Ton explication pédagogique détaillée ici." }
 `;
 
-    const { client: aiClient, provider } = getAIConfig();
+    // 2. Forcer un fournisseur compatible avec la Vision (OpenAI ou OpenRouter)
+    import { OpenAI } from "openai"; // Assurez-vous que cet import est en haut du fichier
+    
+    let visionClient;
+    let visionModel;
 
-    if (!aiClient) {
-      throw new Error("Le client IA n'est pas configuré.");
+    if (process.env.OPENAI_API_KEY) {
+      console.log("🚀 [DEBUG] Utilisation d'OpenAI pour la Vision");
+      visionClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      visionModel = "gpt-4o-mini";
+    } else if (process.env.OPENROUTER_API_KEY) {
+      console.log("🚀 [DEBUG] Utilisation d'OpenRouter pour la Vision");
+      visionClient = new OpenAI({ 
+        baseURL: "https://openrouter.ai/api/v1",
+        apiKey: process.env.OPENROUTER_API_KEY 
+      });
+      visionModel = "meta-llama/llama-3.2-11b-vision-instruct:free";
+    } else {
+      throw new Error("Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images.");
     }
 
-    // 2. Sélection dynamique du modèle
-    let visionModel = "gpt-4o-mini"; // Fallback pour OpenAI
-
-    if (provider === 'GROQ' || provider === 'OPENROUTER') {
-      try {
-        // Récupération en temps réel des modèles disponibles
-        const modelsResponse = await aiClient.models.list();
-        const availableModels = modelsResponse.data;
-        
-        // Affichons la liste complète pour le debug
-        console.log("🚀 [DEBUG] Liste de tous les modèles disponibles :", availableModels.map((m: any) => m.id));
-        
-        // On filtre pour trouver un modèle capable de lire des images
-        const visionModels = availableModels
-          .map((m: any) => m.id)
-          .filter((id: string) => id.toLowerCase().includes('vision') || id.toLowerCase().includes('scout'));
-
-        if (visionModels.length > 0) {
-          visionModel = visionModels[0];
-          console.log(`🚀 [DEBUG] Modèle Vision dynamique sélectionné : ${visionModel}`);
-        } else {
-          console.warn("⚠️ [DEBUG] Aucun modèle vision trouvé dynamiquement. Utilisation du fallback officiel.");
-          // NOUVEAU FALLBACK : La version "instruct" de production (et non "preview")
-          visionModel = provider === 'GROQ' ? "llama-3.2-11b-vision-instruct" : "meta-llama/llama-3.2-11b-vision-instruct:free";
-        }
-      } catch (error) {
-        console.error("❌ [DEBUG] Erreur lors de la récupération des modèles :", error);
-        visionModel = provider === 'GROQ' ? "llama-3.2-11b-vision-instruct" : "meta-llama/llama-3.2-11b-vision-instruct:free";
-      }
-    }
-
-    // 3. Appel à l'API avec le modèle sélectionné
-    const response = await aiClient.chat.completions.create({
+    // 3. Appel à l'API Vision
+    const response = await visionClient.chat.completions.create({
       model: visionModel,
       messages: [
         { role: "system", content: "Tu es un évaluateur JSON strict renvoyant uniquement { \"feedback\": \"...\" }." },
@@ -680,15 +657,10 @@ Renvoie STRICTEMENT un objet JSON avec cette structure :
       jsonResult = JSON.parse(responseContent);
     }
 
-    res.json({
-      feedback: jsonResult.feedback || "Analyse terminée."
-    });
+    res.json({ feedback: jsonResult.feedback || "Analyse terminée." });
 
   } catch (error: any) {
     console.error("❌ Erreur Examinateur IA (scanAndCorrect) :", error);
-    res.status(500).json({ 
-      error: "Erreur lors de l'analyse par l'Examinateur IA",
-      details: error.message
-    });
+    res.status(500).json({ error: "Erreur d'analyse Vision", details: error.message });
   }
 };
