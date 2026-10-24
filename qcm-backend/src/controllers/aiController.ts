@@ -625,10 +625,10 @@ Renvoie STRICTEMENT un objet JSON avec cette structure : { "feedback": "Ton expl
       });
       
       // Modèle gratuit 1 : Gemini 2.0 Flash Lite (Recommandé pour la vision)
-      visionModel = "google/gemini-2.0-flash-lite-preview-02-05:free";
+      // visionModel = "google/gemini-2.0-flash-lite-preview-02-05:free";
       
       // En cas d'indisponibilité du premier, décommentez la ligne ci-dessous et commentez celle du haut :
-      // visionModel = "qwen/qwen-2-vl-72b-instruct:free";
+       visionModel = "qwen/qwen-2-vl-72b-instruct:free";
       
     } else {
       throw new Error("Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images.");
