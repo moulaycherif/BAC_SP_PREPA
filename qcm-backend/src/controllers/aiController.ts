@@ -14,8 +14,6 @@ interface IAItemResponse {
   correctAnswerIndex?: number;
   reponseCorrecte?: string | number;
   explication?: string;
-  
-  // Nouvelles propriétés pour l'architecture "Cours Plat"
   id?: string;
   parent_id?: string | null;
   type?: string;
@@ -26,11 +24,10 @@ interface IAItemResponse {
 interface IAGeneratedData {
   items: IAItemResponse[];
 }
-console.log("PASSAGE PAR AICONTROLLER...");
 
 // Configuration des clients IA
 const getAIConfig = (): { client: OpenAI | null; model: string; provider: string } => {
-  const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
+const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
 
   switch (provider) {
     case 'CEREBRAS':
@@ -72,12 +69,10 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     const file = req.file;
     const { examId, subject, chapter, typeEpreuve, numeroConcoursBlanc } = req.body;
     const contentType = req.body.type || "qcm"; 
-
     if (!file) {
       res.status(400).json({ message: "Aucun fichier PDF fourni." });
       return;
     }
-
     let dataBuffer: Buffer;
     if (file.buffer) {
       dataBuffer = file.buffer;
@@ -91,16 +86,13 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
 
     const pdfData = await pdfParse(dataBuffer);
     const extractedText = pdfData.text;
-
     if (!extractedText || extractedText.trim() === "") {
        res.status(400).json({ message: "Le PDF est vide ou non lisible." });
        return;
     }
-
     const baseMathInstruction = `
     NIVEAU CIBLE : Baccalauréat Sciences Physiques (Terminale Scientifique).
     Le contenu, le vocabulaire, la rigueur scientifique et les calculs doivent correspondre EXACTEMENT aux attentes d'une épreuve de Physique-Chimie du Bac.
-
     RÈGLES VITALES DE FORMATAGE (POUR JSON + KATEX) :
     1. MATHÉMATIQUES COMPLETES : Encadre TOUJOURS la formule entière dans un seul bloc $.
     2. SYMBOLES EXACTS : Utilise les vraies commandes LaTeX (\\mathbb{R}, \\varepsilon, \\delta, \\Omega).
@@ -639,37 +631,36 @@ export const scanAndCorrect = async (req: Request, res: Response): Promise<void>
     const { questionText, correctAnswer, subject } = req.body;
 
     if (!file) {
-      res.status(400).json({ error: "Aucun fichier n'a été fourni." });
+      res.status(400).json({ error: "Aucun fichier (image/PDF) n'a été fourni." });
       return;
     }
 
-    // Conversion de l'image en base64 pour l'API
+    // Convertir l'image en base64 pour l'API Vision
     const base64Image = file.buffer.toString('base64');
-    const mimeType = file.mimetype;
+    const mimeType = file.mimetype || "image/jpeg";
     const dataUri = `data:${mimeType};base64,${base64Image}`;
 
     const systemPrompt = `
-Tu es un professeur expert en ${subject || "Sciences"}. 
+Tu es un examinateur expert en ${subject || "Sciences"}. 
 Analyse le scan de la démarche manuscrite de l'étudiant.
 
-QUESTION POSÉE : "${questionText || "Non spécifiée"}"
+QUESTION : "${questionText || "Non spécifiée"}"
 RÉPONSE ATTENDUE : "${correctAnswer || "Non spécifiée"}"
 
 Analyse pas à pas l'image, repère les erreurs de calcul ou de logique, et fournis une explication claire.
-Renvoie STRICTEMENT un objet JSON avec cette structure (n'ajoute aucun texte autour) :
+Renvoie STRICTEMENT un objet JSON avec cette structure :
 {
   "feedback": "Ton explication pédagogique détaillée ici."
 }
 `;
 
-    const { client: aiClient, model: defaultModel } = getAIConfig();
-
-    if (!aiClient) {
-      throw new Error("Client IA non disponible.");
-    }
+    // ✅ CORRECTION ICI : Instanciation correcte du client OpenAI
+    const aiClient = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY // Assurez-vous que cette variable est bien dans votre .env
+    });
 
     const response = await aiClient.chat.completions.create({
-      model: "gpt-4o-mini", // Utilisation d'un modèle multimodal compatible vision
+      model: "gpt-4o-mini", // Modèle compatible vision
       messages: [
         { role: "system", content: "Tu es un évaluateur JSON strict renvoyant uniquement { \"feedback\": \"...\" }." },
         { 
@@ -681,8 +672,7 @@ Renvoie STRICTEMENT un objet JSON avec cette structure (n'ajoute aucun texte aut
         }
       ],
       response_format: { type: "json_object" },
-      max_tokens: 1500,
-      temperature: 0.2
+      max_tokens: 1500
     });
 
     const responseContent = response.choices[0]?.message?.content;
@@ -690,16 +680,15 @@ Renvoie STRICTEMENT un objet JSON avec cette structure (n'ajoute aucun texte aut
 
     const jsonResult = JSON.parse(responseContent);
 
-    // Le frontend s'attend à recevoir "report" ou "feedback" (setReport(response.data.report || response.data.feedback))
     res.json({
-      feedback: jsonResult.feedback || "Analyse terminée, mais aucun retour généré."
+      feedback: jsonResult.feedback || "Analyse terminée."
     });
 
   } catch (error: any) {
     console.error("❌ Erreur Examinateur IA (scanAndCorrect) :", error);
     res.status(500).json({ 
       error: "Erreur lors de l'analyse par l'Examinateur IA",
-      feedback: "Une erreur est survenue lors du traitement de l'image."
+      details: error.message
     });
   }
 };

@@ -20,16 +20,12 @@ import adminExamRouter from "./routes/adminExam";
 import aiRoutes from "./routes/aiRoutes";
 
 dotenv.config();
-
-console.log("app.ts (back)")
-
 const app = express();
 
 // 📁 Création des dossiers de stockage si inexistants
 if (!fs.existsSync("uploads")) {
   fs.mkdirSync("uploads");
 }
-
 if (!fs.existsSync("uploads/resumes")) {
   fs.mkdirSync("uploads/resumes", { recursive: true });
 }
@@ -45,8 +41,7 @@ const allowedOrigins = [
 app.use(cors({
   origin: function (origin, callback) {
     // Autorise les requêtes sans origine (Postman, etc.)
-    if (!origin) return callback(null, true);
-    
+    if (!origin) return callback(null, true);   
     // Vérifie si l'origine est dans notre liste
     if (allowedOrigins.indexOf(origin) === -1) {
       const msg = 'Bloqué par la politique CORS';
@@ -79,7 +74,7 @@ app.use("/api/upload", uploadRoutes);
 app.use("/api/astuces", astuceRoutes);
 app.use("/api/bac", bacRoutes);
 app.use("/api/admin", adminExamRouter);
-app.use("/api", aiRoutes);
+app.use("/api/ai", aiRoutes);
 
 // Fichiers statiques
 app.use("/uploads", express.static(path.join(__dirname, "../uploads")));
