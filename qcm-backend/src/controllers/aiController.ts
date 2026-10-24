@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import fs from "fs";
+import fs from 'fs';
 import pdfParse from "pdf-parse";
 import OpenAI from "openai";
 import Question from "../models/Question";
@@ -577,6 +577,8 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
 // 📸 EXAMINATEUR IA (Scan & Correct)
 // ======================================================
 export const scanAndCorrect = async (req: Request, res: Response): Promise<void> => {
+  console.log("🚀 [DEBUG] Requête reçue sur scanAndCorrect");
+  console.log("🚀 [DEBUG] Body:", req.body);
   try {
     const file = req.file;
     const { questionText, correctAnswer, subject } = req.body;
