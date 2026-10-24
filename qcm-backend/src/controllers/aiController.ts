@@ -617,14 +617,19 @@ Renvoie STRICTEMENT un objet JSON avec cette structure : { "feedback": "Ton expl
       console.log("🚀 [DEBUG] Utilisation d'OpenAI pour la Vision");
       visionClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       visionModel = "gpt-4o-mini";
-   } else if (process.env.OPENROUTER_API_KEY) {
-      console.log("🚀 [DEBUG] Utilisation d'OpenRouter pour la Vision");
+  } else if (process.env.OPENROUTER_API_KEY) {
+      console.log("🚀 [DEBUG] Utilisation d'OpenRouter pour la Vision (Modèle Gratuit)");
       visionClient = new OpenAI({ 
         baseURL: "https://openrouter.ai/api/v1",
         apiKey: process.env.OPENROUTER_API_KEY 
       });
-      // Utilisation du modèle standard (sans le suffixe :free qui a été désactivé)
-      visionModel = "meta-llama/llama-3.2-11b-vision-instruct";
+      
+      // Modèle gratuit 1 : Gemini 2.0 Flash Lite (Recommandé pour la vision)
+      visionModel = "google/gemini-2.0-flash-lite-preview-02-05:free";
+      
+      // En cas d'indisponibilité du premier, décommentez la ligne ci-dessous et commentez celle du haut :
+      // visionModel = "qwen/qwen-2-vl-72b-instruct:free";
+      
     } else {
       throw new Error("Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images.");
     }
