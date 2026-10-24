@@ -627,7 +627,7 @@ Renvoie STRICTEMENT un objet JSON avec cette structure :
     // 3. Sélection dynamique d'un modèle "Vision" selon le provider actif
     let visionModel = "gpt-4o-mini"; // Modèle Vision par défaut (OpenAI)
     if (provider === 'GROQ') {
-      visionModel = "meta-llama/llama-4-scout-17b-16e-instruct"; // Nouveau modèle Vision recommandé par Groq
+      visionModel = "llama-3.2-90b-vision-preview"; // Nouveau modèle Vision recommandé par Groq
     } else if (provider === 'OPENROUTER') {
       visionModel = "meta-llama/llama-3.2-11b-vision-instruct:free"; // Modèle Vision gratuit sur OpenRouter
     }
