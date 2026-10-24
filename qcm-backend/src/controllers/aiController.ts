@@ -631,22 +631,25 @@ Renvoie STRICTEMENT un objet JSON avec cette structure :
         const modelsResponse = await aiClient.models.list();
         const availableModels = modelsResponse.data;
         
-        // On filtre pour trouver un modèle capable de lire des images (contenant "vision" ou "scout")
+        // Affichons la liste complète pour le debug
+        console.log("🚀 [DEBUG] Liste de tous les modèles disponibles :", availableModels.map((m: any) => m.id));
+        
+        // On filtre pour trouver un modèle capable de lire des images
         const visionModels = availableModels
           .map((m: any) => m.id)
           .filter((id: string) => id.toLowerCase().includes('vision') || id.toLowerCase().includes('scout'));
 
         if (visionModels.length > 0) {
-          // On prend le premier modèle vision disponible
           visionModel = visionModels[0];
           console.log(`🚀 [DEBUG] Modèle Vision dynamique sélectionné : ${visionModel}`);
         } else {
-          console.warn("⚠️ [DEBUG] Aucun modèle vision trouvé dynamiquement. Utilisation du fallback.");
-          visionModel = provider === 'GROQ' ? "llama-3.2-90b-vision-preview" : "meta-llama/llama-3.2-11b-vision-instruct:free";
+          console.warn("⚠️ [DEBUG] Aucun modèle vision trouvé dynamiquement. Utilisation du fallback officiel.");
+          // NOUVEAU FALLBACK : La version "instruct" de production (et non "preview")
+          visionModel = provider === 'GROQ' ? "llama-3.2-11b-vision-instruct" : "meta-llama/llama-3.2-11b-vision-instruct:free";
         }
       } catch (error) {
         console.error("❌ [DEBUG] Erreur lors de la récupération des modèles :", error);
-        visionModel = provider === 'GROQ' ? "llama-3.2-90b-vision-preview" : "meta-llama/llama-3.2-11b-vision-instruct:free";
+        visionModel = provider === 'GROQ' ? "llama-3.2-11b-vision-instruct" : "meta-llama/llama-3.2-11b-vision-instruct:free";
       }
     }
 
