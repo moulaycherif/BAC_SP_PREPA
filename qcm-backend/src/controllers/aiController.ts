@@ -574,11 +574,11 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
   }
 };
 // ======================================================
-// 📸 EXAMINATEUR IA (Scan & Correct)
+// 📸 EXAMINATEUR IA (Scan & Correct) - Dynamique
 // ======================================================
 export const scanAndCorrect = async (req: Request, res: Response): Promise<void> => {
   console.log("🚀 [DEBUG] Requête reçue sur scanAndCorrect");
-  console.log("🚀 [DEBUG] Body:", req.body);
+  
   try {
     const file = req.file;
     const { questionText, correctAnswer, subject } = req.body;
@@ -588,13 +588,12 @@ export const scanAndCorrect = async (req: Request, res: Response): Promise<void>
       return;
     }
 
-    // 1. Lecture ultra-sécurisée du fichier (qu'il soit en mémoire ou sur le disque)
+    // 1. Lecture du fichier
     let base64Image = "";
     if (file.buffer) {
       base64Image = file.buffer.toString('base64');
     } else if (file.path) {
       base64Image = fs.readFileSync(file.path).toString('base64');
-      // Optionnel: nettoyer le fichier temporaire
       fs.unlinkSync(file.path);
     } else {
       throw new Error("Impossible de lire le contenu du fichier uploadé.");
@@ -617,22 +616,41 @@ Renvoie STRICTEMENT un objet JSON avec cette structure :
 }
 `;
 
-    // 2. Utilisation de votre configuration dynamique existante
     const { client: aiClient, provider } = getAIConfig();
 
     if (!aiClient) {
-      throw new Error("Le client IA configuré ne supporte pas l'analyse d'images (Cerebras, etc.).");
+      throw new Error("Le client IA n'est pas configuré.");
     }
 
-    // 3. Sélection dynamique d'un modèle "Vision" selon le provider actif
-    let visionModel = "gpt-4o-mini"; // Modèle Vision par défaut (OpenAI)
-    if (provider === 'GROQ') {
-      visionModel = "llama-3.2-90b-vision-preview"; // Nouveau modèle Vision recommandé par Groq
-    } else if (provider === 'OPENROUTER') {
-      visionModel = "meta-llama/llama-3.2-11b-vision-instruct:free"; // Modèle Vision gratuit sur OpenRouter
+    // 2. Sélection dynamique du modèle
+    let visionModel = "gpt-4o-mini"; // Fallback pour OpenAI
+
+    if (provider === 'GROQ' || provider === 'OPENROUTER') {
+      try {
+        // Récupération en temps réel des modèles disponibles
+        const modelsResponse = await aiClient.models.list();
+        const availableModels = modelsResponse.data;
+        
+        // On filtre pour trouver un modèle capable de lire des images (contenant "vision" ou "scout")
+        const visionModels = availableModels
+          .map((m: any) => m.id)
+          .filter((id: string) => id.toLowerCase().includes('vision') || id.toLowerCase().includes('scout'));
+
+        if (visionModels.length > 0) {
+          // On prend le premier modèle vision disponible
+          visionModel = visionModels[0];
+          console.log(`🚀 [DEBUG] Modèle Vision dynamique sélectionné : ${visionModel}`);
+        } else {
+          console.warn("⚠️ [DEBUG] Aucun modèle vision trouvé dynamiquement. Utilisation du fallback.");
+          visionModel = provider === 'GROQ' ? "llama-3.2-90b-vision-preview" : "meta-llama/llama-3.2-11b-vision-instruct:free";
+        }
+      } catch (error) {
+        console.error("❌ [DEBUG] Erreur lors de la récupération des modèles :", error);
+        visionModel = provider === 'GROQ' ? "llama-3.2-90b-vision-preview" : "meta-llama/llama-3.2-11b-vision-instruct:free";
+      }
     }
 
-    // 4. Appel à l'API
+    // 3. Appel à l'API avec le modèle sélectionné
     const response = await aiClient.chat.completions.create({
       model: visionModel,
       messages: [
@@ -652,10 +670,9 @@ Renvoie STRICTEMENT un objet JSON avec cette structure :
     const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
-    // Sécurisation de la lecture du JSON
     let jsonResult;
     try {
-      jsonResult = JSON.parse(jsonrepair(responseContent)); // jsonrepair est déjà importé en haut de votre fichier
+      jsonResult = JSON.parse(jsonrepair(responseContent));
     } catch (e) {
       jsonResult = JSON.parse(responseContent);
     }

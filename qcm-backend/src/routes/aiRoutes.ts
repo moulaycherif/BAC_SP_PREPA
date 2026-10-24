@@ -20,12 +20,10 @@ router.post("/verify-answer", authenticateStudent, verifyAnswer);
 // 📸 ROUTE SÉCURISÉE AVEC DEBUGGING (Scan & Correct)
 router.post("/scan-correct", 
   (req, res, next) => {
-    console.log("🚀 [DEBUG 1] Requête entrante sur /scan-correct");
     next();
   },
   authenticateStudent, 
   (req, res, next) => {
-    console.log("🚀 [DEBUG 2] Authentification réussie ! L'étudiant est validé.");
     next();
   },
   (req, res, next) => {
@@ -36,7 +34,6 @@ router.post("/scan-correct",
         console.error("❌ [DEBUG 3 - ERREUR MULTER] :", err.message);
         return res.status(500).json({ error: "Erreur lors du traitement du fichier", details: err.message });
       }
-      console.log("🚀 [DEBUG 3] Upload réussi ! Le fichier est bien lu.");
       next();
     });
   }, 
