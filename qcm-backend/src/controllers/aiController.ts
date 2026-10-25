@@ -600,20 +600,20 @@ export const scanAndCorrect = async (req: Request, res: Response): Promise<void>
     const mimeType = file.mimetype || "image/jpeg";
     const dataUri = `data:${mimeType};base64,${base64Image}`;
 
-    const systemPrompt = `
+   const systemPrompt = `
 Tu es un examinateur expert en ${subject || "Sciences"}. 
 Analyse le scan de la démarche manuscrite de l'étudiant.
 QUESTION : "${questionText || "Non spécifiée"}"
 RÉPONSE ATTENDUE : "${correctAnswer ? correctAnswer : "Non fournie. Tu dois déterminer toi-même si la démarche et le résultat sur l'image sont scientifiquement exacts."}"
 
 RÈGLES IMPORTANTES :
-1. N'utilise JAMAIS de symboles "$" pour les mathématiques ou les variables. Écris tout en texte brut (exemple: L = 12.7 mm).
-2. Si la réponse de l'étudiant est correcte, confirme-le dans le feedback.
+1. N'utilise JAMAIS de symboles "$" pour les mathématiques ou les variables. Écris tout en texte brut.
+2. ÉVALUE LA RÉPONSE : attribue un score de 0 à 100 selon la justesse de la démarche et du résultat final.
 3. Renvoie STRICTEMENT un objet JSON avec cette structure : 
 { 
-  "feedback": "Ton explication détaillée ici sans symboles $.",
-  "score": 100 (mets un nombre entre 0 et 100 selon la justesse),
-  "isCorrect": true ou false
+  "feedback": "Ton explication détaillée ici.",
+  "score": <un nombre entier entre 0 et 100>,
+  "isCorrect": <true ou false>
 }
 `;
 
@@ -689,17 +689,24 @@ RÈGLES IMPORTANTES :
 
     console.log("🚀 [DEBUG] Objet final interprété :", jsonResult);
 
-    // 3. Sécurisation du score
-    let isCorrect = jsonResult.isCorrect === true || jsonResult.isCorrect === "true";
-    let finalScore = Number(jsonResult.score) || 0;
+    // 3. Sécurisation extrême de la lecture du score
+    let isCorrect = jsonResult.isCorrect === true || String(jsonResult.isCorrect).toLowerCase() === "true";
+    
+    // On s'assure que le score est bien un entier, même si l'IA a renvoyé "100" en texte ou "100/100"
+    let finalScore = parseInt(jsonResult.score, 10);
+    if (isNaN(finalScore)) {
+      finalScore = 0;
+    }
 
-    // Si c'est correct mais que le score est resté à 0 (ou oublié)
+    // Si l'IA a dit que c'est correct mais a mal formaté le score (score resté à 0)
     if (isCorrect && finalScore === 0) {
       finalScore = 100; 
     }
 
+    console.log(`🚀 [DEBUG] Résultat final envoyé au frontend -> Score: ${finalScore}, isCorrect: ${isCorrect}`);
+
     res.json({ 
-      feedback: jsonResult.feedback || "Analyse terminée sans commentaire.",
+      feedback: jsonResult.feedback || "Analyse terminée.",
       score: finalScore,
       isCorrect: isCorrect
     });
