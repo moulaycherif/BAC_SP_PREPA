@@ -634,7 +634,7 @@ RÈGLES IMPORTANTES :
       
       // On abandonne les modèles gratuits instables. 
       // Ce modèle est le meilleur rapport qualité/prix du marché pour la Vision.
-      visionModel = "google/gemini-1.5-flash";
+      visionModel = "google/gemini-flash-1.5";
       
     } else {
       throw new Error("Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images.");
