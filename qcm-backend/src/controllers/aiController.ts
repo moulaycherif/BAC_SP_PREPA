@@ -608,12 +608,12 @@ RÉPONSE ATTENDUE : "${correctAnswer ? correctAnswer : "Non fournie. Tu dois dé
 
 RÈGLES IMPORTANTES :
 1. N'utilise JAMAIS de symboles "$" pour les mathématiques ou les variables. Écris tout en texte brut.
-2. ÉVALUE LA RÉPONSE : attribue un score de 0 à 100 selon la justesse de la démarche et du résultat final.
+2. ÉVALUE LA RÉPONSE : attribue un score de 0 (si la réponse est complétement fausse) ou 1 (si elle est logiquement correcte).
 3. Renvoie STRICTEMENT un objet JSON avec cette structure : 
 { 
   "feedback": "Ton explication détaillée ici.",
-  "score": <un nombre entier entre 0 et 100>,
-  "isCorrect": <true ou false>
+  "score": 1,
+  "isCorrect": true
 }
 `;
 
@@ -687,21 +687,13 @@ RÈGLES IMPORTANTES :
       };
     }
 
-    console.log("🚀 [DEBUG] Objet final interprété :", jsonResult);
+   console.log("🚀 [DEBUG] Objet final interprété :", jsonResult);
 
-    // 3. Sécurisation extrême de la lecture du score
+    // 3. Sécurisation du score : 1 si correct, 0 si incorrect
     let isCorrect = jsonResult.isCorrect === true || String(jsonResult.isCorrect).toLowerCase() === "true";
     
-    // On s'assure que le score est bien un entier, même si l'IA a renvoyé "100" en texte ou "100/100"
-    let finalScore = parseInt(jsonResult.score, 10);
-    if (isNaN(finalScore)) {
-      finalScore = 0;
-    }
-
-    // Si l'IA a dit que c'est correct mais a mal formaté le score (score resté à 0)
-    if (isCorrect && finalScore === 0) {
-      finalScore = 100; 
-    }
+    // On force mathématiquement le score pour correspondre au "nombre de réponses justes"
+    let finalScore = isCorrect ? 1 : 0;
 
     console.log(`🚀 [DEBUG] Résultat final envoyé au frontend -> Score: ${finalScore}, isCorrect: ${isCorrect}`);
 
