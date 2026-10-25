@@ -604,9 +604,17 @@ export const scanAndCorrect = async (req: Request, res: Response): Promise<void>
 Tu es un examinateur expert en ${subject || "Sciences"}. 
 Analyse le scan de la démarche manuscrite de l'étudiant.
 QUESTION : "${questionText || "Non spécifiée"}"
-RÉPONSE ATTENDUE : "${correctAnswer || "Non spécifiée"}"
-Analyse pas à pas l'image, repère les erreurs de calcul ou de logique, et fournis une explication claire.
-Renvoie STRICTEMENT un objet JSON avec cette structure : { "feedback": "Ton explication pédagogique détaillée ici." }
+RÉPONSE ATTENDUE : "${correctAnswer ? correctAnswer : "Non fournie. Tu dois déterminer toi-même si la démarche et le résultat sur l'image sont scientifiquement exacts."}"
+
+RÈGLES IMPORTANTES :
+1. N'utilise JAMAIS de symboles "$" pour les mathématiques ou les variables. Écris tout en texte brut (exemple: L = 12.7 mm).
+2. Si la réponse de l'étudiant est correcte, confirme-le dans le feedback.
+3. Renvoie STRICTEMENT un objet JSON avec cette structure : 
+{ 
+  "feedback": "Ton explication détaillée ici sans symboles $.",
+  "score": 100 (mets un nombre entre 0 et 100 selon la justesse),
+  "isCorrect": true ou false
+}
 `;
 
     // 2. Forcer un fournisseur compatible avec la Vision (OpenAI ou OpenRouter)
@@ -635,7 +643,7 @@ Renvoie STRICTEMENT un objet JSON avec cette structure : { "feedback": "Ton expl
     const response = await visionClient.chat.completions.create({
       model: visionModel,
       messages: [
-        { role: "system", content: "Tu es un évaluateur JSON strict renvoyant uniquement { \"feedback\": \"...\" }." },
+        { role: "system", content: "Tu es un évaluateur JSON strict renvoyant uniquement { \"feedback\": \"...\", \"score\": 100, \"isCorrect\": true }." },
         { 
           role: "user", 
           content: [
@@ -658,7 +666,12 @@ Renvoie STRICTEMENT un objet JSON avec cette structure : { "feedback": "Ton expl
       jsonResult = JSON.parse(responseContent);
     }
 
-    res.json({ feedback: jsonResult.feedback || "Analyse terminée." });
+    // On renvoie le feedback ET le score au frontend
+    res.json({ 
+      feedback: jsonResult.feedback || "Analyse terminée.",
+      score: jsonResult.score !== undefined ? jsonResult.score : (jsonResult.isCorrect ? 100 : 0),
+      isCorrect: jsonResult.isCorrect || false
+    });
 
   } catch (error: any) {
     console.error("❌ Erreur Examinateur IA (scanAndCorrect) :", error);
