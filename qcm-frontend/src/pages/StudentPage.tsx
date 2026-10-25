@@ -319,6 +319,7 @@ interface OpenQuestionInputProps {
   exerciseAnswers: { [id: string]: string };
   onAnswerChange: (questionId: string, value: string) => void;
   isSubQCorrectAndFrozen: boolean;
+  onFeedbackReceived?: (questionId: string, data: any) => void; // NOUVEAU
 }
 
 function OpenQuestionInput({
@@ -328,6 +329,7 @@ function OpenQuestionInput({
   exerciseAnswers,
   onAnswerChange,
   isSubQCorrectAndFrozen,
+  onFeedbackReceived // NOUVEAU
 }: OpenQuestionInputProps) {
   const [isKeyboardActive, setIsKeyboardActive] = useState(false);
   const [showScan, setShowScan] = useState(false);
@@ -383,6 +385,7 @@ function OpenQuestionInput({
             questionText={subQ.questionText || subQ.question || subQ.texte || ""}
             correctAnswer={subQ.correctAnswer || ""}
             subject={selectedMatiere || ""}
+            onFeedbackReceived={onFeedbackReceived} // NOUVEAU
           />
         </div>
       )}
@@ -1857,13 +1860,14 @@ export default function StudentPage() {
                           return (
                             <>
                               <OpenQuestionInput
-                                subQ={subQ}
-                                selectedMatiere={selectedMatiere}
-                                exerciseSubmitted={exerciseSubmitted}
-                                exerciseAnswers={exerciseAnswers}
-                                onAnswerChange={handleExerciseAnswer}
-                                isSubQCorrectAndFrozen={isSubQCorrectAndFrozen || aiFeedbacks[subQ._id]?.isCorrect}
-                              />
+  subQ={subQ}
+  selectedMatiere={selectedMatiere}
+  exerciseSubmitted={exerciseSubmitted}
+  exerciseAnswers={exerciseAnswers}
+  onAnswerChange={handleExerciseAnswer}
+  isSubQCorrectAndFrozen={isSubQCorrectAndFrozen || aiFeedbacks[subQ._id]?.isCorrect}
+  onFeedbackReceived={(qId, data) => setAiFeedbacks(prev => ({ ...prev, [qId]: data }))} // NOUVEAU
+/>
 
                               {exerciseSubmitted && aiFeedbacks[subQ._id] && (
                                 <div className={`ml-2 md:ml-6 mt-3 px-4 py-3 rounded-xl border text-sm ${
@@ -1883,13 +1887,14 @@ export default function StudentPage() {
                         default:
                           return (
                             <OpenQuestionInput
-                              subQ={subQ}
-                              selectedMatiere={selectedMatiere}
-                              exerciseSubmitted={exerciseSubmitted}
-                              exerciseAnswers={exerciseAnswers}
-                              onAnswerChange={handleExerciseAnswer}
-                              isSubQCorrectAndFrozen={isSubQCorrectAndFrozen}
-                            />
+  subQ={subQ}
+  selectedMatiere={selectedMatiere}
+  exerciseSubmitted={exerciseSubmitted}
+  exerciseAnswers={exerciseAnswers}
+  onAnswerChange={handleExerciseAnswer}
+  isSubQCorrectAndFrozen={isSubQCorrectAndFrozen || aiFeedbacks[subQ._id]?.isCorrect}
+  onFeedbackReceived={(qId, data) => setAiFeedbacks(prev => ({ ...prev, [qId]: data }))} // NOUVEAU
+/>
                           );
                       }
                     })()}

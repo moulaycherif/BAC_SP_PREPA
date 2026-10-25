@@ -600,7 +600,7 @@ export const scanAndCorrect = async (req: Request, res: Response): Promise<void>
     const mimeType = file.mimetype || "image/jpeg";
     const dataUri = `data:${mimeType};base64,${base64Image}`;
 
-   const systemPrompt = `
+    const systemPrompt = `
 Tu es un examinateur expert en ${subject || "Sciences"}. 
 Analyse le scan de la démarche manuscrite de l'étudiant.
 QUESTION : "${questionText || "Non spécifiée"}"
@@ -625,17 +625,15 @@ RÈGLES IMPORTANTES :
       console.log("🚀 [DEBUG] Utilisation d'OpenAI pour la Vision");
       visionClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       visionModel = "gpt-4o-mini";
-  } else if (process.env.OPENROUTER_API_KEY) {
+    } else if (process.env.OPENROUTER_API_KEY) {
       console.log("🚀 [DEBUG] Utilisation d'OpenRouter pour la Vision (Gemini 1.5 Flash)");
       visionClient = new OpenAI({ 
         baseURL: "https://openrouter.ai/api/v1",
         apiKey: process.env.OPENROUTER_API_KEY 
       });
       
-      // On abandonne les modèles gratuits instables. 
-      // Ce modèle est le meilleur rapport qualité/prix du marché pour la Vision.
-      visionModel = "google/gemini-3.8-flash";
-      
+      // Correction du nom de modèle : c'est 1.5-flash et non 3.8-flash
+      visionModel = "google/gemini-1.5-flash"; 
     } else {
       throw new Error("Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images.");
     }
@@ -644,7 +642,7 @@ RÈGLES IMPORTANTES :
     const response = await visionClient.chat.completions.create({
       model: visionModel,
       messages: [
-        { role: "system", content: "Tu es un évaluateur strict. Renvoie UNIQUEMENT un objet JSON valide avec cette structure exacte : { \"feedback\": \"...\", \"score\": 100, \"isCorrect\": true }." },
+        { role: "system", content: "Tu es un évaluateur strict. Renvoie UNIQUEMENT un objet JSON valide avec cette structure exacte : { \"feedback\": \"...\", \"score\": 1, \"isCorrect\": true }." },
         { 
           role: "user", 
           content: [
@@ -653,8 +651,6 @@ RÈGLES IMPORTANTES :
           ] 
         }
       ],
-      // ⚠️ LIGNE SUPPRIMÉE : response_format: { type: "json_object" }
-      // On retire cette ligne car elle fait planter les petits modèles gratuits.
       max_tokens: 1500
     });
 
@@ -687,20 +683,17 @@ RÈGLES IMPORTANTES :
       };
     }
 
-   console.log("🚀 [DEBUG] Objet final interprété :", jsonResult);
-
     // 3. Sécurisation du score : 1 si correct, 0 si incorrect
     let isCorrect = jsonResult.isCorrect === true || String(jsonResult.isCorrect).toLowerCase() === "true";
-    
-    // On force mathématiquement le score pour correspondre au "nombre de réponses justes"
     let finalScore = isCorrect ? 1 : 0;
 
     console.log(`🚀 [DEBUG] Résultat final envoyé au frontend -> Score: ${finalScore}, isCorrect: ${isCorrect}`);
 
-    res.json({ 
-      feedback: jsonResult.feedback || "Analyse terminée.",
+    // ✅ ENVOI AU FRONTEND : On retourne explicitement les 3 variables demandées par React
+    res.status(200).json({ 
+      isCorrect: isCorrect,
       score: finalScore,
-      isCorrect: isCorrect
+      feedback: jsonResult.feedback || "Analyse terminée."
     });
 
   } catch (error: any) {

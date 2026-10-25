@@ -6,6 +6,7 @@ interface ExerciseScanCorrectProps {
   questionText: string;
   correctAnswer: string;
   subject: string;
+  onFeedbackReceived?: (questionId: string, data: any) => void; // NOUVEAU
 }
 
 const ExerciseScanCorrect: React.FC<ExerciseScanCorrectProps> = ({
@@ -13,6 +14,7 @@ const ExerciseScanCorrect: React.FC<ExerciseScanCorrectProps> = ({
   questionText,
   correctAnswer,
   subject,
+  onFeedbackReceived // NOUVEAU
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -54,10 +56,24 @@ const ExerciseScanCorrect: React.FC<ExerciseScanCorrectProps> = ({
       const response = await api.post(`/api/ai/scan-correct`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
-      setReport(response.data.report || response.data.feedback);
+      
+      const { isCorrect, score, feedback, report: apiReport } = response.data;
+      const finalFeedback = feedback || apiReport;
+      
+      setReport(finalFeedback);
+      
+      // NOUVEAU : On remonte les données au composant parent (StudentPage)
+      if (onFeedbackReceived) {
+        onFeedbackReceived(questionId, {
+          isCorrect: isCorrect === true || isCorrect === "true", // Sécurité de typage
+          score: score || (isCorrect ? 1 : 0),
+          feedback: finalFeedback
+        });
+      }
+      
     } catch (error) {
       console.error("Erreur lors du scan :", error);
-      setErrorMsg("Une erreur est survenue lors de l'analyse par Examinateur IA.");
+      setErrorMsg("Une erreur est survenue lors de l'analyse par l'IA.");
     } finally {
       setLoading(false);
     }

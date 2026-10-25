@@ -4,17 +4,18 @@ import api from "../api/axios";
 interface ExerciseAiFeedbackProps {
   questionId: string;
   questionText: string;
-  studentAnswer: string;
   correctAnswer: string;
   isSubmitted: boolean;
   subject: string;
+  onFeedbackReceived?: (questionId: string, data: any) => void; // NOUVEAU
 }
 
 const ExerciseAiFeedback: React.FC<ExerciseAiFeedbackProps> = ({ 
   questionId, 
   questionText, 
   correctAnswer, 
-  subject 
+  subject,
+  onFeedbackReceived // NOUVEAU
 }) => {
   const [studentAnswer, setStudentAnswer] = useState<string>("");
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -31,11 +32,22 @@ const ExerciseAiFeedback: React.FC<ExerciseAiFeedbackProps> = ({
         questionId,
         questionText,
         studentAnswer,
-        correctAnswer, // Transmis au backend pour une correction précise
+        correctAnswer,
         subject
       });
       
-      setFeedback(response.data.feedback);
+      const { isCorrect, score, feedback: apiFeedback } = response.data;
+      setFeedback(apiFeedback);
+
+      // NOUVEAU : Remontée au parent
+      if (onFeedbackReceived) {
+        onFeedbackReceived(questionId, {
+          isCorrect: isCorrect === true,
+          score: score || (isCorrect ? 1 : 0),
+          feedback: apiFeedback
+        });
+      }
+      
     } catch (error) {
       console.error("Erreur lors de la récupération du feedback", error);
       setFeedback("Impossible d'obtenir une correction pour le moment.");
