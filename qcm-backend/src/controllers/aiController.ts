@@ -659,26 +659,45 @@ RÈGLES IMPORTANTES :
     const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
-    let jsonResult;
+    console.log("🚀 [DEBUG] Réponse BRUTE de l'IA :", responseContent);
+
+    let jsonResult: any = {};
+    
     try {
-      jsonResult = JSON.parse(jsonrepair(responseContent));
+      // 1. On cherche s'il y a un bloc JSON caché dans le texte
+      const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+      const stringToParse = jsonMatch ? jsonMatch[0] : responseContent;
+      
+      jsonResult = JSON.parse(jsonrepair(stringToParse));
+
+      // Si le JSON est valide mais que l'IA a oublié de mettre "isCorrect"
+      if (jsonResult.isCorrect === undefined && jsonResult.feedback) {
+         const fb = jsonResult.feedback.toLowerCase();
+         jsonResult.isCorrect = fb.includes("correct") || fb.includes("exact") || fb.includes("bonne réponse");
+      }
     } catch (e) {
-      jsonResult = JSON.parse(responseContent);
+      console.warn("⚠️ [DEBUG] L'IA n'a pas fait de JSON. Utilisation du mode texte de secours.");
+      // 2. Si le JSON est introuvable ou illisible, on prend le texte brut
+      const textLower = responseContent.toLowerCase();
+      jsonResult = {
+        feedback: responseContent,
+        isCorrect: textLower.includes("correct") || textLower.includes("exact") || textLower.includes("bonne réponse"),
+      };
     }
 
-   console.log("🚀 [DEBUG] JSON renvoyé par l'IA :", jsonResult);
+    console.log("🚀 [DEBUG] Objet final interprété :", jsonResult);
 
-    // Sécurisation de la lecture du score et du statut correct
+    // 3. Sécurisation du score
     let isCorrect = jsonResult.isCorrect === true || jsonResult.isCorrect === "true";
     let finalScore = Number(jsonResult.score) || 0;
 
-    // Si l'IA a dit que c'est correct mais a oublié de mettre le score
+    // Si c'est correct mais que le score est resté à 0 (ou oublié)
     if (isCorrect && finalScore === 0) {
       finalScore = 100; 
     }
 
     res.json({ 
-      feedback: jsonResult.feedback || "Analyse terminée.",
+      feedback: jsonResult.feedback || "Analyse terminée sans commentaire.",
       score: finalScore,
       isCorrect: isCorrect
     });
