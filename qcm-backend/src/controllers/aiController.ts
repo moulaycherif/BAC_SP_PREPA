@@ -666,11 +666,21 @@ RÈGLES IMPORTANTES :
       jsonResult = JSON.parse(responseContent);
     }
 
-    // On renvoie le feedback ET le score au frontend
+   console.log("🚀 [DEBUG] JSON renvoyé par l'IA :", jsonResult);
+
+    // Sécurisation de la lecture du score et du statut correct
+    let isCorrect = jsonResult.isCorrect === true || jsonResult.isCorrect === "true";
+    let finalScore = Number(jsonResult.score) || 0;
+
+    // Si l'IA a dit que c'est correct mais a oublié de mettre le score
+    if (isCorrect && finalScore === 0) {
+      finalScore = 100; 
+    }
+
     res.json({ 
       feedback: jsonResult.feedback || "Analyse terminée.",
-      score: jsonResult.score !== undefined ? jsonResult.score : (jsonResult.isCorrect ? 100 : 0),
-      isCorrect: jsonResult.isCorrect || false
+      score: finalScore,
+      isCorrect: isCorrect
     });
 
   } catch (error: any) {
