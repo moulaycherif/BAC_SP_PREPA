@@ -643,7 +643,7 @@ RÈGLES IMPORTANTES :
     const response = await visionClient.chat.completions.create({
       model: visionModel,
       messages: [
-        { role: "system", content: "Tu es un évaluateur JSON strict renvoyant uniquement { \"feedback\": \"...\", \"score\": 100, \"isCorrect\": true }." },
+        { role: "system", content: "Tu es un évaluateur strict. Renvoie UNIQUEMENT un objet JSON valide avec cette structure exacte : { \"feedback\": \"...\", \"score\": 100, \"isCorrect\": true }." },
         { 
           role: "user", 
           content: [
@@ -652,7 +652,8 @@ RÈGLES IMPORTANTES :
           ] 
         }
       ],
-      response_format: { type: "json_object" },
+      // ⚠️ LIGNE SUPPRIMÉE : response_format: { type: "json_object" }
+      // On retire cette ligne car elle fait planter les petits modèles gratuits.
       max_tokens: 1500
     });
 
