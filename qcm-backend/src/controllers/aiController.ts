@@ -23,6 +23,9 @@ interface IAItemResponse {
 interface IAGeneratedData {
   items: IAItemResponse[];
 }
+
+console.log("AICONTROLLER");
+
 // Configuration des clients IA
 const getAIConfig = (): { client: OpenAI | null; model: string; provider: string } => {
 const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
