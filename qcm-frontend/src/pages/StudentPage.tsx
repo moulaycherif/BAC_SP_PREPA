@@ -77,6 +77,8 @@ interface MathFieldElement extends HTMLElement {
   setOptions?: (options: Record<string, any>) => void;
 }
 
+console.log("STUDENTPAGE");
+
 export const MathInput: React.FC<MathInputProps> = ({ value, onChange, disabled }) => {
   const mfRef = useRef<MathFieldElement>(null);
 
