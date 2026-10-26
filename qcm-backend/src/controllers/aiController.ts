@@ -633,7 +633,7 @@ RÈGLES IMPORTANTES :
       });
       
       // Correction du nom de modèle : c'est 1.5-flash et non 3.8-flash
-      visionModel = "google/gemini-1.5-flash"; 
+      visionModel = "google/gemini-flash-1.5"; 
     } else {
       throw new Error("Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images.");
     }
