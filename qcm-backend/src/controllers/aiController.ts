@@ -627,14 +627,14 @@ RÈGLES IMPORTANTES :
       visionClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       visionModel = "gpt-4o-mini";
     } else if (process.env.OPENROUTER_API_KEY) {
-      console.log("🚀 [DEBUG] Utilisation d'OpenRouter pour la Vision (Gemini 1.5 Flash)");
+      console.log("🚀 [DEBUG] Utilisation d'OpenRouter pour la Vision (GPT-4o-mini)");
       visionClient = new OpenAI({ 
         baseURL: "https://openrouter.ai/api/v1",
         apiKey: process.env.OPENROUTER_API_KEY 
       });
       
-      // Correction du nom de modèle : c'est 1.5-flash et non 3.8-flash
-      visionModel = "google/gemini-flash-latest"; 
+      // ✅ Utilisez cet identifiant 100% stable sur OpenRouter
+      visionModel = "openai/gpt-4o-mini"; 
     } else {
       throw new Error("Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images.");
     }
