@@ -810,15 +810,29 @@ export default function StudentPage() {
           totalQ++;
           const hasOptions = Array.isArray(subQ.options) && subQ.options.length > 0;
           const userAnswer = exerciseAnswers[subQ._id] || "";
+          
+          // 1. Vérifier si un feedback existe déjà pour cette question (ex: via le scanner Vision)
+          const existingFeedback = aiFeedbacks[subQ._id];
 
           if (hasOptions) {
+            // Logique QCM existante
             if (userAnswer === subQ.correctAnswer) {
               finalScore++;
             } else {
               exerciseHasError = true;
             }
           } else {
-            if (userAnswer.trim().length > 0) {
+            // Logique Question Ouverte / Scan
+            if (existingFeedback) {
+              // L'étudiant a utilisé le scanner, on reprend les points validés !
+              newFeedbacks[subQ._id] = existingFeedback;
+              if (existingFeedback.isCorrect) {
+                finalScore += existingFeedback.score || 1;
+              } else {
+                exerciseHasError = true;
+              }
+            } else if (userAnswer.trim().length > 0) {
+              // L'étudiant a tapé du texte, on vérifie via l'API classique
               try {
                 const token = localStorage.getItem("token");
                 const res = await axios.post(
@@ -845,6 +859,7 @@ export default function StudentPage() {
                 exerciseHasError = true;
               }
             } else {
+              // Rien tapé, rien scanné
               exerciseHasError = true;
             }
           }
@@ -856,12 +871,14 @@ export default function StudentPage() {
       }
     }
 
-    setAiFeedbacks(newFeedbacks);
+    // 2. On fusionne les feedbacks pour ne rien perdre
+    setAiFeedbacks(prev => ({ ...prev, ...newFeedbacks }));
     setExerciseScore(finalScore);
     setExerciseSubmitted(true);
     setShowSolutions(false); 
     setWrongExercises(wrong);
     setIsEvaluating(false);
+};
 
     try {
       const token = localStorage.getItem("token");
