@@ -878,8 +878,8 @@ export default function StudentPage() {
     setShowSolutions(false); 
     setWrongExercises(wrong);
     setIsEvaluating(false);
-};
 
+    // 3. Enregistrement de l'activité de l'étudiant (désormais bien à l'intérieur de la fonction)
     try {
       const token = localStorage.getItem("token");
       await axios.post(`${API_BASE_URL}/api/student-activity`, {
