@@ -8,9 +8,6 @@ interface ExerciseScanCorrectProps {
   subject: string;
   onFeedbackReceived?: (questionId: string, data: any) => void; // NOUVEAU
 }
-
-console.log("EXERCISESCANCORRECT");
-
 const ExerciseScanCorrect: React.FC<ExerciseScanCorrectProps> = ({
   questionId,
   questionText,

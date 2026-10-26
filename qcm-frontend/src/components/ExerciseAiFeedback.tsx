@@ -9,9 +9,6 @@ interface ExerciseAiFeedbackProps {
   subject: string;
   onFeedbackReceived?: (questionId: string, data: any) => void; // NOUVEAU
 }
-
-console.log("EXERCISEFEEDBACK");
-
 const ExerciseAiFeedback: React.FC<ExerciseAiFeedbackProps> = ({ 
   questionId, 
   questionText, 
