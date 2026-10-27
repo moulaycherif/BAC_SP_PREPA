@@ -314,6 +314,7 @@ const Flashcard = ({ title, content }: { title: string, content: string }) => {
 
 interface OpenQuestionInputProps {
   subQ: any;
+  contextText?: string;
   selectedMatiere: string | null;
   exerciseSubmitted: boolean;
   exerciseAnswers: { [id: string]: string };
@@ -324,6 +325,7 @@ interface OpenQuestionInputProps {
 
 function OpenQuestionInput({
   subQ,
+  contextText,
   selectedMatiere,
   exerciseSubmitted,
   exerciseAnswers,
@@ -385,6 +387,7 @@ function OpenQuestionInput({
             questionText={subQ.questionText || subQ.question || subQ.texte || ""}
             correctAnswer={subQ.correctAnswer || ""}
             subject={selectedMatiere || ""}
+            context={contextText || ""}
             onFeedbackReceived={onFeedbackReceived} // NOUVEAU
           />
         </div>

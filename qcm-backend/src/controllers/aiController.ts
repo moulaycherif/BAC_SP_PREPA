@@ -582,7 +582,14 @@ export const scanAndCorrect = async (req: Request, res: Response): Promise<void>
   
   try {
     const file = req.file;
-    const { questionText, correctAnswer, subject } = req.body;
+    const { questionText, correctAnswer, subject, context } = req.body;
+
+    // 1. Récupérer l'image ET les informations de l'exercice
+    const { image, question, expectedAnswer } = req.body;
+
+    if (!image) {
+      res.status(400).json({ message: "Aucune image fournie." });
+    }
 
     if (!file) {
       res.status(400).json({ error: "Aucun fichier (image/PDF) n'a été fourni." });
@@ -601,16 +608,22 @@ export const scanAndCorrect = async (req: Request, res: Response): Promise<void>
     const mimeType = file.mimetype || "image/jpeg";
     const dataUri = `data:${mimeType};base64,${base64Image}`;
 
+    // 2. Améliorer le prompt avec le contexte
     const systemPrompt = `
 Tu es un examinateur expert en ${subject || "Sciences"}. 
 Analyse le scan de la démarche manuscrite de l'étudiant.
+
+ÉNONCÉ ET CONTEXTE DU PROBLÈME (Données d'expériences, valeurs, etc.) :
+"${context || "Aucun contexte fourni"}"
+
 QUESTION : "${questionText || "Non spécifiée"}"
 RÉPONSE ATTENDUE : "${correctAnswer ? correctAnswer : "Non fournie. Tu dois déterminer toi-même si la démarche et le résultat sur l'image sont scientifiquement exacts."}"
 
 RÈGLES IMPORTANTES :
-1. N'utilise JAMAIS de symboles "$" pour les mathématiques ou les variables. Écris tout en texte brut.
-2. ÉVALUE LA RÉPONSE : attribue un score de 0 (si la réponse est complétement fausse) ou 1 (si elle est logiquement correcte).
-3. Renvoie STRICTEMENT un objet JSON avec cette structure : 
+1. Utilise les valeurs du CONTEXTE ci-dessus pour vérifier la justesse numérique des calculs de l'étudiant (ex: D, λ, a).
+2. N'utilise JAMAIS de symboles "$" pour les mathématiques ou les variables. Écris tout en texte brut.
+3. ÉVALUE LA RÉPONSE : attribue un score de 0 (si la réponse est complétement fausse) ou 1 (si elle est logiquement et numériquement correcte).
+4. Renvoie STRICTEMENT un objet JSON avec cette structure : 
 { 
   "feedback": "Ton explication détaillée ici.",
   "score": 1,
