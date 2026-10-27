@@ -659,16 +659,18 @@ RÈGLES IMPORTANTES :
     let finalScore = isCorrect ? 1 : 0;
 
     // ✅ ENVOI EXPLICITE ET STOP DE L'EXÉCUTION via return
-    return res.status(200).json({ 
+    res.status(200).json({ 
       isCorrect: isCorrect,
       score: finalScore,
       feedback: jsonResult.feedback || "Analyse terminée."
     });
+    return;
 
   } catch (error: any) {
     console.error("❌ Erreur Examinateur IA (scanAndCorrect) :", error);
     if (!res.headersSent) {
-      return res.status(500).json({ error: "Erreur d'analyse Vision", details: error.message });
+      res.status(500).json({ error: "Erreur d'analyse Vision", details: error.message });
+      return;
     }
   }
 };
