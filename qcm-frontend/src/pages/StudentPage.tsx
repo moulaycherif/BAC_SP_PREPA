@@ -1881,12 +1881,13 @@ export default function StudentPage() {
                             <>
                               <OpenQuestionInput
   subQ={subQ}
+  contextText={currentEx.contextText || currentEx.enonce || currentEx.texte || ""} // 👈 LIGNE À AJOUTER ICI
   selectedMatiere={selectedMatiere}
   exerciseSubmitted={exerciseSubmitted}
   exerciseAnswers={exerciseAnswers}
   onAnswerChange={handleExerciseAnswer}
   isSubQCorrectAndFrozen={isSubQCorrectAndFrozen || aiFeedbacks[subQ._id]?.isCorrect}
-  onFeedbackReceived={(qId, data) => setAiFeedbacks(prev => ({ ...prev, [qId]: data }))} // NOUVEAU
+  onFeedbackReceived={(qId, data) => setAiFeedbacks(prev => ({ ...prev, [qId]: data }))} 
 />
 
                               {exerciseSubmitted && aiFeedbacks[subQ._id] && (
@@ -1908,12 +1909,13 @@ export default function StudentPage() {
                           return (
                             <OpenQuestionInput
   subQ={subQ}
+  contextText={currentEx.contextText || currentEx.enonce || currentEx.texte || ""} // 👈 LIGNE À AJOUTER ICI
   selectedMatiere={selectedMatiere}
   exerciseSubmitted={exerciseSubmitted}
   exerciseAnswers={exerciseAnswers}
   onAnswerChange={handleExerciseAnswer}
   isSubQCorrectAndFrozen={isSubQCorrectAndFrozen || aiFeedbacks[subQ._id]?.isCorrect}
-  onFeedbackReceived={(qId, data) => setAiFeedbacks(prev => ({ ...prev, [qId]: data }))} // NOUVEAU
+  onFeedbackReceived={(qId, data) => setAiFeedbacks(prev => ({ ...prev, [qId]: data }))} 
 />
                           );
                       }
