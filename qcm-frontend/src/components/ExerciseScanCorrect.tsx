@@ -42,8 +42,6 @@ const ExerciseScanCorrect: React.FC<ExerciseScanCorrectProps> = ({
       return;
     }
 
-    console.log("Contexte envoyé:", context)
-
     const formData = new FormData();
     formData.append("file", file);
     formData.append("questionId", questionId);
