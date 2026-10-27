@@ -6,6 +6,7 @@ interface ExerciseScanCorrectProps {
   questionText: string;
   correctAnswer: string;
   subject: string;
+  context?: string;
   onFeedbackReceived?: (questionId: string, data: any) => void; // NOUVEAU
 }
 const ExerciseScanCorrect: React.FC<ExerciseScanCorrectProps> = ({
@@ -13,6 +14,7 @@ const ExerciseScanCorrect: React.FC<ExerciseScanCorrectProps> = ({
   questionText,
   correctAnswer,
   subject,
+  context,
   onFeedbackReceived // NOUVEAU
 }) => {
   const [file, setFile] = useState<File | null>(null);
@@ -40,12 +42,15 @@ const ExerciseScanCorrect: React.FC<ExerciseScanCorrectProps> = ({
       return;
     }
 
+    console.log("Contexte envoyé:", context)
+
     const formData = new FormData();
     formData.append("file", file);
     formData.append("questionId", questionId);
     formData.append("questionText", questionText);
     formData.append("correctAnswer", correctAnswer);
     formData.append("subject", subject);
+    formData.append("context", context || "");
 
     setLoading(true);
     setErrorMsg("");

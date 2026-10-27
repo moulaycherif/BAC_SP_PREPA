@@ -20,13 +20,14 @@ interface IAItemResponse {
   title?: string;
   content?: string;
 }
+
 interface IAGeneratedData {
   items: IAItemResponse[];
 }
 
 // Configuration des clients IA
 const getAIConfig = (): { client: OpenAI | null; model: string; provider: string } => {
-const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
+  const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
   switch (provider) {
     case 'CEREBRAS':
       return {
@@ -97,7 +98,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
       systemPrompt = `Tu es un professeur expert de Physique-Chimie. Génère 5 QCM (PAS PLUS) de HAUT NIVEAU (type Bac Sciences Physiques) basés sur ce texte. L'étudiant doit raisonner et faire des calculs.
       Réponds avec JSON strict : { "items": [ { "question": "...", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 0, "explication": "..." } ] } \n${baseMathInstruction}`;
     } else if (contentType === "exercise") {
-  systemPrompt = `Tu es un professeur expert de Physique-Chimie. Génère 1 seul Exercice Complexe (type problème du Bac Sciences Physiques) découpé en 3 à 5 sous-questions.
+      systemPrompt = `Tu es un professeur expert de Physique-Chimie. Génère 1 seul Exercice Complexe (type problème du Bac Sciences Physiques) découpé en 3 à 5 sous-questions.
   Chaque sous-question doit être un objet distinct dans le tableau "items". 
   IMPORTANT : Toutes les sous-questions de cet exercice doivent partager EXACTEMENT le même champ "enonce" (qui contient le contexte global de l'exercice, les données initiales, etc.).
   Réponds avec JSON strict : { "items": [ { "enonce": "Contexte global de l'exercice...", "question": "Sous-question 1...", "explication": "...", "options": [] }, { "enonce": "Contexte global de l'exercice...", "question": "Sous-question 2...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
@@ -179,18 +180,15 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     } else if (aiClient) {
       if (provider === 'GROQ') {
         let groqCandidateModels: string[] = [];
-        // Récupération dynamique et priorisation intelligente des modèles actifs
         try {
           console.log("[GROQ] Récupération dynamique de la liste des modèles actifs...");
           const modelsList = await aiClient.models.list();
           const availableIds: string[] = modelsList.data.map((m: any) => m.id);
-          // 1. Filtrer les modèles non adaptés (audio, TTS, guard, vision, embeddings)
           const filtered = availableIds.filter((id: string) => {
             const lower = id.toLowerCase();
             return !lower.includes('whisper') && !lower.includes('guard') && !lower.includes('embed') && 
                    !lower.includes('vision') && !lower.includes('orpheus') && !lower.includes('audio');
           });
-          // 2. Prioriser les modèles LLM texte les plus performants et stables
           const priorityKeywords = [
             'gpt-oss-120b',
             'llama-3.3-70b',
@@ -210,7 +208,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
         } catch (e: any) {
           console.warn(`[GROQ] Impossible de récupérer la liste dynamique (${e.message}). Utilisation de la liste de secours.`);
         }
-        // Liste de secours à jour au cas où l'API de liste échoue
         if (groqCandidateModels.length === 0) {
           groqCandidateModels = [
             "openai/gpt-oss-120b",
@@ -237,7 +234,7 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
             responseContent = response.choices[0]?.message?.content || undefined;
             if (responseContent) {
               console.log(`[GROQ] Succès avec le modèle : ${candidateModel}`);
-              break; // Succès ! On sort de la boucle immédiatement.
+              break;
             }
           } catch (err: any) {
             console.warn(`[GROQ] Le modèle ${candidateModel} a échoué (${err.message}). Essai du suivant...`);
@@ -248,7 +245,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
           throw new Error(`Tous les modèles Groq ont échoué. Dernière erreur : ${lastError?.message || "Erreur inconnue"}`);
         }
       } else {
-        // Mode OpenAI / OpenRouter standard
         const response = await aiClient.chat.completions.create({
           model: defaultModel,
           messages: [
@@ -281,7 +277,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
     const finalExamName = isControle ? "Contrôle IA" : (examId || "Support de cours IA");
     const finalTypeEpreuve = isControle ? "blanc" : "ia"; 
     const excelRows = generatedData.items.map((item: IAItemResponse) => {
-      // 1. Logique pour le nouveau format plat (Chapitres, Leçons)
       if (contentType === "cours_complet") {
         return {
           ID: item.id || "",
@@ -291,7 +286,6 @@ export const generateContentFromPdf = async (req: Request, res: Response): Promi
           Contenu: item.content || ""
         };
       }
-      // 2. Logique existante pour les QCM et autres formats
       let rawOptions = item.options || [];
       let cleanOptions = Array.isArray(rawOptions) ? rawOptions.map(String) : [];      
       let cleanReponseCorrecte = "";
@@ -358,19 +352,16 @@ export const importCorrectedExcel = async (req: Request, res: Response): Promise
           ? [] 
           : (row.Options ? String(row.Options).split(" || ").map(opt => opt.trim()).filter(opt => opt !== "") : []);  
         return {
-          // Champs classiques QCM/Exercices
           enonce: row.Enonce || null, 
           texte: row.Question || null,
           options: optionsArray,      
           reponseCorrecte: row.ReponseCorrecte ? String(row.ReponseCorrecte) : null,
           explication: row.Explication || "",          
-          // Nouveaux champs pour "Cours Plat"
           course_id: row.ID || null,
           parent_id: row.Parent_ID || null,
           title: row.Titre || null,
           content: row.Contenu || null,          
-          // Métadonnées
-          type: type, // "chapter", "lesson", "quiz_question", "qcm", "exercise"...
+          type: type,
           subject: row.Sujet || null,
           chapter: row.Chapitre || null,
           exam: row.Examen || "Support de cours IA",
@@ -389,6 +380,7 @@ export const importCorrectedExcel = async (req: Request, res: Response): Promise
       res.status(500).json({ message: "Erreur lors de l'importation de l'Excel corrigé." });
     }
 };
+
 // ======================================================
 // 🤖 CORRECTION INTELLIGENTE DES SAISIES LIBRES ET LATEX
 // ======================================================
@@ -396,7 +388,6 @@ export const verifyAnswer = async (req: Request, res: Response): Promise<void> =
   try {
     const { question, expectedAnswer, userAnswer, context } = req.body;
 
-    // 1. Validation basique
     if (!userAnswer || String(userAnswer).trim() === "") {
       res.json({
         isCorrect: false,
@@ -406,7 +397,6 @@ export const verifyAnswer = async (req: Request, res: Response): Promise<void> =
       return;
     }
 
-    // 2. Préparation du prompt d'évaluation
     const systemPrompt = `
 Tu es un professeur expert en correction d'examens scientifiques (Mathématiques, Physique, Chimie, SVT).
 Ton rôle est d'évaluer la réponse d'un élève à une question d'exercice.
@@ -436,11 +426,9 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
 }
 `;
 
-    // 3. Récupération du client IA configuré (OpenAI, Groq, OpenRouter...)
     const { client: aiClient, model: defaultModel, provider } = getAIConfig();
     let responseContent: string | undefined = undefined;
 
-    // --- BRANCHE CEREBRAS ---
     if (provider === 'CEREBRAS') {
       const cerebrasResponse = await fetch("https://api.cerebras.ai/v1/chat/completions", {
         method: "POST",
@@ -466,17 +454,14 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
         throw new Error("Erreur avec l'API Cerebras");
       }
 
-    // --- BRANCHE GROQ, OPENROUTER OU OPENAI ---
     } else if (aiClient) {
       if (provider === 'GROQ') {
         let groqCandidateModels: string[] = [];
 
-        // Récupération dynamique de la liste des modèles actifs
         try {
           const modelsList = await aiClient.models.list();
           const availableIds: string[] = modelsList.data.map((m: any) => m.id);
 
-          // Filtrage des modèles non textuels (whisper, guard, vision, etc.)
           groqCandidateModels = availableIds.filter((id: string) => {
             const lower = id.toLowerCase();
             return !lower.includes('whisper') && 
@@ -485,18 +470,14 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
                    !lower.includes('vision') &&
                    !lower.includes('audio');
           });
-
           console.log(`[GROQ verifyAnswer] Modèles actifs détectés (${groqCandidateModels.length}) :`, groqCandidateModels);
         } catch (e: any) {
           console.warn(`[GROQ verifyAnswer] Erreur lors de la récupération dynamique (${e.message}).`);
         }
-
         if (groqCandidateModels.length === 0) {
           groqCandidateModels = [defaultModel].filter(Boolean);
         }
-
         let lastError: any = null;
-
         for (const candidateModel of groqCandidateModels) {
           try {
             console.log(`[GROQ verifyAnswer] Tentative avec le modèle : ${candidateModel}...`);
@@ -510,7 +491,6 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
               temperature: 0.1,
               max_tokens: 500
             });
-
             responseContent = response.choices[0]?.message?.content || undefined;
             if (responseContent) {
               console.log(`[GROQ verifyAnswer] Succès avec : ${candidateModel}`);
@@ -521,12 +501,10 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
             lastError = err;
           }
         }
-
         if (!responseContent) {
           throw new Error(`Tous les modèles Groq actifs ont échoué : ${lastError?.message || "Erreur inconnue"}`);
         }
       } else {
-        // Mode OpenAI / OpenRouter standard
         const response = await aiClient.chat.completions.create({
           model: defaultModel,
           messages: [
@@ -540,14 +518,11 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
         responseContent = response.choices[0]?.message?.content || undefined;
       }
     }
-
     if (!responseContent) throw new Error("Réponse vide de l'IA lors de la vérification.");
 
-    // 4. Extraction et sécurisation du JSON retourné
     const firstBrace = responseContent.indexOf('{');
     const lastBrace = responseContent.lastIndexOf('}');
     if (firstBrace === -1 || lastBrace === -1) throw new Error("L'IA n'a pas renvoyé un format JSON.");
-    
     const rawJsonStr = responseContent.substring(firstBrace, lastBrace + 1);
     
     let evaluation: any;
@@ -557,13 +532,11 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
       throw new Error("JSON IA invalide après tentative de réparation.");
     }
 
-    // 5. Retour des résultats au Frontend
     res.json({
       isCorrect: Boolean(evaluation.isCorrect),
       score: evaluation.isCorrect ? 1 : 0,
       feedback: evaluation.feedback || (evaluation.isCorrect ? "Réponse exacte !" : "Réponse incorrecte.")
     });
-
   } catch (error) {
     console.error("❌ Erreur dans verifyAnswer (Correction IA) :", error);
     res.status(500).json({
@@ -574,15 +547,14 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
     });
   }
 };
+
 // ======================================================
 // 📸 EXAMINATEUR IA (Scan & Correct) - Force Vision Provider
 // ======================================================
 export const scanAndCorrect = async (req: Request, res: Response): Promise<void> => {
-  console.log("🚀 [DEBUG] Requête reçue sur scanAndCorrect");
-  
   try {
     const file = req.file;
-    const { questionText, correctAnswer, subject } = req.body;
+    const { questionText, correctAnswer, subject, context } = req.body;
 
     if (!file) {
       res.status(400).json({ error: "Aucun fichier (image/PDF) n'a été fourni." });
@@ -595,51 +567,56 @@ export const scanAndCorrect = async (req: Request, res: Response): Promise<void>
       base64Image = file.buffer.toString('base64');
     } else if (file.path) {
       base64Image = fs.readFileSync(file.path).toString('base64');
-      fs.unlinkSync(file.path);
+      try {
+        fs.unlinkSync(file.path);
+      } catch (e) {
+        console.warn("Impossible de supprimer le fichier temporaire:", e);
+      }
     }
 
     const mimeType = file.mimetype || "image/jpeg";
     const dataUri = `data:${mimeType};base64,${base64Image}`;
 
+    // 2. Améliorer le prompt avec le contexte
     const systemPrompt = `
 Tu es un examinateur expert en ${subject || "Sciences"}. 
 Analyse le scan de la démarche manuscrite de l'étudiant.
+
+ÉNONCÉ ET CONTEXTE DU PROBLÈME (Données d'expériences, valeurs, etc.) :
+"${context || "Aucun contexte fourni"}"
+
 QUESTION : "${questionText || "Non spécifiée"}"
 RÉPONSE ATTENDUE : "${correctAnswer ? correctAnswer : "Non fournie. Tu dois déterminer toi-même si la démarche et le résultat sur l'image sont scientifiquement exacts."}"
 
 RÈGLES IMPORTANTES :
-1. N'utilise JAMAIS de symboles "$" pour les mathématiques ou les variables. Écris tout en texte brut.
-2. ÉVALUE LA RÉPONSE : attribue un score de 0 (si la réponse est complétement fausse) ou 1 (si elle est logiquement correcte).
-3. Renvoie STRICTEMENT un objet JSON avec cette structure : 
+1. Utilise les valeurs du CONTEXTE ci-dessus pour vérifier la justesse numérique des calculs de l'étudiant (ex: D, λ, a).
+2. N'utilise JAMAIS de symboles "$" pour les mathématiques ou les variables. Écris tout en texte brut.
+3. ÉVALUE LA RÉPONSE : attribue un score de 0 (si la réponse est complètement fausse) ou 1 (si elle est logiquement et numériquement correcte).
+4. Renvoie STRICTEMENT un objet JSON avec cette structure : 
 { 
   "feedback": "Ton explication détaillée ici.",
   "score": 1,
   "isCorrect": true
-}
-`;
+}`;
 
-    // 2. Forcer un fournisseur compatible avec la Vision (OpenAI ou OpenRouter)
+    // 3. Forcer un fournisseur compatible avec la Vision (OpenAI ou OpenRouter)
     let visionClient;
     let visionModel;
 
     if (process.env.OPENAI_API_KEY) {
-      console.log("🚀 [DEBUG] Utilisation d'OpenAI pour la Vision");
       visionClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       visionModel = "gpt-4o-mini";
     } else if (process.env.OPENROUTER_API_KEY) {
-      console.log("🚀 [DEBUG] Utilisation d'OpenRouter pour la Vision (GPT-4o-mini)");
       visionClient = new OpenAI({ 
         baseURL: "https://openrouter.ai/api/v1",
         apiKey: process.env.OPENROUTER_API_KEY 
       });
-      
-      // ✅ Utilisez cet identifiant 100% stable sur OpenRouter
       visionModel = "openai/gpt-4o-mini"; 
     } else {
       throw new Error("Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images.");
     }
 
-    // 3. Appel à l'API Vision
+    // 4. Appel à l'API Vision
     const response = await visionClient.chat.completions.create({
       model: visionModel,
       messages: [
@@ -657,26 +634,20 @@ RÈGLES IMPORTANTES :
 
     const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
-
-    console.log("🚀 [DEBUG] Réponse BRUTE de l'IA :", responseContent);
-
+    
     let jsonResult: any = {};
     
     try {
-      // 1. On cherche s'il y a un bloc JSON caché dans le texte
       const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
       const stringToParse = jsonMatch ? jsonMatch[0] : responseContent;
-      
       jsonResult = JSON.parse(jsonrepair(stringToParse));
 
-      // Si le JSON est valide mais que l'IA a oublié de mettre "isCorrect"
       if (jsonResult.isCorrect === undefined && jsonResult.feedback) {
          const fb = jsonResult.feedback.toLowerCase();
          jsonResult.isCorrect = fb.includes("correct") || fb.includes("exact") || fb.includes("bonne réponse");
       }
     } catch (e) {
       console.warn("⚠️ [DEBUG] L'IA n'a pas fait de JSON. Utilisation du mode texte de secours.");
-      // 2. Si le JSON est introuvable ou illisible, on prend le texte brut
       const textLower = responseContent.toLowerCase();
       jsonResult = {
         feedback: responseContent,
@@ -684,14 +655,11 @@ RÈGLES IMPORTANTES :
       };
     }
 
-    // 3. Sécurisation du score : 1 si correct, 0 si incorrect
     let isCorrect = jsonResult.isCorrect === true || String(jsonResult.isCorrect).toLowerCase() === "true";
     let finalScore = isCorrect ? 1 : 0;
 
-    console.log(`🚀 [DEBUG] Résultat final envoyé au frontend -> Score: ${finalScore}, isCorrect: ${isCorrect}`);
-
-    // ✅ ENVOI AU FRONTEND : On retourne explicitement les 3 variables demandées par React
-    res.status(200).json({ 
+    // ✅ ENVOI EXPLICITE ET STOP DE L'EXÉCUTION via return
+    return res.status(200).json({ 
       isCorrect: isCorrect,
       score: finalScore,
       feedback: jsonResult.feedback || "Analyse terminée."
@@ -699,6 +667,8 @@ RÈGLES IMPORTANTES :
 
   } catch (error: any) {
     console.error("❌ Erreur Examinateur IA (scanAndCorrect) :", error);
-    res.status(500).json({ error: "Erreur d'analyse Vision", details: error.message });
+    if (!res.headersSent) {
+      return res.status(500).json({ error: "Erreur d'analyse Vision", details: error.message });
+    }
   }
 };
