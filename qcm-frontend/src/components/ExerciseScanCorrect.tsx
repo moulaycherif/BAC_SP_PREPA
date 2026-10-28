@@ -2,25 +2,24 @@ import React, { useState } from "react";
 import api from "../api/axios";
 
 interface ExerciseScanCorrectProps {
-  questionId: string;
-  questionText: string;
-  correctAnswer: string;
+  exerciseId: string;
+  subQuestions: any[]; // On passe toutes les questions de l'exercice
   subject: string;
   context?: string;
-  onFeedbackReceived?: (questionId: string, data: any) => void; // NOUVEAU
+  onFeedbackReceived?: (feedbacks: { [questionId: string]: any }) => void;
 }
+
 const ExerciseScanCorrect: React.FC<ExerciseScanCorrectProps> = ({
-  questionId,
-  questionText,
-  correctAnswer,
+  exerciseId,
+  subQuestions,
   subject,
   context,
-  onFeedbackReceived // NOUVEAU
+  onFeedbackReceived
 }) => {
   const [file, setFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [report, setReport] = useState<string | null>(null);
+  const [globalReport, setGlobalReport] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string>("");
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -44,37 +43,45 @@ const ExerciseScanCorrect: React.FC<ExerciseScanCorrectProps> = ({
 
     const formData = new FormData();
     formData.append("file", file);
-    formData.append("questionId", questionId);
-    formData.append("questionText", questionText);
-    formData.append("correctAnswer", correctAnswer);
+    formData.append("exerciseId", exerciseId);
     formData.append("subject", subject);
     formData.append("context", context || "");
+    // On envoie le tableau de questions sous forme de chaîne JSON
+    formData.append("subQuestions", JSON.stringify(subQuestions.map(q => ({
+      id: q._id,
+      questionText: q.questionText || q.question || q.texte,
+      correctAnswer: q.correctAnswer
+    }))));
 
     setLoading(true);
     setErrorMsg("");
-    setReport(null);
+    setGlobalReport(null);
 
     try {
-      const response = await api.post(`/api/ai/scan-correct`, formData, {
+      // Nouvelle route adaptée pour l'exercice entier
+      const response = await api.post(`/api/ai/scan-correct-exercise`, formData, {
         headers: { "Content-Type": "multipart/form-data" },
       });
       
-      const { isCorrect, score, feedback, report: apiReport } = response.data;
-      const finalFeedback = feedback || apiReport;
+      /* Le backend doit maintenant renvoyer un objet global :
+         {
+           globalReport: "Bilan général...",
+           feedbacks: {
+             "id_question_1": { isCorrect: true, score: 1, feedback: "..." },
+             "id_question_2": { isCorrect: false, score: 0, feedback: "..." }
+           }
+         }
+      */
+      const { feedbacks, globalReport: apiReport } = response.data;
       
-      setReport(finalFeedback);
+      setGlobalReport(apiReport || "Analyse terminée avec succès.");
       
-      // NOUVEAU : On remonte les données au composant parent (StudentPage)
-      if (onFeedbackReceived) {
-        onFeedbackReceived(questionId, {
-          isCorrect: isCorrect === true || isCorrect === "true", // Sécurité de typage
-          score: score || (isCorrect ? 1 : 0),
-          feedback: finalFeedback
-        });
+      if (onFeedbackReceived && feedbacks) {
+        onFeedbackReceived(feedbacks);
       }
       
     } catch (error) {
-      console.error("Erreur lors du scan :", error);
+      console.error("Erreur lors du scan global :", error);
       setErrorMsg("Une erreur est survenue lors de l'analyse par l'IA.");
     } finally {
       setLoading(false);
@@ -82,38 +89,36 @@ const ExerciseScanCorrect: React.FC<ExerciseScanCorrectProps> = ({
   };
 
   return (
-    <div className="bg-white p-5 rounded-xl border border-indigo-200 shadow-sm mt-4">
-      <h3 className="text-md font-bold text-indigo-900 mb-2">📸 Option 2 : Scan & Correct (Examinateur IA)</h3>
-      
-      <form onSubmit={handleUpload} className="space-y-3">
+    <div className="bg-white p-5 rounded-xl">
+      <form onSubmit={handleUpload} className="space-y-4">
         <input
           type="file"
           accept="image/*,.pdf"
           onChange={handleFileChange}
-          className="block w-full text-xs text-gray-500 file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+          className="block w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-5 file:rounded-full file:border-0 file:text-sm file:font-bold file:bg-indigo-100 file:text-indigo-800 hover:file:bg-indigo-200 cursor-pointer"
         />
 
         {previewUrl && (
-          <img src={previewUrl} alt="Aperçu" className="max-h-40 rounded border object-contain mx-auto my-2" />
+          <img src={previewUrl} alt="Aperçu" className="max-h-60 rounded-lg border shadow-sm object-contain mx-auto my-3" />
         )}
 
         <button
           type="submit"
           disabled={loading || !file}
-          className={`px-5 py-2 rounded-lg text-white font-bold text-sm transition ${
-            loading || !file ? "bg-indigo-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700"
+          className={`w-full py-3 rounded-xl text-white font-bold text-lg transition ${
+            loading || !file ? "bg-indigo-300 cursor-not-allowed" : "bg-indigo-600 hover:bg-indigo-700 shadow-md hover:shadow-lg"
           }`}
         >
-          {loading ? "Analyse de la copie..." : "Analyser la démarche"}
+          {loading ? "🤖 Analyse de la copie entière en cours..." : "Scanner et corriger tout l'exercice"}
         </button>
       </form>
 
-      {errorMsg && <p className="mt-2 text-xs text-red-600">{errorMsg}</p>}
+      {errorMsg && <p className="mt-3 text-sm font-semibold text-red-600 text-center">{errorMsg}</p>}
 
-      {report && (
-        <div className="mt-4 p-4 bg-indigo-50 rounded-lg border-l-4 border-indigo-500">
-          <h4 className="font-bold text-indigo-900 flex items-center gap-2 mb-1 text-sm">📋 Rapport personnalisé</h4>
-          <div className="text-gray-700 text-sm whitespace-pre-wrap">{report}</div>
+      {globalReport && (
+        <div className="mt-5 p-4 bg-indigo-50 rounded-xl border-l-4 border-indigo-500">
+          <h4 className="font-bold text-indigo-900 flex items-center gap-2 mb-2 text-md">📋 Rapport Général IA</h4>
+          <div className="text-gray-700 text-sm whitespace-pre-wrap leading-relaxed">{globalReport}</div>
         </div>
       )}
     </div>

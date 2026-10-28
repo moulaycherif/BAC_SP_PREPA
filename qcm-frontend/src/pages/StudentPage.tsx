@@ -322,77 +322,31 @@ interface OpenQuestionInputProps {
   isSubQCorrectAndFrozen: boolean;
   onFeedbackReceived?: (questionId: string, data: any) => void; // NOUVEAU
 }
-console.log("STUDENT PAGE");
 
 function OpenQuestionInput({
   subQ,
-  contextText,
-  selectedMatiere,
   exerciseSubmitted,
   exerciseAnswers,
   onAnswerChange,
-  isSubQCorrectAndFrozen,
-  onFeedbackReceived // NOUVEAU
+  isSubQCorrectAndFrozen
 }: OpenQuestionInputProps) {
-  const [isKeyboardActive, setIsKeyboardActive] = useState(false);
-  const [showScan, setShowScan] = useState(false);
-
   return (
     <div className="ml-2 md:ml-6 mt-3 space-y-3">
       <div className="flex flex-wrap gap-2 mb-2">
-        <button
-          type="button"
-          onClick={() => {
-            setIsKeyboardActive(!isKeyboardActive);
-            setShowScan(false);
-          }}
-          disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
-          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
-            isKeyboardActive
-              ? "bg-teal-600 text-white shadow"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
-          } disabled:opacity-50`}
-        >
+        <span className="px-4 py-1.5 rounded-lg text-xs font-bold bg-teal-600 text-white shadow">
           ⌨️ Saisie Mathématique
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowScan(!showScan)}
-          disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
-          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
-            showScan
-              ? "bg-indigo-600 text-white shadow"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
-          } disabled:opacity-50`}
-        >
-          📸 Photo / PDF (Scan & Correct)
-        </button>
+        </span>
       </div>
 
-      {isKeyboardActive && (
-        <div className={`w-full p-2 border rounded-xl overflow-hidden transition ${
-          isSubQCorrectAndFrozen ? "border-green-500 bg-green-50" : "bg-white border-teal-500 ring-2 ring-teal-100"
-        }`}>
-          <MathInput
-            value={exerciseAnswers[subQ._id] || ""}
-            onChange={(newValue) => onAnswerChange(subQ._id, newValue)}
-            disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
-          />
-        </div>
-      )}
-
-      {showScan && (
-        <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl mt-2">
-          <ExerciseScanCorrect
-            questionId={subQ._id}
-            questionText={subQ.questionText || subQ.question || subQ.texte || ""}
-            correctAnswer={subQ.correctAnswer || ""}
-            subject={selectedMatiere || ""}
-            context={contextText || ""}
-            onFeedbackReceived={onFeedbackReceived} // NOUVEAU
-          />
-        </div>
-      )}
+      <div className={`w-full p-2 border rounded-xl overflow-hidden transition ${
+        isSubQCorrectAndFrozen ? "border-green-500 bg-green-50" : "bg-white border-teal-500 ring-2 ring-teal-100"
+      }`}>
+        <MathInput
+          value={exerciseAnswers[subQ._id] || ""}
+          onChange={(newValue) => onAnswerChange(subQ._id, newValue)}
+          disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
+        />
+      </div>
     </div>
   );
 }
@@ -1494,36 +1448,60 @@ export default function StudentPage() {
             </div>
 
             {!exerciseSubmitted && (
-              <button
-                onClick={async () => {
-                  let score = 0;
-                  let totalQuestions = 0;
-                  whiteExams.forEach((ex) => {
-                    ex.subQuestions?.forEach((subQ: any) => {
-                      totalQuestions++;
-                      if (exerciseAnswers[subQ._id] === subQ.correctAnswer) { score++; }
-                    });
-                  });
-                  const wrong = whiteExams.filter((ex) => ex.subQuestions?.some((subQ: any) => exerciseAnswers[subQ._id] !== subQ.correctAnswer));
-                  setExerciseScore(score);
-                  try {
-                    const token = localStorage.getItem("token");
-                    await axios.post(`${API_BASE_URL}/api/student-activity`, {
-                      type: "EXERCISE", 
-                      subject: selectedMatiere,
-                      chapter: selectedChapter,
-                      score,
-                      totalQuestions: whiteExams.length,
-                      successRate: totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0,
-                    }, { headers: { Authorization: `Bearer ${token}` } });
-                  } catch (err) { console.error(err); }
-                  setExerciseSubmitted(true); setWrongExercises(wrong);
-                }}
-                className="mt-6 px-6 py-2 bg-green-600 text-white rounded font-semibold shadow hover:bg-green-700 transition"
-              >
-                ✅ Soumettre mes réponses
-              </button>
-            )}
+  <div className="flex flex-col items-center mt-8 space-y-6">
+    
+    {/* 1. Le composant de scan global (Nouveau) */}
+    <div className="w-full p-4 bg-indigo-50 border border-indigo-200 rounded-xl max-w-3xl mx-auto">
+      <h3 className="text-lg font-bold text-indigo-900 mb-2 text-center">
+        📸 Soumettre toute la feuille de calcul (Scan & Correct)
+      </h3>
+      <ExerciseScanCorrect
+        exerciseId={currentEx._id} // Assurez-vous d'avoir accès à currentEx ici, ou passez whiteExams si c'est un examen global
+        subQuestions={currentEx.subQuestions} 
+        subject={selectedMatiere || ""}
+        context={currentEx.contextText || currentEx.enonce || ""}
+        onFeedbackReceived={(feedbacks) => {
+          setAiFeedbacks(prev => ({ ...prev, ...feedbacks }));
+        }} 
+      />
+    </div>
+
+    {/* Séparateur visuel optionnel */}
+    <div className="text-gray-400 font-medium">OU</div>
+
+    {/* 2. Votre bouton de soumission classique (Existant) */}
+    <button
+      onClick={async () => {
+        let score = 0;
+        let totalQuestions = 0;
+        whiteExams.forEach((ex) => {
+          ex.subQuestions?.forEach((subQ: any) => {
+            totalQuestions++;
+            if (exerciseAnswers[subQ._id] === subQ.correctAnswer) { score++; }
+          });
+        });
+        const wrong = whiteExams.filter((ex) => ex.subQuestions?.some((subQ: any) => exerciseAnswers[subQ._id] !== subQ.correctAnswer));
+        setExerciseScore(score);
+        try {
+          const token = localStorage.getItem("token");
+          await axios.post(`${API_BASE_URL}/api/student-activity`, {
+            type: "EXERCISE", 
+            subject: selectedMatiere,
+            chapter: selectedChapter,
+            score,
+            totalQuestions: whiteExams.length,
+            successRate: totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0,
+          }, { headers: { Authorization: `Bearer ${token}` } });
+        } catch (err) { console.error(err); }
+        setExerciseSubmitted(true); setWrongExercises(wrong);
+      }}
+      className="px-8 py-3 bg-green-600 text-white rounded-lg font-bold shadow-md hover:bg-green-700 transition w-full max-w-sm"
+    >
+      ✅ Soumettre mes réponses saisies
+    </button>
+
+  </div>
+)}
 
             {exerciseSubmitted && (
               <div className="mt-4 text-center font-bold text-red-600 bg-red-50 py-2 rounded-xl border border-red-100">

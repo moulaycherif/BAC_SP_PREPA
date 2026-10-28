@@ -1,6 +1,12 @@
 import express from "express";
 import multer from "multer";
-import { generateContentFromPdf, importCorrectedExcel, verifyAnswer, scanAndCorrect } from "../controllers/aiController";
+import { 
+  generateContentFromPdf, 
+  importCorrectedExcel, 
+  verifyAnswer,
+  scanAndCorrect,          // AJOUT : indispensable car utilisé dans la route /scan-correct
+  scanAndCorrectExercise   // AJOUT : votre nouvelle fonction
+} from "../controllers/aiController";
 import { authenticateStudent } from "../middleware/authMiddleware";
 
 const router = express.Router();
@@ -17,15 +23,9 @@ router.post("/import-excel", upload.single("file"), importCorrectedExcel);
 // 🤖 Route de vérification des réponses d'exercices à saisie libre / mathématique
 router.post("/verify-answer", authenticateStudent, verifyAnswer);
 
-// 📸 ROUTE SÉCURISÉE AVEC DEBUGGING (Scan & Correct)
+// 📸 ROUTE SÉCURISÉE AVEC DEBUGGING (Scan & Correct - Question unique)
 router.post("/scan-correct", 
-  (req, res, next) => {
-    next();
-  },
   authenticateStudent, 
-  (req, res, next) => {
-    next();
-  },
   (req, res, next) => {
     // Interception des erreurs Multer
     const multerUpload = upload.single("file");
@@ -38,6 +38,23 @@ router.post("/scan-correct",
     });
   }, 
   scanAndCorrect
+);
+
+// 📸 NOUVELLE ROUTE : Scan & Correct global (Exercice complet)
+router.post(
+  "/scan-correct-exercise",
+  authenticateStudent,
+  (req, res, next) => {
+    const multerUpload = upload.single("file");
+    multerUpload(req, res, (err) => {
+      if (err) {
+        console.error("❌ [ERREUR MULTER - EXERCICE] :", err.message);
+        return res.status(500).json({ error: "Erreur lors du traitement du fichier", details: err.message });
+      }
+      next();
+    });
+  },
+  scanAndCorrectExercise
 );
 
 export default router;

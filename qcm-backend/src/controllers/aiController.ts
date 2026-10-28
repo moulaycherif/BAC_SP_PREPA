@@ -56,7 +56,6 @@ const getAIConfig = (): { client: OpenAI | null; model: string; provider: string
       };
   }
 };
-console.log("AI CONTROLLER");
 
 export const generateContentFromPdf = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -550,24 +549,33 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
 };
 
 // ======================================================
-// 📸 EXAMINATEUR IA (Scan & Correct) - Force Vision Provider
+// 📸 EXAMINATEUR IA EXERCICE ENTIER (Scan & Correct Global)
 // ======================================================
-export const scanAndCorrect = async (req: Request, res: Response): Promise<void> => {
+export const scanAndCorrectExercise = async (req: Request, res: Response): Promise<void> => {
   try {
     const file = req.file;
-    const { questionText, correctAnswer, subject, context } = req.body;
+    const { subject, context } = req.body;
 
     if (!file) {
       res.status(400).json({ error: "Aucun fichier (image/PDF) n'a été fourni." });
       return;
     }
 
-    // 1. Lecture du fichier
+    // 1. Parsage des sous-questions transmises depuis le frontend
+    let subQuestions: any[] = [];
+    try {
+      subQuestions = JSON.parse(req.body.subQuestions || "[]");
+    } catch (e) {
+      res.status(400).json({ error: "Format des subQuestions invalide." });
+      return;
+    }
+
+    // 2. Conversion de l'image/PDF en Base64
     let base64Image = "";
     if (file.buffer) {
-      base64Image = file.buffer.toString('base64');
+      base64Image = file.buffer.toString("base64");
     } else if (file.path) {
-      base64Image = fs.readFileSync(file.path).toString('base64');
+      base64Image = fs.readFileSync(file.path).toString("base64");
       try {
         fs.unlinkSync(file.path);
       } catch (e) {
@@ -578,29 +586,40 @@ export const scanAndCorrect = async (req: Request, res: Response): Promise<void>
     const mimeType = file.mimetype || "image/jpeg";
     const dataUri = `data:${mimeType};base64,${base64Image}`;
 
-    // 2. Améliorer le prompt avec le contexte
+    // 3. Construction du prompt d'évaluation pour tout l'exercice
     const systemPrompt = `
 Tu es un examinateur expert en ${subject || "Sciences"}. 
-Analyse le scan de la démarche manuscrite de l'étudiant.
+Analyse le scan complet de la feuille de calcul / copie rédigée par l'étudiant.
 
-ÉNONCÉ ET CONTEXTE DU PROBLÈME (Données d'expériences, valeurs, etc.) :
+CONTEXTE GLOBAL ET ÉNONCÉ DE L'EXERCICE :
 "${context || "Aucun contexte fourni"}"
 
-QUESTION : "${questionText || "Non spécifiée"}"
-RÉPONSE ATTENDUE : "${correctAnswer ? correctAnswer : "Non fournie. Tu dois déterminer toi-même si la démarche et le résultat sur l'image sont scientifiquement exacts."}"
+LISTE DES SOUS-QUESTIONS À CORRIGER :
+${JSON.stringify(subQuestions, null, 2)}
 
-RÈGLES IMPORTANTES :
-1. Utilise les valeurs du CONTEXTE ci-dessus pour vérifier la justesse numérique des calculs de l'étudiant (ex: D, λ, a).
-2. N'utilise JAMAIS de symboles "$" pour les mathématiques ou les variables. Écris tout en texte brut.
-3. ÉVALUE LA RÉPONSE : attribue un score de 0 (si la réponse est complètement fausse) ou 1 (si elle est logiquement et numériquement correcte).
-4. Renvoie STRICTEMENT un objet JSON avec cette structure : 
-{ 
-  "feedback": "Ton explication détaillée ici.",
-  "score": 1,
-  "isCorrect": true
-}`;
+CONSIGNES STRICTES :
+1. Analyse l'image fournie et retrouve le raisonnement, les calculs et les réponses associées à CHAQUE sous-question listée ci-dessus.
+2. Pour chaque sous-question, détermine si la réponse de l'élève est exacte et attribue un score (1 si c'est correct, 0 sinon).
+3. N'utilise JAMAIS le symbole "$" pour les expressions mathématiques dans les retours texte.
+4. Règle absolue de formatage : Tu DOIS répondre EXCLUSIVEMENT avec un objet JSON respectant EXACTEMENT la structure suivante :
+{
+  "globalReport": "Un commentaire général court et constructif sur l'ensemble du travail de l'élève.",
+  "feedbacks": {
+    "ID_DE_LA_QUESTION_1": {
+      "isCorrect": true,
+      "score": 1,
+      "feedback": "Explication sur la réponse à cette question."
+    },
+    "ID_DE_LA_QUESTION_2": {
+      "isCorrect": false,
+      "score": 0,
+      "feedback": "Analyse de l'erreur commise pour cette question."
+    }
+  }
+}
+`;
 
-    // 3. Forcer un fournisseur compatible avec la Vision (OpenAI ou OpenRouter)
+    // 4. Choix du client Vision (OpenAI / OpenRouter)
     let visionClient;
     let visionModel;
 
@@ -608,69 +627,64 @@ RÈGLES IMPORTANTES :
       visionClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
       visionModel = "gpt-4o-mini";
     } else if (process.env.OPENROUTER_API_KEY) {
-      visionClient = new OpenAI({ 
+      visionClient = new OpenAI({
         baseURL: "https://openrouter.ai/api/v1",
-        apiKey: process.env.OPENROUTER_API_KEY 
+        apiKey: process.env.OPENROUTER_API_KEY,
       });
-      visionModel = "openai/gpt-4o-mini"; 
+      visionModel = "openai/gpt-4o-mini";
     } else {
-      throw new Error("Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images.");
+      throw new Error(
+        "Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images."
+      );
     }
 
-    // 4. Appel à l'API Vision
+    // 5. Appel à l'API Vision avec format JSON forcé
     const response = await visionClient.chat.completions.create({
       model: visionModel,
       messages: [
-        { role: "system", content: "Tu es un évaluateur strict. Renvoie UNIQUEMENT un objet JSON valide avec cette structure exacte : { \"feedback\": \"...\", \"score\": 1, \"isCorrect\": true }." },
-        { 
-          role: "user", 
+        {
+          role: "system",
+          content:
+            "Tu es un évaluateur strict. Réponds EXCLUSIVEMENT avec un objet JSON valide contenant les clés 'globalReport' et 'feedbacks'.",
+        },
+        {
+          role: "user",
           content: [
             { type: "text", text: systemPrompt },
-            { type: "image_url", image_url: { url: dataUri } }
-          ] 
-        }
+            { type: "image_url", image_url: { url: dataUri } },
+          ],
+        },
       ],
-      max_tokens: 1500
+      response_format: { type: "json_object" },
+      max_tokens: 2500,
     });
 
     const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
-    
+
+    // 6. Extraction et nettoyage du JSON
     let jsonResult: any = {};
-    
     try {
       const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
       const stringToParse = jsonMatch ? jsonMatch[0] : responseContent;
       jsonResult = JSON.parse(jsonrepair(stringToParse));
-
-      if (jsonResult.isCorrect === undefined && jsonResult.feedback) {
-         const fb = jsonResult.feedback.toLowerCase();
-         jsonResult.isCorrect = fb.includes("correct") || fb.includes("exact") || fb.includes("bonne réponse");
-      }
     } catch (e) {
-      console.warn("⚠️ [DEBUG] L'IA n'a pas fait de JSON. Utilisation du mode texte de secours.");
-      const textLower = responseContent.toLowerCase();
-      jsonResult = {
-        feedback: responseContent,
-        isCorrect: textLower.includes("correct") || textLower.includes("exact") || textLower.includes("bonne réponse"),
-      };
+      throw new Error("L'IA n'a pas renvoyé un format JSON valide.");
     }
 
-    let isCorrect = jsonResult.isCorrect === true || String(jsonResult.isCorrect).toLowerCase() === "true";
-    let finalScore = isCorrect ? 1 : 0;
-
-    // ✅ ENVOI EXPLICITE ET STOP DE L'EXÉCUTION via return
-    res.status(200).json({ 
-      isCorrect: isCorrect,
-      score: finalScore,
-      feedback: jsonResult.feedback || "Analyse terminée."
+    // 7. Renvoi de la réponse au frontend
+    res.status(200).json({
+      globalReport: jsonResult.globalReport || "Analyse de la copie terminée.",
+      feedbacks: jsonResult.feedbacks || {},
     });
     return;
-
   } catch (error: any) {
-    console.error("❌ Erreur Examinateur IA (scanAndCorrect) :", error);
+    console.error("❌ Erreur Examinateur IA Exercice (scanAndCorrectExercise) :", error);
     if (!res.headersSent) {
-      res.status(500).json({ error: "Erreur d'analyse Vision", details: error.message });
+      res.status(500).json({
+        error: "Erreur d'analyse de l'exercice par le module Vision",
+        details: error.message,
+      });
       return;
     }
   }
