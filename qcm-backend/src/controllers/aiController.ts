@@ -549,6 +549,131 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
 };
 
 // ======================================================
+// 📸 EXAMINATEUR IA (Scan & Correct - QUESTION UNIQUE)
+// ======================================================
+export const scanAndCorrect = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const file = req.file;
+    const { questionText, correctAnswer, subject, context } = req.body;
+
+    if (!file) {
+      res.status(400).json({ error: "Aucun fichier (image/PDF) n'a été fourni." });
+      return;
+    }
+
+    // 1. Lecture du fichier
+    let base64Image = "";
+    if (file.buffer) {
+      base64Image = file.buffer.toString('base64');
+    } else if (file.path) {
+      base64Image = fs.readFileSync(file.path).toString('base64');
+      try {
+        fs.unlinkSync(file.path);
+      } catch (e) {
+        console.warn("Impossible de supprimer le fichier temporaire:", e);
+      }
+    }
+
+    const mimeType = file.mimetype || "image/jpeg";
+    const dataUri = `data:${mimeType};base64,${base64Image}`;
+
+    // 2. Améliorer le prompt avec le contexte
+    const systemPrompt = `
+Tu es un examinateur expert en ${subject || "Sciences"}. 
+Analyse le scan de la démarche manuscrite de l'étudiant.
+
+ÉNONCÉ ET CONTEXTE DU PROBLÈME (Données d'expériences, valeurs, etc.) :
+"${context || "Aucun contexte fourni"}"
+
+QUESTION : "${questionText || "Non spécifiée"}"
+RÉPONSE ATTENDUE : "${correctAnswer ? correctAnswer : "Non fournie. Tu dois déterminer toi-même si la démarche et le résultat sur l'image sont scientifiquement exacts."}"
+
+RÈGLES IMPORTANTES :
+1. Utilise les valeurs du CONTEXTE ci-dessus pour vérifier la justesse numérique des calculs de l'étudiant (ex: D, λ, a).
+2. N'utilise JAMAIS de symboles "$" pour les mathématiques ou les variables. Écris tout en texte brut.
+3. ÉVALUE LA RÉPONSE : attribue un score de 0 (si la réponse est complètement fausse) ou 1 (si elle est logiquement et numériquement correcte).
+4. Renvoie STRICTEMENT un objet JSON avec cette structure : 
+{ 
+  "feedback": "Ton explication détaillée ici.",
+  "score": 1,
+  "isCorrect": true
+}`;
+
+    // 3. Forcer un fournisseur compatible avec la Vision (OpenAI ou OpenRouter)
+    let visionClient;
+    let visionModel;
+
+    if (process.env.OPENAI_API_KEY) {
+      visionClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      visionModel = "gpt-4o-mini";
+    } else if (process.env.OPENROUTER_API_KEY) {
+      visionClient = new OpenAI({ 
+        baseURL: "https://openrouter.ai/api/v1",
+        apiKey: process.env.OPENROUTER_API_KEY 
+      });
+      visionModel = "openai/gpt-4o-mini"; 
+    } else {
+      throw new Error("Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images.");
+    }
+
+    // 4. Appel à l'API Vision
+    const response = await visionClient.chat.completions.create({
+      model: visionModel,
+      messages: [
+        { role: "system", content: "Tu es un évaluateur strict. Renvoie UNIQUEMENT un objet JSON valide avec cette structure exacte : { \"feedback\": \"...\", \"score\": 1, \"isCorrect\": true }." },
+        { 
+          role: "user", 
+          content: [
+            { type: "text", text: systemPrompt },
+            { type: "image_url", image_url: { url: dataUri } }
+          ] 
+        }
+      ],
+      max_tokens: 1500
+    });
+
+    const responseContent = response.choices[0]?.message?.content;
+    if (!responseContent) throw new Error("Réponse vide de l'IA.");
+    
+    let jsonResult: any = {};
+    
+    try {
+      const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+      const stringToParse = jsonMatch ? jsonMatch[0] : responseContent;
+      jsonResult = JSON.parse(jsonrepair(stringToParse));
+
+      if (jsonResult.isCorrect === undefined && jsonResult.feedback) {
+         const fb = jsonResult.feedback.toLowerCase();
+         jsonResult.isCorrect = fb.includes("correct") || fb.includes("exact") || fb.includes("bonne réponse");
+      }
+    } catch (e) {
+      console.warn("⚠️ [DEBUG] L'IA n'a pas fait de JSON. Utilisation du mode texte de secours.");
+      const textLower = responseContent.toLowerCase();
+      jsonResult = {
+        feedback: responseContent,
+        isCorrect: textLower.includes("correct") || textLower.includes("exact") || textLower.includes("bonne réponse"),
+      };
+    }
+
+    let isCorrect = jsonResult.isCorrect === true || String(jsonResult.isCorrect).toLowerCase() === "true";
+    let finalScore = isCorrect ? 1 : 0;
+
+    // ✅ ENVOI EXPLICITE ET STOP DE L'EXÉCUTION via return
+    res.status(200).json({ 
+      isCorrect: isCorrect,
+      score: finalScore,
+      feedback: jsonResult.feedback || "Analyse terminée."
+    });
+    return;
+
+  } catch (error: unknown) {
+  const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
+  res.status(500).json({ error: "Erreur d'analyse Vision", details: errorMessage });
+  return;
+}
+};
+
+// ======================================================
 // 📸 EXAMINATEUR IA EXERCICE ENTIER (Scan & Correct Global)
 // ======================================================
 export const scanAndCorrectExercise = async (req: Request, res: Response): Promise<void> => {

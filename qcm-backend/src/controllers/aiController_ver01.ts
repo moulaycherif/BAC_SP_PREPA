@@ -1,0 +1,676 @@
+import { Request, Response } from "express";
+import fs from 'fs';
+import pdfParse from "pdf-parse";
+import OpenAI from "openai";
+import Question from "../models/Question";
+import { jsonrepair } from 'jsonrepair';
+import * as xlsx from 'xlsx';
+
+interface IAItemResponse {
+  // Propriétés existantes (QCM, Exercices)
+  enonce?: string;
+  question?: string;
+  options?: string[];
+  correctAnswerIndex?: number;
+  reponseCorrecte?: string | number;
+  explication?: string;
+  id?: string;
+  parent_id?: string | null;
+  type?: string;
+  title?: string;
+  content?: string;
+}
+
+interface IAGeneratedData {
+  items: IAItemResponse[];
+}
+
+// Configuration des clients IA
+const getAIConfig = (): { client: OpenAI | null; model: string; provider: string } => {
+  const provider = (process.env.AI_PROVIDER || '').trim().toUpperCase();
+  switch (provider) {
+    case 'CEREBRAS':
+      return {
+        client: null,
+        model: "llama3.1-8b",
+        provider: 'CEREBRAS'
+      };
+    case 'GROQ':
+      return {
+        client: new OpenAI({ apiKey: process.env.GROQ_API_KEY, baseURL: "https://api.groq.com/openai/v1" }),
+        model: "llama-3.3-70b-versatile",
+        provider: 'GROQ'
+      };
+    case 'OPENROUTER':
+      return {
+        client: new OpenAI({ apiKey: process.env.OPENROUTER_API_KEY, baseURL: "https://openrouter.ai/api/v1" }),
+        model: "meta-llama/llama-3.1-8b-instruct:free",
+        provider: 'OPENROUTER'
+      };
+    case 'OPENAI':
+    default:
+      return {
+        client: new OpenAI({ apiKey: process.env.OPENAI_API_KEY }),
+        model: "gpt-4o-mini",
+        provider: 'OPENAI'
+      };
+  }
+};
+
+export const generateContentFromPdf = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const file = req.file;
+    const { examId, subject, chapter, typeEpreuve, numeroConcoursBlanc } = req.body;
+    const contentType = req.body.type || "qcm"; 
+    if (!file) {
+      res.status(400).json({ message: "Aucun fichier PDF fourni." });
+      return;
+    }
+    let dataBuffer: Buffer;
+    if (file.buffer) {
+      dataBuffer = file.buffer;
+    } else if (file.path) {
+      dataBuffer = fs.readFileSync(file.path);
+      fs.unlinkSync(file.path); 
+    } else {
+      res.status(400).json({ message: "Format de fichier non supporté." });
+      return;
+    }
+
+    const pdfData = await pdfParse(dataBuffer);
+    const extractedText = pdfData.text;
+    if (!extractedText || extractedText.trim() === "") {
+       res.status(400).json({ message: "Le PDF est vide ou non lisible." });
+       return;
+    }
+    const baseMathInstruction = `
+    NIVEAU CIBLE : Baccalauréat Sciences Physiques (Terminale Scientifique).
+    Le contenu, le vocabulaire, la rigueur scientifique et les calculs doivent correspondre EXACTEMENT aux attentes d'une épreuve de Physique-Chimie du Bac.
+    RÈGLES VITALES DE FORMATAGE (POUR JSON + KATEX) :
+    1. MATHÉMATIQUES COMPLETES : Encadre TOUJOURS la formule entière dans un seul bloc $.
+    2. SYMBOLES EXACTS : Utilise les vraies commandes LaTeX (\\mathbb{R}, \\varepsilon, \\delta, \\Omega).
+    3. DOUBLE ANTISLASH OBLIGATOIRE : Tu DOIS écrire 2 antislashs pour CHAQUE commande (\\frac, \\lim).
+    RÈGLE DE STRUCTURE : Le champ "options" doit être un tableau de simples chaînes de caractères.
+    IMPORTANT : Ta réponse DOIT être uniquement un objet JSON valide, sans texte additionnel.`;
+
+    let systemPrompt = "";
+    if (contentType === "qcm") {
+      systemPrompt = `Tu es un professeur expert de Physique-Chimie. Génère 5 QCM (PAS PLUS) de HAUT NIVEAU (type Bac Sciences Physiques) basés sur ce texte. L'étudiant doit raisonner et faire des calculs.
+      Réponds avec JSON strict : { "items": [ { "question": "...", "options": ["A", "B", "C", "D"], "correctAnswerIndex": 0, "explication": "..." } ] } \n${baseMathInstruction}`;
+    } else if (contentType === "exercise") {
+      systemPrompt = `Tu es un professeur expert de Physique-Chimie. Génère 1 seul Exercice Complexe (type problème du Bac Sciences Physiques) découpé en 3 à 5 sous-questions.
+  Chaque sous-question doit être un objet distinct dans le tableau "items". 
+  IMPORTANT : Toutes les sous-questions de cet exercice doivent partager EXACTEMENT le même champ "enonce" (qui contient le contexte global de l'exercice, les données initiales, etc.).
+  Réponds avec JSON strict : { "items": [ { "enonce": "Contexte global de l'exercice...", "question": "Sous-question 1...", "explication": "...", "options": [] }, { "enonce": "Contexte global de l'exercice...", "question": "Sous-question 2...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
+    } else if (contentType === "flashcard" || contentType === "astuce") {
+      systemPrompt = `Génère 5 flashcards ou astuces de niveau avancé, indispensables pour préparer l'épreuve du Bac Sciences Physiques.
+      Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
+    } else if (contentType === "resume") {
+      systemPrompt = `Extrais les 4-5 concepts, lois physiques ou théorèmes chimiques critiques niveau Bac Sciences Physiques présents dans le document. 
+      Réponds avec JSON strict : { "items": [ { "question": "Loi/Théorème: ...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
+    } else if (contentType === "controle") {
+      systemPrompt = `Conçois un contrôle d'évaluation exigeant type Baccalauréat Sciences Physiques basé sur ce texte. L'étudiant doit transpirer et mobiliser plusieurs concepts.
+      Réponds avec JSON strict : { "items": [ { "question": "...", "explication": "...", "options": [] } ] } \n${baseMathInstruction}`;
+    } else if (contentType === "cours_complet") {
+      systemPrompt = `Agis en tant qu'expert pédagogique. Génère le contenu d'un cours complet et structuré basé sur ce texte.
+      Tu dois formater ta réponse STRICTEMENT selon ce format JSON plat, englobé dans une clé "items".
+      
+      Règles :
+      1. Chaque objet représente une unité (Chapitre, Leçon, ou Question de Quiz).
+      2. Utilise la clé "type" pour différencier ("chapter", "lesson", "quiz_question").
+      3. Utilise "parent_id" pour lier une leçon ou une question à un chapitre. L'ID du parent doit exister.
+
+      Réponds avec un JSON strict :
+      {
+        "items": [
+          { "id": "chap_1", "parent_id": null, "type": "chapter", "title": "Titre du chapitre", "content": "" },
+          { "id": "les_1", "parent_id": "chap_1", "type": "lesson", "title": "Titre de la leçon", "content": "Contenu détaillé de la leçon..." },
+          { "id": "q_1", "parent_id": "chap_1", "type": "quiz_question", "title": "Question du quiz ?", "content": "{\\"options\\": [\\"A\\", \\"B\\"], \\"correct_index\\": 0}" }
+        ]
+      }
+      \n${baseMathInstruction}`;
+    }
+
+    const { client: aiClient, model: defaultModel, provider } = getAIConfig();
+    let responseContent: string | undefined = undefined;
+
+    // --- BRANCHE CEREBRAS ---
+    if (provider === 'CEREBRAS') {
+      let targetModel = defaultModel;
+      try {
+        const modelsResponse = await fetch("https://api.cerebras.ai/v1/models", {
+          headers: { "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}` }
+        });
+        if (modelsResponse.ok) {
+          const modelsData = await modelsResponse.json();
+          const availableModels = modelsData.data?.map((m: any) => m.id) || [];
+          if (availableModels.length > 0) {
+            const llamaModel = availableModels.find((m: string) => m.toLowerCase().includes('llama'));
+            targetModel = llamaModel || availableModels[0];
+          }
+        }
+      } catch (e) {
+        console.warn("Cerebras models check fallback.");
+      }
+
+      const cerebrasResponse = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: targetModel,
+          messages: [
+            { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
+            { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
+          ],
+          temperature: 0.2,
+          max_tokens: 2500
+        })
+      });
+      if (!cerebrasResponse.ok) {
+        const errorText = await cerebrasResponse.text();
+        throw new Error(`Erreur API Cerebras HTTP ${cerebrasResponse.status}: ${errorText}`);
+      }
+
+      const responseData = await cerebrasResponse.json();
+      responseContent = responseData.choices?.[0]?.message?.content;
+    // --- BRANCHE GROQ, OPENROUTER OU OPENAI ---
+    } else if (aiClient) {
+      if (provider === 'GROQ') {
+        let groqCandidateModels: string[] = [];
+        try {
+          console.log("[GROQ] Récupération dynamique de la liste des modèles actifs...");
+          const modelsList = await aiClient.models.list();
+          const availableIds: string[] = modelsList.data.map((m: any) => m.id);
+          const filtered = availableIds.filter((id: string) => {
+            const lower = id.toLowerCase();
+            return !lower.includes('whisper') && !lower.includes('guard') && !lower.includes('embed') && 
+                   !lower.includes('vision') && !lower.includes('orpheus') && !lower.includes('audio');
+          });
+          const priorityKeywords = [
+            'gpt-oss-120b',
+            'llama-3.3-70b',
+            'llama-3.1-8b',
+            'gpt-oss-20b',
+            'qwen3',
+            'compound-mini'
+          ];
+
+          groqCandidateModels = filtered.sort((a, b) => {
+            const indexA = priorityKeywords.findIndex(kw => a.toLowerCase().includes(kw));
+            const indexB = priorityKeywords.findIndex(kw => b.toLowerCase().includes(kw));
+            return (indexA === -1 ? 99 : indexA) - (indexB === -1 ? 99 : indexB);
+          });
+
+          console.log(`[GROQ] Modèles prioritaires détectés (${groqCandidateModels.length}) :`, groqCandidateModels);
+        } catch (e: any) {
+          console.warn(`[GROQ] Impossible de récupérer la liste dynamique (${e.message}). Utilisation de la liste de secours.`);
+        }
+        if (groqCandidateModels.length === 0) {
+          groqCandidateModels = [
+            "openai/gpt-oss-120b",
+            "llama-3.3-70b-versatile",
+            "llama-3.1-8b-instant",
+            "openai/gpt-oss-20b",
+            "groq/compound-mini"
+          ];
+        }
+        let lastError: any = null;
+        for (const candidateModel of groqCandidateModels) {
+          try {
+            console.log(`[GROQ] Tentative de génération avec le modèle : ${candidateModel}...`);
+            const response = await aiClient.chat.completions.create({
+              model: candidateModel,
+              messages: [
+                { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
+                { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
+              ],
+              response_format: { type: "json_object" },
+              temperature: 0.2,
+              max_tokens: 2500
+            });
+            responseContent = response.choices[0]?.message?.content || undefined;
+            if (responseContent) {
+              console.log(`[GROQ] Succès avec le modèle : ${candidateModel}`);
+              break;
+            }
+          } catch (err: any) {
+            console.warn(`[GROQ] Le modèle ${candidateModel} a échoué (${err.message}). Essai du suivant...`);
+            lastError = err;
+          }
+        }
+        if (!responseContent) {
+          throw new Error(`Tous les modèles Groq ont échoué. Dernière erreur : ${lastError?.message || "Erreur inconnue"}`);
+        }
+      } else {
+        const response = await aiClient.chat.completions.create({
+          model: defaultModel,
+          messages: [
+            { role: "system", content: systemPrompt + "\n\nRÈGLE VITALE : Sois extrêmement concis. Ne répète JAMAIS la même équation. Va directement au résultat final sans boucler." },
+            { role: "user", content: `Texte du document :\n${extractedText.substring(0, 10000)}` }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.2,
+          max_tokens: 2500
+        });
+        responseContent = response.choices[0]?.message?.content || undefined;
+      }
+    }
+    if (!responseContent) throw new Error("Réponse vide de l'IA.");
+    const firstBrace = responseContent.indexOf('{');
+    const lastBrace = responseContent.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1) throw new Error("L'IA n'a pas renvoyé de JSON.");    
+    const rawJsonStr = responseContent.substring(firstBrace, lastBrace + 1);
+    let generatedData: IAGeneratedData;
+    try {
+      const repairedJson = jsonrepair(rawJsonStr); 
+      generatedData = JSON.parse(repairedJson);
+    } catch (parseError) {
+      throw new Error("Le format renvoyé par l'IA est irrécupérable.");
+    }
+    if (!generatedData || !Array.isArray(generatedData.items)) {
+      throw new Error("La structure JSON retournée par l'IA ne contient pas le tableau 'items' attendu.");
+    }
+    const isControle = contentType === "controle";
+    const finalExamName = isControle ? "Contrôle IA" : (examId || "Support de cours IA");
+    const finalTypeEpreuve = isControle ? "blanc" : "ia"; 
+    const excelRows = generatedData.items.map((item: IAItemResponse) => {
+      if (contentType === "cours_complet") {
+        return {
+          ID: item.id || "",
+          Parent_ID: item.parent_id || "",
+          Type: item.type || "",
+          Titre: item.title || "",
+          Contenu: item.content || ""
+        };
+      }
+      let rawOptions = item.options || [];
+      let cleanOptions = Array.isArray(rawOptions) ? rawOptions.map(String) : [];      
+      let cleanReponseCorrecte = "";
+      if (cleanOptions.length > 0) {
+        const idx = typeof item.correctAnswerIndex === 'number' ? item.correctAnswerIndex : 0;
+        cleanReponseCorrecte = cleanOptions[idx] || cleanOptions[0];
+      } else if (item.reponseCorrecte) {
+        cleanReponseCorrecte = String(item.reponseCorrecte);
+      }
+      return {
+        Enonce: item.enonce || "",
+        Question: item.question || "",
+        Options: cleanOptions.join(" || "),
+        ReponseCorrecte: cleanReponseCorrecte,
+        Explication: item.explication || "",
+        Type: contentType,
+        Sujet: subject || "",
+        Chapitre: chapter || "",
+        Examen: finalExamName,
+        TypeEpreuve: finalTypeEpreuve,
+        NumConcoursBlanc: numeroConcoursBlanc || ""
+      };
+    });
+    const worksheet = xlsx.utils.json_to_sheet(excelRows);
+    const workbook = xlsx.utils.book_new();
+    xlsx.utils.book_append_sheet(workbook, worksheet, "Generations_IA");
+    const excelBuffer = xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Disposition', `attachment; filename="Generations_IA_${contentType}.xlsx"`);
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.send(excelBuffer);
+  } catch (error) {
+    console.error("Erreur IA:", error);
+    if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path); 
+    res.status(500).json({ message: "Erreur lors de la génération par l'IA.", error: error instanceof Error ? error.message : "Erreur inconnue" });
+  }
+};
+
+export const importCorrectedExcel = async (req: Request, res: Response): Promise<void> => {
+    try {
+      const file = req.file;
+      if (!file) {
+        res.status(400).json({ message: "Aucun fichier Excel fourni." });
+        return;
+      }
+      let buffer: Buffer;
+      if (file.buffer) {
+        buffer = file.buffer;
+      } else if (file.path) {
+        buffer = fs.readFileSync(file.path);
+      } else {
+        res.status(400).json({ message: "Fichier illisible." });
+        return;
+      }  
+      const workbook = xlsx.read(buffer, { type: 'buffer' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rawData: any[] = xlsx.utils.sheet_to_json(worksheet);  
+      if (rawData.length === 0) {
+        res.status(400).json({ message: "Le fichier Excel est vide." });
+        return;
+      }  
+      const itemsToInsert = rawData.map(row => {
+        const type = (row.Type || "qcm").toLowerCase();
+        const optionsArray = type === 'exercise' 
+          ? [] 
+          : (row.Options ? String(row.Options).split(" || ").map(opt => opt.trim()).filter(opt => opt !== "") : []);  
+        return {
+          enonce: row.Enonce || null, 
+          texte: row.Question || null,
+          options: optionsArray,      
+          reponseCorrecte: row.ReponseCorrecte ? String(row.ReponseCorrecte) : null,
+          explication: row.Explication || "",          
+          course_id: row.ID || null,
+          parent_id: row.Parent_ID || null,
+          title: row.Titre || null,
+          content: row.Contenu || null,          
+          type: type,
+          subject: row.Sujet || null,
+          chapter: row.Chapitre || null,
+          exam: row.Examen || "Support de cours IA",
+          typeEpreuve: row.TypeEpreuve || "ia",
+          numeroConcoursBlanc: row.NumConcoursBlanc || null,
+          note: 1
+        };
+      });
+  
+      await Question.insertMany(itemsToInsert);
+      if (file.path && fs.existsSync(file.path)) fs.unlinkSync(file.path);
+      res.status(200).json({ message: "Excel corrigé importé avec succès !", count: itemsToInsert.length });
+    } catch (error) {
+      console.error("Erreur Import Excel IA :", error);
+      if (req.file?.path && fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+      res.status(500).json({ message: "Erreur lors de l'importation de l'Excel corrigé." });
+    }
+};
+
+// ======================================================
+// 🤖 CORRECTION INTELLIGENTE DES SAISIES LIBRES ET LATEX
+// ======================================================
+export const verifyAnswer = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { question, expectedAnswer, userAnswer, context } = req.body;
+
+    if (!userAnswer || String(userAnswer).trim() === "") {
+      res.json({
+        isCorrect: false,
+        score: 0,
+        feedback: "Aucune réponse n'a été saisie."
+      });
+      return;
+    }
+
+    const systemPrompt = `
+Tu es un professeur expert en correction d'examens scientifiques (Mathématiques, Physique, Chimie, SVT).
+Ton rôle est d'évaluer la réponse d'un élève à une question d'exercice.
+
+ÉNONCÉ / CONTEXTE : "${context || 'Non spécifié'}"
+QUESTION : "${question || 'Non spécifiée'}"
+RÉPONSE OFFICIELLE ATTENDUE : "${expectedAnswer || 'Non spécifiée'}"
+RÉPONSE SAISIE PAR L'ÉLÈVE : "${userAnswer}"
+
+DIRECTIVES D'ÉVALUATION ÉQUITABLE ET SOUPLE :
+1. SYNTAXE LATEX / MATHLIVE :
+   - La réponse de l'élève contient souvent du LaTeX généré par un clavier virtuel (ex: \\frac{1}{2}, \\sqrt{x}, x^2, \\int, \\lim_{x\\to 0}). Tu DOIS interpréter correctement ces formules mathématiques.
+2. ÉQUIVALENCES MATHÉMATIQUES & SCIENTIFIQUES :
+   - Accepte TOUTES les formes mathématiquement équivalentes.
+   - Exemples : "0,5", "0.5", "1/2", "\\frac{1}{2}" sont TOUS strictly équivalents et doivent être validés.
+   - Exemples : "2x + 1" et "1 + 2x" sont identiques.
+   - Exemples physiques : "m/s" et "m.s^-1" sont identiques.
+3. SOUPLESSE DE RÉDACTION :
+   - Ignore les variations de majuscules/minuscules, la ponctuation, les fautes d'orthographe légères.
+   - Si la bonne conclusion scientifique ou mathématique est présente, valide la réponse, même si la formulation textuelle diffère légèrement du corrigé.
+
+FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
+{
+  "isCorrect": true ou false,
+  "score": (1 si isCorrect est true, 0 sinon),
+  "feedback": "Un très court message (1 ou 2 phrases max) expliquant poliment et pédagogiquement pourquoi c'est juste ou faux."
+}
+`;
+
+    const { client: aiClient, model: defaultModel, provider } = getAIConfig();
+    let responseContent: string | undefined = undefined;
+
+    if (provider === 'CEREBRAS') {
+      const cerebrasResponse = await fetch("https://api.cerebras.ai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${process.env.CEREBRAS_API_KEY}`
+        },
+        body: JSON.stringify({
+          model: defaultModel,
+          messages: [
+            { role: "system", content: "Tu es un API JSON qui ne renvoie que du JSON valide." },
+            { role: "user", content: systemPrompt }
+          ],
+          temperature: 0.1,
+          max_tokens: 500
+        })
+      });
+
+      if (cerebrasResponse.ok) {
+        const responseData = await cerebrasResponse.json();
+        responseContent = responseData.choices?.[0]?.message?.content;
+      } else {
+        throw new Error("Erreur avec l'API Cerebras");
+      }
+
+    } else if (aiClient) {
+      if (provider === 'GROQ') {
+        let groqCandidateModels: string[] = [];
+
+        try {
+          const modelsList = await aiClient.models.list();
+          const availableIds: string[] = modelsList.data.map((m: any) => m.id);
+
+          groqCandidateModels = availableIds.filter((id: string) => {
+            const lower = id.toLowerCase();
+            return !lower.includes('whisper') && 
+                   !lower.includes('guard') && 
+                   !lower.includes('embed') && 
+                   !lower.includes('vision') &&
+                   !lower.includes('audio');
+          });
+          console.log(`[GROQ verifyAnswer] Modèles actifs détectés (${groqCandidateModels.length}) :`, groqCandidateModels);
+        } catch (e: any) {
+          console.warn(`[GROQ verifyAnswer] Erreur lors de la récupération dynamique (${e.message}).`);
+        }
+        if (groqCandidateModels.length === 0) {
+          groqCandidateModels = [defaultModel].filter(Boolean);
+        }
+        let lastError: any = null;
+        for (const candidateModel of groqCandidateModels) {
+          try {
+            console.log(`[GROQ verifyAnswer] Tentative avec le modèle : ${candidateModel}...`);
+            const response = await aiClient.chat.completions.create({
+              model: candidateModel,
+              messages: [
+                { role: "system", content: "Tu es un évaluateur JSON strict. Ne renvoie AUCUN texte avant ou après le JSON." },
+                { role: "user", content: systemPrompt }
+              ],
+              response_format: { type: "json_object" },
+              temperature: 0.1,
+              max_tokens: 500
+            });
+            responseContent = response.choices[0]?.message?.content || undefined;
+            if (responseContent) {
+              console.log(`[GROQ verifyAnswer] Succès avec : ${candidateModel}`);
+              break;
+            }
+          } catch (err: any) {
+            console.warn(`[GROQ verifyAnswer] Échec avec ${candidateModel}: ${err.message}`);
+            lastError = err;
+          }
+        }
+        if (!responseContent) {
+          throw new Error(`Tous les modèles Groq actifs ont échoué : ${lastError?.message || "Erreur inconnue"}`);
+        }
+      } else {
+        const response = await aiClient.chat.completions.create({
+          model: defaultModel,
+          messages: [
+            { role: "system", content: "Tu es un évaluateur JSON strict. Ne renvoie AUCUN texte avant ou après le JSON." },
+            { role: "user", content: systemPrompt }
+          ],
+          response_format: { type: "json_object" },
+          temperature: 0.1,
+          max_tokens: 500
+        });
+        responseContent = response.choices[0]?.message?.content || undefined;
+      }
+    }
+    if (!responseContent) throw new Error("Réponse vide de l'IA lors de la vérification.");
+
+    const firstBrace = responseContent.indexOf('{');
+    const lastBrace = responseContent.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1) throw new Error("L'IA n'a pas renvoyé un format JSON.");
+    const rawJsonStr = responseContent.substring(firstBrace, lastBrace + 1);
+    
+    let evaluation: any;
+    try {
+      evaluation = JSON.parse(jsonrepair(rawJsonStr));
+    } catch (e) {
+      throw new Error("JSON IA invalide après tentative de réparation.");
+    }
+
+    res.json({
+      isCorrect: Boolean(evaluation.isCorrect),
+      score: evaluation.isCorrect ? 1 : 0,
+      feedback: evaluation.feedback || (evaluation.isCorrect ? "Réponse exacte !" : "Réponse incorrecte.")
+    });
+  } catch (error) {
+    console.error("❌ Erreur dans verifyAnswer (Correction IA) :", error);
+    res.status(500).json({
+      error: "Erreur serveur lors de la vérification par l'IA",
+      isCorrect: false,
+      score: 0,
+      feedback: "⚠️ Impossible de vérifier votre réponse (le serveur IA ne répond pas)."
+    });
+  }
+};
+
+// ======================================================
+// 📸 EXAMINATEUR IA (Scan & Correct) - Force Vision Provider
+// ======================================================
+export const scanAndCorrect = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const file = req.file;
+    const { questionText, correctAnswer, subject, context } = req.body;
+
+    if (!file) {
+      res.status(400).json({ error: "Aucun fichier (image/PDF) n'a été fourni." });
+      return;
+    }
+
+    // 1. Lecture du fichier
+    let base64Image = "";
+    if (file.buffer) {
+      base64Image = file.buffer.toString('base64');
+    } else if (file.path) {
+      base64Image = fs.readFileSync(file.path).toString('base64');
+      try {
+        fs.unlinkSync(file.path);
+      } catch (e) {
+        console.warn("Impossible de supprimer le fichier temporaire:", e);
+      }
+    }
+
+    const mimeType = file.mimetype || "image/jpeg";
+    const dataUri = `data:${mimeType};base64,${base64Image}`;
+
+    // 2. Améliorer le prompt avec le contexte
+    const systemPrompt = `
+Tu es un examinateur expert en ${subject || "Sciences"}. 
+Analyse le scan de la démarche manuscrite de l'étudiant.
+
+ÉNONCÉ ET CONTEXTE DU PROBLÈME (Données d'expériences, valeurs, etc.) :
+"${context || "Aucun contexte fourni"}"
+
+QUESTION : "${questionText || "Non spécifiée"}"
+RÉPONSE ATTENDUE : "${correctAnswer ? correctAnswer : "Non fournie. Tu dois déterminer toi-même si la démarche et le résultat sur l'image sont scientifiquement exacts."}"
+
+RÈGLES IMPORTANTES :
+1. Utilise les valeurs du CONTEXTE ci-dessus pour vérifier la justesse numérique des calculs de l'étudiant (ex: D, λ, a).
+2. N'utilise JAMAIS de symboles "$" pour les mathématiques ou les variables. Écris tout en texte brut.
+3. ÉVALUE LA RÉPONSE : attribue un score de 0 (si la réponse est complètement fausse) ou 1 (si elle est logiquement et numériquement correcte).
+4. Renvoie STRICTEMENT un objet JSON avec cette structure : 
+{ 
+  "feedback": "Ton explication détaillée ici.",
+  "score": 1,
+  "isCorrect": true
+}`;
+
+    // 3. Forcer un fournisseur compatible avec la Vision (OpenAI ou OpenRouter)
+    let visionClient;
+    let visionModel;
+
+    if (process.env.OPENAI_API_KEY) {
+      visionClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+      visionModel = "gpt-4o-mini";
+    } else if (process.env.OPENROUTER_API_KEY) {
+      visionClient = new OpenAI({ 
+        baseURL: "https://openrouter.ai/api/v1",
+        apiKey: process.env.OPENROUTER_API_KEY 
+      });
+      visionModel = "openai/gpt-4o-mini"; 
+    } else {
+      throw new Error("Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images.");
+    }
+
+    // 4. Appel à l'API Vision
+    const response = await visionClient.chat.completions.create({
+      model: visionModel,
+      messages: [
+        { role: "system", content: "Tu es un évaluateur strict. Renvoie UNIQUEMENT un objet JSON valide avec cette structure exacte : { \"feedback\": \"...\", \"score\": 1, \"isCorrect\": true }." },
+        { 
+          role: "user", 
+          content: [
+            { type: "text", text: systemPrompt },
+            { type: "image_url", image_url: { url: dataUri } }
+          ] 
+        }
+      ],
+      max_tokens: 1500
+    });
+
+    const responseContent = response.choices[0]?.message?.content;
+    if (!responseContent) throw new Error("Réponse vide de l'IA.");
+    
+    let jsonResult: any = {};
+    
+    try {
+      const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+      const stringToParse = jsonMatch ? jsonMatch[0] : responseContent;
+      jsonResult = JSON.parse(jsonrepair(stringToParse));
+
+      if (jsonResult.isCorrect === undefined && jsonResult.feedback) {
+         const fb = jsonResult.feedback.toLowerCase();
+         jsonResult.isCorrect = fb.includes("correct") || fb.includes("exact") || fb.includes("bonne réponse");
+      }
+    } catch (e) {
+      console.warn("⚠️ [DEBUG] L'IA n'a pas fait de JSON. Utilisation du mode texte de secours.");
+      const textLower = responseContent.toLowerCase();
+      jsonResult = {
+        feedback: responseContent,
+        isCorrect: textLower.includes("correct") || textLower.includes("exact") || textLower.includes("bonne réponse"),
+      };
+    }
+
+    let isCorrect = jsonResult.isCorrect === true || String(jsonResult.isCorrect).toLowerCase() === "true";
+    let finalScore = isCorrect ? 1 : 0;
+
+    // ✅ ENVOI EXPLICITE ET STOP DE L'EXÉCUTION via return
+    res.status(200).json({ 
+      isCorrect: isCorrect,
+      score: finalScore,
+      feedback: jsonResult.feedback || "Analyse terminée."
+    });
+    return;
+
+  } catch (error: any) {
+    console.error("❌ Erreur Examinateur IA (scanAndCorrect) :", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: "Erreur d'analyse Vision", details: error.message });
+      return;
+    }
+  }
+};
