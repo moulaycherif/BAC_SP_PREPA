@@ -56,6 +56,7 @@ const getAIConfig = (): { client: OpenAI | null; model: string; provider: string
       };
   }
 };
+console.log("AI CONTROLLER");
 
 export const generateContentFromPdf = async (req: Request, res: Response): Promise<void> => {
   try {

@@ -322,6 +322,7 @@ interface OpenQuestionInputProps {
   isSubQCorrectAndFrozen: boolean;
   onFeedbackReceived?: (questionId: string, data: any) => void; // NOUVEAU
 }
+console.log("STUDENT PAGE");
 
 function OpenQuestionInput({
   subQ,
