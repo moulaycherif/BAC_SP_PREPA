@@ -682,102 +682,74 @@ export const scanAndCorrectExercise = async (req: Request, res: Response): Promi
     const { subject, context } = req.body;
 
     if (!file) {
-      res.status(400).json({ error: "Aucun fichier (image/PDF) n'a été fourni." });
+      res.status(400).json({ error: "Aucune image n'a été fournie." });
       return;
     }
 
-    // 1. Parsage des sous-questions transmises depuis le frontend
+    if (file.mimetype === 'application/pdf') {
+      res.status(400).json({ error: "Les fichiers PDF ne sont pas supportés par l'IA Vision. Veuillez envoyer une image (JPG, PNG)." });
+      return;
+    }
+
     let subQuestions: any[] = [];
     try {
       subQuestions = JSON.parse(req.body.subQuestions || "[]");
     } catch (e) {
-      res.status(400).json({ error: "Format des subQuestions invalide." });
+      res.status(400).json({ error: "Format des questions invalide." });
       return;
     }
 
-    // 2. Conversion de l'image/PDF en Base64
-    let base64Image = "";
-    if (file.buffer) {
-      base64Image = file.buffer.toString("base64");
-    } else if (file.path) {
-      base64Image = fs.readFileSync(file.path).toString("base64");
-      try {
-        fs.unlinkSync(file.path);
-      } catch (e) {
-        console.warn("Impossible de supprimer le fichier temporaire:", e);
-      }
-    }
+    const base64Image = file.buffer ? file.buffer.toString("base64") : fs.readFileSync(file.path).toString("base64");
+    if (file.path) fs.unlinkSync(file.path);
 
     const mimeType = file.mimetype || "image/jpeg";
     const dataUri = `data:${mimeType};base64,${base64Image}`;
 
-    // 3. Construction du prompt d'évaluation pour tout l'exercice
     const systemPrompt = `
 Tu es un examinateur expert en ${subject || "Sciences"}. 
-Analyse le scan complet de la feuille de calcul / copie rédigée par l'étudiant.
+Analyse l'image de la copie manuscrite de l'étudiant.
 
-CONTEXTE GLOBAL ET ÉNONCÉ DE L'EXERCICE :
+CONTEXTE DE L'EXERCICE :
 "${context || "Aucun contexte fourni"}"
 
 LISTE DES SOUS-QUESTIONS À CORRIGER :
 ${JSON.stringify(subQuestions, null, 2)}
 
 CONSIGNES STRICTES :
-1. Analyse l'image fournie et retrouve le raisonnement, les calculs et les réponses associées à CHAQUE sous-question listée ci-dessus.
-2. Pour chaque sous-question, détermine si la réponse de l'élève est exacte et attribue un score (1 si c'est correct, 0 sinon).
-3. N'utilise JAMAIS le symbole "$" pour les expressions mathématiques dans les retours texte.
-4. Règle absolue de formatage : Tu DOIS répondre EXCLUSIVEMENT avec un objet JSON respectant EXACTEMENT la structure suivante :
+1. Recherche sur l'image le raisonnement et la réponse finale pour CHAQUE sous-question de la liste.
+2. Pour chaque sous-question, détermine si c'est correct (true/false) et attribue un score (1 si exact, 0 sinon).
+3. Ne mets AUCUN texte ni balise markdown (pas de \`\`\`json) en dehors de l'objet JSON final.
+4. Tu DOIS renvoyer EXACTEMENT cette structure JSON :
 {
-  "globalReport": "Un commentaire général court et constructif sur l'ensemble du travail de l'élève.",
+  "globalReport": "Un commentaire général sur la clarté et le travail de l'élève.",
   "feedbacks": {
     "ID_DE_LA_QUESTION_1": {
       "isCorrect": true,
       "score": 1,
-      "feedback": "Explication sur la réponse à cette question."
+      "feedback": "Explication de la correction."
     },
     "ID_DE_LA_QUESTION_2": {
       "isCorrect": false,
       "score": 0,
-      "feedback": "Analyse de l'erreur commise pour cette question."
+      "feedback": "Erreur constatée..."
     }
   }
-}
-`;
+}`;
 
-    // 4. Choix du client Vision (OpenAI / OpenRouter)
-    let visionClient;
-    let visionModel;
+    const visionClient = new OpenAI({ 
+      apiKey: process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY,
+      baseURL: process.env.OPENROUTER_API_KEY ? "https://openrouter.ai/api/v1" : undefined
+    });
+    const visionModel = process.env.OPENROUTER_API_KEY ? "openai/gpt-4o-mini" : "gpt-4o-mini";
 
-    if (process.env.OPENAI_API_KEY) {
-      visionClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-      visionModel = "gpt-4o-mini";
-    } else if (process.env.OPENROUTER_API_KEY) {
-      visionClient = new OpenAI({
-        baseURL: "https://openrouter.ai/api/v1",
-        apiKey: process.env.OPENROUTER_API_KEY,
-      });
-      visionModel = "openai/gpt-4o-mini";
-    } else {
-      throw new Error(
-        "Une clé OPENAI_API_KEY ou OPENROUTER_API_KEY est requise dans le .env pour analyser des images."
-      );
-    }
-
-    // 5. Appel à l'API Vision avec format JSON forcé
     const response = await visionClient.chat.completions.create({
       model: visionModel,
       messages: [
-        {
-          role: "system",
-          content:
-            "Tu es un évaluateur strict. Réponds EXCLUSIVEMENT avec un objet JSON valide contenant les clés 'globalReport' et 'feedbacks'.",
-        },
-        {
-          role: "user",
-          content: [
+        { role: "system", content: "Tu es un évaluateur strict. Réponds EXCLUSIVEMENT en JSON valide." },
+        { role: "user", content: [
             { type: "text", text: systemPrompt },
             { type: "image_url", image_url: { url: dataUri } },
-          ],
+          ]
         },
       ],
       response_format: { type: "json_object" },
@@ -787,7 +759,6 @@ CONSIGNES STRICTES :
     const responseContent = response.choices[0]?.message?.content;
     if (!responseContent) throw new Error("Réponse vide de l'IA.");
 
-    // 6. Extraction et nettoyage du JSON
     let jsonResult: any = {};
     try {
       const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
@@ -797,20 +768,15 @@ CONSIGNES STRICTES :
       throw new Error("L'IA n'a pas renvoyé un format JSON valide.");
     }
 
-    // 7. Renvoi de la réponse au frontend
     res.status(200).json({
       globalReport: jsonResult.globalReport || "Analyse de la copie terminée.",
       feedbacks: jsonResult.feedbacks || {},
     });
     return;
   } catch (error: any) {
-    console.error("❌ Erreur Examinateur IA Exercice (scanAndCorrectExercise) :", error);
+    console.error("❌ Erreur (scanAndCorrectExercise) :", error);
     if (!res.headersSent) {
-      res.status(500).json({
-        error: "Erreur d'analyse de l'exercice par le module Vision",
-        details: error.message,
-      });
-      return;
+      res.status(500).json({ error: "Erreur d'analyse Vision", details: error.message });
     }
   }
 };
