@@ -1923,25 +1923,30 @@ export default function StudentPage() {
          <div className="mt-8 flex flex-col items-center gap-6 w-full">
   {!exerciseSubmitted ? (
     <>
-      {/* 1. Zone Scan Global */}
-      <div className="w-full max-w-3xl p-4 bg-indigo-50 border border-indigo-200 rounded-xl shadow-sm">
-        <h3 className="text-lg font-bold text-indigo-900 mb-2 text-center">
-          📸 Soumettre toute la copie de l'exercice (Scan & Correct)
-        </h3>
-        <ExerciseScanCorrect
-          exerciseId={currentEx._id}
-          subQuestions={currentEx.subQuestions}
-          subject={selectedMatiere || ""}
-          context={currentEx.contextText || currentEx.enonce || currentEx.texte || ""}
-          onFeedbackReceived={(feedbacks) => {
-            setAiFeedbacks(prev => ({ ...prev, ...feedbacks }));
-          }}
-        />
-      </div>
+      {/* Afficher la zone de Scan UNIQUEMENT si c'est un exercice (isExercice === true) */}
+      {isExercice && (
+        <>
+          {/* 1. Zone Scan Global */}
+          <div className="w-full max-w-3xl p-4 bg-indigo-50 border border-indigo-200 rounded-xl shadow-sm">
+            <h3 className="text-lg font-bold text-indigo-900 mb-2 text-center">
+              📸 Soumettre toute la copie de l'exercice (Scan & Correct)
+            </h3>
+            <ExerciseScanCorrect
+              exerciseId={currentEx._id}
+              subQuestions={currentEx.subQuestions}
+              subject={selectedMatiere || ""}
+              context={currentEx.contextText || currentEx.enonce || currentEx.texte || ""}
+              onFeedbackReceived={(feedbacks) => {
+                setAiFeedbacks(prev => ({ ...prev, ...feedbacks }));
+              }}
+            />
+          </div>
 
-      <div className="text-gray-400 font-bold uppercase tracking-widest text-sm">OU / ET</div>
+          <div className="text-gray-400 font-bold uppercase tracking-widest text-sm">OU / ET</div>
+        </>
+      )}
 
-      {/* 2. Bouton Validation */}
+      {/* 2. Bouton Validation (Affiché pour tout le monde : QCM et Exercices) */}
       <button
         onClick={handleExerciseSubmitAi}
         disabled={isEvaluating}
