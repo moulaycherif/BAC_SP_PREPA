@@ -549,7 +549,7 @@ FORMAT DE RÉPONSE OBLIGATOIRE (JSON strict, aucune autre phrase) :
 };
 
 // ======================================================
-// 📸 EXAMINATEUR IA (Scan & Correct) - Force Vision Provider
+// 📸 EXAMINATEUR IA (Scan & Correct - QUESTION UNIQUE)
 // ======================================================
 export const scanAndCorrect = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -666,11 +666,117 @@ RÈGLES IMPORTANTES :
     });
     return;
 
+  } catch (error: unknown) {
+  const errorMessage = error instanceof Error ? error.message : "Erreur inconnue";
+  res.status(500).json({ error: "Erreur d'analyse Vision", details: errorMessage });
+  return;
+}
+};
+
+// ======================================================
+// 📸 EXAMINATEUR IA EXERCICE ENTIER (Scan & Correct Global)
+// ======================================================
+export const scanAndCorrectExercise = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const file = req.file;
+    const { subject, context } = req.body;
+
+    if (!file) {
+      res.status(400).json({ error: "Aucune image n'a été fournie." });
+      return;
+    }
+
+    if (file.mimetype === 'application/pdf') {
+      res.status(400).json({ error: "Les fichiers PDF ne sont pas supportés par l'IA Vision. Veuillez envoyer une image (JPG, PNG)." });
+      return;
+    }
+
+    let subQuestions: any[] = [];
+    try {
+      subQuestions = JSON.parse(req.body.subQuestions || "[]");
+    } catch (e) {
+      res.status(400).json({ error: "Format des questions invalide." });
+      return;
+    }
+
+    const base64Image = file.buffer ? file.buffer.toString("base64") : fs.readFileSync(file.path).toString("base64");
+    if (file.path) fs.unlinkSync(file.path);
+
+    const mimeType = file.mimetype || "image/jpeg";
+    const dataUri = `data:${mimeType};base64,${base64Image}`;
+
+    const systemPrompt = `
+Tu es un examinateur expert en ${subject || "Sciences"}. 
+Analyse l'image de la copie manuscrite de l'étudiant.
+
+CONTEXTE DE L'EXERCICE :
+"${context || "Aucun contexte fourni"}"
+
+LISTE DES SOUS-QUESTIONS À CORRIGER :
+${JSON.stringify(subQuestions, null, 2)}
+
+CONSIGNES STRICTES :
+1. Recherche sur l'image le raisonnement et la réponse finale pour CHAQUE sous-question de la liste.
+2. Pour chaque sous-question, détermine si c'est correct (true/false) et attribue un score (1 si exact, 0 sinon).
+3. Ne mets AUCUN texte ni balise markdown (pas de \`\`\`json) en dehors de l'objet JSON final.
+4. Tu DOIS renvoyer EXACTEMENT cette structure JSON :
+{
+  "globalReport": "Un commentaire général sur la clarté et le travail de l'élève.",
+  "feedbacks": {
+    "ID_DE_LA_QUESTION_1": {
+      "isCorrect": true,
+      "score": 1,
+      "feedback": "Explication de la correction."
+    },
+    "ID_DE_LA_QUESTION_2": {
+      "isCorrect": false,
+      "score": 0,
+      "feedback": "Erreur constatée..."
+    }
+  }
+}`;
+
+    const visionClient = new OpenAI({ 
+      apiKey: process.env.OPENAI_API_KEY || process.env.OPENROUTER_API_KEY,
+      baseURL: process.env.OPENROUTER_API_KEY ? "https://openrouter.ai/api/v1" : undefined
+    });
+    const visionModel = process.env.OPENROUTER_API_KEY ? "openai/gpt-4o-mini" : "gpt-4o-mini";
+
+    const response = await visionClient.chat.completions.create({
+      model: visionModel,
+      messages: [
+        { role: "system", content: "Tu es un évaluateur strict. Réponds EXCLUSIVEMENT en JSON valide." },
+        { role: "user", content: [
+            { type: "text", text: systemPrompt },
+            { type: "image_url", image_url: { url: dataUri } },
+          ]
+        },
+      ],
+      response_format: { type: "json_object" },
+      max_tokens: 2500,
+    });
+
+    const responseContent = response.choices[0]?.message?.content;
+    if (!responseContent) throw new Error("Réponse vide de l'IA.");
+
+    let jsonResult: any = {};
+    try {
+      const jsonMatch = responseContent.match(/\{[\s\S]*\}/);
+      const stringToParse = jsonMatch ? jsonMatch[0] : responseContent;
+      jsonResult = JSON.parse(jsonrepair(stringToParse));
+    } catch (e) {
+      throw new Error("L'IA n'a pas renvoyé un format JSON valide.");
+    }
+
+    res.status(200).json({
+      globalReport: jsonResult.globalReport || "Analyse de la copie terminée.",
+      feedbacks: jsonResult.feedbacks || {},
+    });
+    return;
   } catch (error: any) {
-    console.error("❌ Erreur Examinateur IA (scanAndCorrect) :", error);
+    console.error("❌ Erreur (scanAndCorrectExercise) :", error);
     if (!res.headersSent) {
       res.status(500).json({ error: "Erreur d'analyse Vision", details: error.message });
-      return;
     }
   }
 };

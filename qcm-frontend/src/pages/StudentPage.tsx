@@ -314,84 +314,36 @@ const Flashcard = ({ title, content }: { title: string, content: string }) => {
 
 interface OpenQuestionInputProps {
   subQ: any;
-  contextText?: string;
-  selectedMatiere: string | null;
   exerciseSubmitted: boolean;
   exerciseAnswers: { [id: string]: string };
   onAnswerChange: (questionId: string, value: string) => void;
   isSubQCorrectAndFrozen: boolean;
-  onFeedbackReceived?: (questionId: string, data: any) => void; // NOUVEAU
 }
 
 function OpenQuestionInput({
   subQ,
-  contextText,
-  selectedMatiere,
   exerciseSubmitted,
   exerciseAnswers,
   onAnswerChange,
-  isSubQCorrectAndFrozen,
-  onFeedbackReceived // NOUVEAU
+  isSubQCorrectAndFrozen
 }: OpenQuestionInputProps) {
-  const [isKeyboardActive, setIsKeyboardActive] = useState(false);
-  const [showScan, setShowScan] = useState(false);
-
   return (
     <div className="ml-2 md:ml-6 mt-3 space-y-3">
       <div className="flex flex-wrap gap-2 mb-2">
-        <button
-          type="button"
-          onClick={() => {
-            setIsKeyboardActive(!isKeyboardActive);
-            setShowScan(false);
-          }}
-          disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
-          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
-            isKeyboardActive
-              ? "bg-teal-600 text-white shadow"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
-          } disabled:opacity-50`}
-        >
+        <span className="px-4 py-1.5 rounded-lg text-xs font-bold bg-teal-600 text-white shadow">
           ⌨️ Saisie Mathématique
-        </button>
-        <button
-          type="button"
-          onClick={() => setShowScan(!showScan)}
-          disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
-          className={`px-4 py-1.5 rounded-lg text-xs font-bold transition ${
-            showScan
-              ? "bg-indigo-600 text-white shadow"
-              : "bg-gray-100 text-gray-700 hover:bg-gray-200 border border-gray-300"
-          } disabled:opacity-50`}
-        >
-          📸 Photo / PDF (Scan & Correct)
-        </button>
+        </span>
       </div>
 
-      {isKeyboardActive && (
-        <div className={`w-full p-2 border rounded-xl overflow-hidden transition ${
-          isSubQCorrectAndFrozen ? "border-green-500 bg-green-50" : "bg-white border-teal-500 ring-2 ring-teal-100"
-        }`}>
-          <MathInput
-            value={exerciseAnswers[subQ._id] || ""}
-            onChange={(newValue) => onAnswerChange(subQ._id, newValue)}
-            disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
-          />
-        </div>
-      )}
-
-      {showScan && (
-        <div className="p-3 bg-indigo-50 border border-indigo-200 rounded-xl mt-2">
-          <ExerciseScanCorrect
-            questionId={subQ._id}
-            questionText={subQ.questionText || subQ.question || subQ.texte || ""}
-            correctAnswer={subQ.correctAnswer || ""}
-            subject={selectedMatiere || ""}
-            context={contextText || ""}
-            onFeedbackReceived={onFeedbackReceived} // NOUVEAU
-          />
-        </div>
-      )}
+      <div className={`w-full p-2 border rounded-xl overflow-hidden transition ${
+        isSubQCorrectAndFrozen ? "border-green-500 bg-green-50" : "bg-white border-teal-500 ring-2 ring-teal-100"
+      }`}>
+        <MathInput
+          value={exerciseAnswers[subQ._id] || ""}
+          onChange={(newValue) => onAnswerChange(subQ._id, newValue)}
+          disabled={exerciseSubmitted || isSubQCorrectAndFrozen}
+        />
+      </div>
     </div>
   );
 }
@@ -1493,36 +1445,60 @@ export default function StudentPage() {
             </div>
 
             {!exerciseSubmitted && (
-              <button
-                onClick={async () => {
-                  let score = 0;
-                  let totalQuestions = 0;
-                  whiteExams.forEach((ex) => {
-                    ex.subQuestions?.forEach((subQ: any) => {
-                      totalQuestions++;
-                      if (exerciseAnswers[subQ._id] === subQ.correctAnswer) { score++; }
-                    });
-                  });
-                  const wrong = whiteExams.filter((ex) => ex.subQuestions?.some((subQ: any) => exerciseAnswers[subQ._id] !== subQ.correctAnswer));
-                  setExerciseScore(score);
-                  try {
-                    const token = localStorage.getItem("token");
-                    await axios.post(`${API_BASE_URL}/api/student-activity`, {
-                      type: "EXERCISE", 
-                      subject: selectedMatiere,
-                      chapter: selectedChapter,
-                      score,
-                      totalQuestions: whiteExams.length,
-                      successRate: totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0,
-                    }, { headers: { Authorization: `Bearer ${token}` } });
-                  } catch (err) { console.error(err); }
-                  setExerciseSubmitted(true); setWrongExercises(wrong);
-                }}
-                className="mt-6 px-6 py-2 bg-green-600 text-white rounded font-semibold shadow hover:bg-green-700 transition"
-              >
-                ✅ Soumettre mes réponses
-              </button>
-            )}
+  <div className="flex flex-col items-center mt-8 space-y-6">
+    
+    {/* 1. Le composant de scan global (Nouveau) */}
+    <div className="w-full p-4 bg-indigo-50 border border-indigo-200 rounded-xl max-w-3xl mx-auto">
+      <h3 className="text-lg font-bold text-indigo-900 mb-2 text-center">
+        📸 Soumettre toute la feuille de calcul (Scan & Correct)
+      </h3>
+      <ExerciseScanCorrect
+        exerciseId={currentEx._id} // Assurez-vous d'avoir accès à currentEx ici, ou passez whiteExams si c'est un examen global
+        subQuestions={currentEx.subQuestions} 
+        subject={selectedMatiere || ""}
+        context={currentEx.contextText || currentEx.enonce || ""}
+        onFeedbackReceived={(feedbacks) => {
+          setAiFeedbacks(prev => ({ ...prev, ...feedbacks }));
+        }} 
+      />
+    </div>
+
+    {/* Séparateur visuel optionnel */}
+    <div className="text-gray-400 font-medium">OU</div>
+
+    {/* 2. Votre bouton de soumission classique (Existant) */}
+    <button
+      onClick={async () => {
+        let score = 0;
+        let totalQuestions = 0;
+        whiteExams.forEach((ex) => {
+          ex.subQuestions?.forEach((subQ: any) => {
+            totalQuestions++;
+            if (exerciseAnswers[subQ._id] === subQ.correctAnswer) { score++; }
+          });
+        });
+        const wrong = whiteExams.filter((ex) => ex.subQuestions?.some((subQ: any) => exerciseAnswers[subQ._id] !== subQ.correctAnswer));
+        setExerciseScore(score);
+        try {
+          const token = localStorage.getItem("token");
+          await axios.post(`${API_BASE_URL}/api/student-activity`, {
+            type: "EXERCISE", 
+            subject: selectedMatiere,
+            chapter: selectedChapter,
+            score,
+            totalQuestions: whiteExams.length,
+            successRate: totalQuestions > 0 ? Math.round((score / totalQuestions) * 100) : 0,
+          }, { headers: { Authorization: `Bearer ${token}` } });
+        } catch (err) { console.error(err); }
+        setExerciseSubmitted(true); setWrongExercises(wrong);
+      }}
+      className="px-8 py-3 bg-green-600 text-white rounded-lg font-bold shadow-md hover:bg-green-700 transition w-full max-w-sm"
+    >
+      ✅ Soumettre mes réponses saisies
+    </button>
+
+  </div>
+)}
 
             {exerciseSubmitted && (
               <div className="mt-4 text-center font-bold text-red-600 bg-red-50 py-2 rounded-xl border border-red-100">
@@ -1876,48 +1852,33 @@ export default function StudentPage() {
                           );
 
                         case 'open':
-                        case 'exercice':
-                          return (
-                            <>
-                              <OpenQuestionInput
-  subQ={subQ}
-  contextText={currentEx.contextText || currentEx.enonce || currentEx.texte || ""} // 👈 LIGNE À AJOUTER ICI
-  selectedMatiere={selectedMatiere}
-  exerciseSubmitted={exerciseSubmitted}
-  exerciseAnswers={exerciseAnswers}
-  onAnswerChange={handleExerciseAnswer}
-  isSubQCorrectAndFrozen={isSubQCorrectAndFrozen || aiFeedbacks[subQ._id]?.isCorrect}
-  onFeedbackReceived={(qId, data) => setAiFeedbacks(prev => ({ ...prev, [qId]: data }))} 
-/>
-
-                              {exerciseSubmitted && aiFeedbacks[subQ._id] && (
-                                <div className={`ml-2 md:ml-6 mt-3 px-4 py-3 rounded-xl border text-sm ${
-                                  aiFeedbacks[subQ._id].isCorrect 
-                                    ? "bg-green-50 text-green-900 border-green-200" 
-                                    : "bg-red-50 text-red-900 border-red-200"
-                                }`}>
-                                  <span className="font-bold flex items-center mb-1">
-                                    🤖 Évaluation IA : {aiFeedbacks[subQ._id].isCorrect ? "Correct" : "Incorrect"}
-                                  </span>
-                                  <p>{aiFeedbacks[subQ._id].feedback}</p>
-                                </div>
-                              )}
-                            </>
-                          );
-
-                        default:
-                          return (
-                            <OpenQuestionInput
-  subQ={subQ}
-  contextText={currentEx.contextText || currentEx.enonce || currentEx.texte || ""} // 👈 LIGNE À AJOUTER ICI
-  selectedMatiere={selectedMatiere}
-  exerciseSubmitted={exerciseSubmitted}
-  exerciseAnswers={exerciseAnswers}
-  onAnswerChange={handleExerciseAnswer}
-  isSubQCorrectAndFrozen={isSubQCorrectAndFrozen || aiFeedbacks[subQ._id]?.isCorrect}
-  onFeedbackReceived={(qId, data) => setAiFeedbacks(prev => ({ ...prev, [qId]: data }))} 
-/>
-                          );
+  case 'exercice':
+  default:
+    return (
+      <>
+        <OpenQuestionInput
+          subQ={subQ}
+          exerciseSubmitted={exerciseSubmitted}
+          exerciseAnswers={exerciseAnswers}
+          onAnswerChange={handleExerciseAnswer}
+          isSubQCorrectAndFrozen={isSubQCorrectAndFrozen || aiFeedbacks[subQ._id]?.isCorrect}
+        />
+        
+        {/* Affichage des retours IA juste en dessous */}
+        {exerciseSubmitted && aiFeedbacks[subQ._id] && (
+          <div className={`ml-2 md:ml-6 mt-3 px-4 py-3 rounded-xl border text-sm ${
+            aiFeedbacks[subQ._id].isCorrect 
+              ? "bg-green-50 text-green-900 border-green-200" 
+              : "bg-red-50 text-red-900 border-red-200"
+          }`}>
+            <span className="font-bold flex items-center mb-1">
+              🤖 Évaluation IA : {aiFeedbacks[subQ._id].isCorrect ? "Correct" : "Incorrect"}
+            </span>
+            <p>{aiFeedbacks[subQ._id].feedback}</p>
+          </div>
+        )}
+      </>
+    );
                       }
                     })()}
 
@@ -1959,38 +1920,64 @@ export default function StudentPage() {
             </div>
           )}
 
-          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
-            {!exerciseSubmitted ? (
-              <button
-                onClick={handleExerciseSubmitAi}
-                disabled={isEvaluating}
-                className={`px-8 py-3.5 text-white text-lg font-bold rounded-2xl shadow-lg transition transform flex items-center gap-2 ${
-                  isEvaluating 
-                    ? "bg-gray-400 cursor-not-allowed" 
-                    : "bg-green-600 hover:bg-green-700 hover:scale-102"
-                }`}
-              >
-                {isEvaluating ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    🤖 Évaluation en cours...
-                  </>
-                ) : (
-                  isExercice ? "🤖 Valider mes réponses (Correction IA)" : "✅ Valider ce QCM"
-                )}
-              </button>
-            ) : (
-              <button
-                onClick={() => setShowSolutions(!showSolutions)}
-                className="px-8 py-3.5 bg-slate-800 hover:bg-slate-900 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
-              >
-                📖 {showSolutions ? "Masquer la correction officielle" : "Voir la correction officielle"}
-              </button>
-            )}
+         <div className="mt-8 flex flex-col items-center gap-6 w-full">
+  {!exerciseSubmitted ? (
+    <>
+      {/* Afficher la zone de Scan UNIQUEMENT si c'est un exercice (isExercice === true) */}
+      {isExercice && (
+        <>
+          {/* 1. Zone Scan Global */}
+          <div className="w-full max-w-3xl p-4 bg-indigo-50 border border-indigo-200 rounded-xl shadow-sm">
+            <h3 className="text-lg font-bold text-indigo-900 mb-2 text-center">
+              📸 Soumettre toute la copie de l'exercice (Scan & Correct)
+            </h3>
+            <ExerciseScanCorrect
+              exerciseId={currentEx._id}
+              subQuestions={currentEx.subQuestions}
+              subject={selectedMatiere || ""}
+              context={currentEx.contextText || currentEx.enonce || currentEx.texte || ""}
+              onFeedbackReceived={(feedbacks) => {
+                setAiFeedbacks(prev => ({ ...prev, ...feedbacks }));
+              }}
+            />
           </div>
+
+          <div className="text-gray-400 font-bold uppercase tracking-widest text-sm">OU / ET</div>
+        </>
+      )}
+
+      {/* 2. Bouton Validation (Affiché pour tout le monde : QCM et Exercices) */}
+      <button
+        onClick={handleExerciseSubmitAi}
+        disabled={isEvaluating}
+        className={`px-8 py-3.5 text-white text-lg font-bold rounded-2xl shadow-lg transition transform flex items-center gap-2 ${
+          isEvaluating 
+            ? "bg-gray-400 cursor-not-allowed" 
+            : "bg-green-600 hover:bg-green-700 hover:scale-102"
+        }`}
+      >
+        {isEvaluating ? (
+          <>
+            <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            🤖 Évaluation en cours...
+          </>
+        ) : (
+          isExercice ? "🤖 Valider mes réponses (Correction IA)" : "✅ Valider ce QCM"
+        )}
+      </button>
+    </>
+  ) : (
+    <button
+      onClick={() => setShowSolutions(!showSolutions)}
+      className="px-8 py-3.5 bg-slate-800 hover:bg-slate-900 text-white text-lg font-bold rounded-2xl shadow-lg transition transform hover:scale-102 flex items-center gap-2"
+    >
+      📖 {showSolutions ? "Masquer la correction officielle" : "Voir la correction officielle"}
+    </button>
+  )}
+</div>
 
           {exerciseSubmitted && (
             <div className="mt-6 text-center font-bold text-lg text-blue-900 bg-blue-50 py-3 px-6 rounded-xl border border-blue-200 shadow-sm max-w-xl mx-auto">
